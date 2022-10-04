@@ -1,1 +1,31 @@
+# History & Session data files
+.Rhistory
+.RData
+
+# RStudio files
 .Rproj.user
+
+# User-specific files
+.Ruserdata
+
+# Specific file formats
+*.doc
+*.pptx
+*.xls*
+
+# Temporary files
+*.utf8.md
+*.knit.md
+*~
+~$*.doc*
+~$*.xls*
+*.xlk
+~$*.ppt*
+
+
+# Folder
+docs/admin
+docs/literature
+docs/manuscript
+docs/presentations
+model/Old
