@@ -1,0 +1,176 @@
+---
+title: 'Modelling Notebook: Squirrel WTimpact project'
+author: "Sinah Drenske"
+output:
+  html_document:
+    toc: yes
+    toc_depth: '2'
+    df_print: paged
+  html_notebook:
+    toc: yes
+    toc_depth: 2
+    code_folding: hide
+    theme:
+      bg: '#12162C'
+      fg: '#F9F5C3'
+      primary: '#BCBAC9'
+      base_font: Calibri
+      heading_font: Brandon Grotesque Black
+---
+
+# General information
+
+Sinah Drenske, PhD Student\
+IZW Berlin\
+Department of Ecological Dynamics
+
+and
+
+Technical University Berlin\
+Faculty VI Planning Building Environment\
+Institute of Ecology\
+Department of Planning-related Animal Ecology
+
+Notebook started: 08.06.2022
+
+## Project focus
+
+XYZ...
+
+## Collaborators
+
+Julie Louvrier, Stephanie Kramer-Schadt
+
+## Keyword List
+
+List of keywords for the modelling notebook (from Ayllon et al. 2021 + own terms)
+
++--------------------------------------------+-------------------------------------------------------------------+
+| Modelling Notebook entry tag/TRACE element | Modelling Notebook keyword                                        |
++============================================+===================================================================+
+| Problem formulation                        | Model purpose; Research questions                                 |
++--------------------------------------------+-------------------------------------------------------------------+
+| Model description                          | Model development; Design decisions                               |
++--------------------------------------------+-------------------------------------------------------------------+
+| Data evaluation                            | Parameterization; Patterns                                        |
++--------------------------------------------+-------------------------------------------------------------------+
+| Conceptual model evaluation                | Conceptual design decisions                                       |
++--------------------------------------------+-------------------------------------------------------------------+
+| Implementation verification                | Debugging; Software verification; Testing; Usability tools design |
++--------------------------------------------+-------------------------------------------------------------------+
+| Model output verification                  | Output verification; Goodness-of-fit; Calibration; tests on\      |
+|                                            | environmental drivers                                             |
++--------------------------------------------+-------------------------------------------------------------------+
+| Model analysis and application             | Sensitivity analysis; Uncertainty analysis; Robustness analysis;\ |
+|                                            | Simulation experiment                                             |
++--------------------------------------------+-------------------------------------------------------------------+
+| Model output corroboration                 | Output corroboration; Validation                                  |
++--------------------------------------------+-------------------------------------------------------------------+
+
+# Topical index
+
+link keywords to entries
+
+# Master catalogue
+
+List of locations of files most relevant to the project, with a description of the file and folder taxonomy.
+
+# Work log
+
+## Entry Template
+
+### General information
+
+**Date**:\
+**Author**: Sinah Drenske\
+**TRACE tag**:\
+**Keywords**:\
+**Title**:\
+**Overview**:\
+**Files**:
+
+### Specific details
+
+XYZ...
+
+## 13.08.2022
+
+### General information
+
+**Date**:13.08.2022\
+**Author**: Sinah Drenske\
+**TRACE tag**:\
+**Keywords**:\
+**Title**:\
+**Overview**:\
+**Files**:
+
+### Specific details
+
+QUestion: Script 02, function calculate_delta, part with diff & difftime: why do we calculate negative differences? Why the first picture - later picute and not later picture - picture before?
+
+## 03.08.2022
+
+### General information
+
+**Date**:03.08.2022\
+**Author**: Sinah Drenske\
+**TRACE tag**:\
+**Keywords**:\
+**Title**: Preparation of the temporal analyses\
+**Overview**:Review of Julies script and adaptation to the squirrel project\
+**Files**:
+
+### Specific details
+
+What I did: I worked on script 2, the preparation for the temporal analyses. I changed some things for example I used the hms time object to calculate the time differences. Maybe that will cause problems later. For example during the function that is not working. Maybe I could also write something more efficient? But at first I need to understand what the function does. Maybe I should run Julies script and see how its working
+
+Questions: Am I using the right dataset? After looking for a while at the scripts I am so confused that I am not sure if I am using still the right CT dataset. And is the delta of 30 min included in this dataset or not?????
+
+Idea: replace German species names directly at the beginning in Script 01. Then we have to change it in all other scripts
+
+## 02.08.2022
+
+### General information
+
+**Date**: 02.08.2022\
+**Author**: Sinah Drenske\
+**TRACE tag**:\
+**Keywords**:\
+**Title**: Refreshing memories\
+**Overview**: Review scripts and data\
+**Files**:
+
+### Specific details
+
+I want to get familiar again with the data and the scripts and to continue my work on it.
+
+Decision: For now I will not work on datasets for the jsdm (because I am not sure if we will develop one for this study)
+
+Ideas: defining time windows depending on the hour of the day (for example: 04-10 am - morning, 10-3pm - noon, 3-7pm - afternoon, 7-11pm - evening, 11pm-04am - night)
+Characterise the stations better - where are they, what are the characteristics and so on. Because if more stations are under specific conditions, we will of course see more animals there
+
+For all (study) species: define hours per day. When are they active?
+
+For squirrels (or all species?): activity during the seasons (ist aber auch eigentlich schon in einem der ersten plots vermerkt) Aber vielleicht genauer ansehen? Wann sind Eichhörnchen in den Seasons vor allem aktiv also zu welchen uhrzeiten? Gibt es da Unterschiede? 
+
+
+## 08.06.2022
+
+### General information
+
+**Date**:08.06.2022\
+**Author**: Sinah Drenske\
+**TRACE tag**:\
+**Keywords**:Setup\
+**Title**: Setting up the modelling notebook\
+**Overview**:Designing layout and structure of the modelling notebook\
+**Files**:
+
+### Specific details
+
+I have started the modelling notebook and will now record all progress on this project here.
+Why did we choose the specific species?
+Squirrels are our study species and we choose each possible predator where we have data from even if the probability to get eaten by this animal is low. therefore we choose cats, martens, foxes and raccoons as possible predators
+
+## TBA

@@ -1,0 +1,499 @@
+---
+title: "Your Project: Data Preparation" ## name of your project and analysis step
+description: |
+    The aim of this study is...
+author:
+    ## author information; single arguemnts can be deleted if not needed
+    - name: "John Smith"
+      url: https://izw-berlin.de/en/john-smith-en.html  
+      affiliation: Leibniz Institute for Zoo and Wildlife Research
+      affiliation_url: https://izw-berlin.de/en/
+      orcid_id: 0000-0000-0000-0000
+    - name: "Jane Doe"
+      url: https://janedoe.com
+      affiliation: Leibniz Institute for Zoo and Wildlife Research
+      affiliation_url: https://izw-berlin.de/en/
+    ## add more authors with the same intendation and styling if needed 
+    ## a new author always starts with a hyphen!
+date: "`r Sys.Date()`"
+output: 
+    distill::distill_article:
+        highlight: kate      ## styling of code
+        code_folding: false  ## if `true` you can expand and shrink code chunks
+        toc: true            ## if `true` adds a table of content
+        toc_depth: 2         ## level to be displayed in the table of content
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, 
+                      dev = "ragg_png", fig.width = 9, fig.height = 6, dpi = 600, retina = 1)
+Sys.setlocale("LC_TIME", "C")
+```
+
+* **Research question:**
+* **Study area:**
+* **Data:** 
+
+
+# Setup
+## Packages
+```{r packages}
+## for non-CRAN packages please keep install instruction
+## but commented so it is not run each time, e.g.
+# devtools::install_github("EcoDynIZW/template")
+
+## libraries used in this script
+## please add ALL LIBRARIES NEEDED HERE
+## please remove libraries from the list that are not needed anymore 
+## at a later stage
+package.list=c(#"camtrapR",
+               #"camtrapRdeluxe",
+               #"dplyr",
+               #"evaluate",
+               #"gdata",
+               "here",
+               "hms",
+               #"janitor",
+               #"lubridate",
+               "magrittr",
+               #"maptools",
+               #"optimbase",
+               #"plyr",
+               #"raster",
+               #"readxl",
+               #"rgdal",
+               #"rgeos",
+               #"rjags",
+               #"rlecuyer",
+               #"sf",
+               #"showtext",
+               #"snowfall",
+               #"sp",
+               #"stringr",
+               "tidyverse"
+               )
+
+for (package in package.list) {
+  if (!require(package, character.only=T, quietly=T)) {
+    install.packages(package)
+    library(package, character.only=T)
+  }
+}
+
+```
+
+
+## Data
+
+```{r data}
+##Camera Traps detection histories
+#loading the environmental variables and using only the user IDs that are within the cov table
+stacked_raster_values_and_garden_CT_all_seasons_no_nas <- readRDS(here::here("data-raw", "r-raw", "stacked_raster_values_and_garden_CT_all_seasons_allcovs_Renamed2022_01_19.RDS"))
+
+#already formatted and filtered camera trap data with a delta of 30 mins
+CT_act_date_formated_delta30 <- readRDS(here::here("data-raw", "r-raw","CT_act_allspecies_NoDelta_filtered2022_01_19.RDS"))
+```
+
+# Calculate the time intervals between last detections of the primary species (A) and first detection of the secondary species (B) 
+## Preparation of the dataset: Taking out pictures between 7pm and 5am
+```{r}
+CT_act_day <- CT_act_date_formated_delta30
+
+#extract the hours between 5am and 6pm, 
+medium_day <- CT_act_day %>% dplyr::filter(Time >= hms::as_hms("05:00:00"), 
+                             Time <= hms::as_hms("19:00:00"))
+table(medium_day$Species)
+```
+
+### Save output
+```{r}
+# #saving the output
+# saveRDS(object = medium_day, 
+#         file = here::here("output", "data-proc", "temporal_proc", 
+#                           paste0("medium_day_",gsub(pattern = "-", replacement = "", x = Sys.Date()),".RDS")))
+```
+
+##Calculate the temporal difference between each species 
+```{r}
+#a bit of formating 
+data_interest <- medium_day
+data_interest %<>%
+  mutate(Species = as.factor(Species), 
+         Station = as.integer(Station))
+
+data_interest <- as.data.frame(data_interest)
+
+# Extracting the IDs of the CT that detected species of interest
+id_CT <- unique(data_interest$Station)
+
+#list of species of interest 
+species_interest <- c("Eichhörnchen", "cat", "Waschbär","Rotfuchs", "Marder_(Baum-und_Steinmarder)")
+```
+
+### Function to calculate the time interval
+```{r}
+### Original --------------------------------------------------------
+# calculate_delta <- function(species)
+#   {
+#   #empty list 
+#   delta_species <- list(0)
+#   ###loop starts here
+#   
+#   for(j in id_CT)
+#     {
+#     k = which(id_CT == j)
+#     #take the CT by its id 
+#     B <- data_interest %>% filter(Station == j)
+#   
+#     #order it by date and time
+#     B_ordered <- B %>% arrange(DateTimeOriginal)
+# 
+#     #delta is going to contain the calculated difference of time between species A and B for each row of the detections of the CT
+#     #but only if the two species from row i and i+1 are in the specific order
+#     #if the combination of the species names between the row i and i + 1 is equal to the names of the species of interest     stuck togetehr then we calcutalte difftime between the two lines,  otherwise, no
+#   
+#     delta <- rep(NA, nrow(B_ordered))
+#     for(i in 1: (nrow(B_ordered)))
+#       {
+#       if (paste(B_ordered[c(i:(i+1)),"Species"], collapse ="") == paste(species, collapse=""))
+#         { 
+#         diff <- difftime(B_ordered[i,"DateTimeOriginal"], B_ordered[i+1,"DateTimeOriginal"])
+#         if (diff < - 12)
+#           { 
+#           delta[i] <- 0 #if the time difference is more than 12 hours then we set it back to zero because it means too                             much time has spent
+#           }
+#         if (diff >= -12)
+#           {
+#           delta[i] <- diff
+#           }
+#         }
+#       }
+#   
+#     delta_species[[k]] <- delta
+#     names(delta_species)[k] <- as.character(j)
+#   
+#     }
+#   return(delta_species)
+# 
+#   }
+```
+
+```{r}
+#### TEST ####
+##############
+##############
+
+# 1st function: for loop 1 take out pics of species of interest per station and order them by date and time
+# 2nd function:  calculate the time differences
+
+calculate_delta <- function(species)
+ {
+  # print(paste0("Start Time ", Sys.time()))
+  # start.time <- Sys.time()
+
+  #empty list 
+  delta_species <- list(0)
+  ###loop starts here
+  
+  # numberCT: each element of station ID
+  for(numberCT in id_CT) 
+    {
+    #print(paste0("j ", j))
+    #numberEle
+    numberEle <- which(id_CT == numberCT) 
+    #print(paste0("k ", k))
+    
+    #take the CT by its id, und filter alle Fotos der species of interest pro station/CT 
+    Pics_CT <- data_interest %>% filter(Station == numberCT)
+  
+    #order it by date and time (maybe not necessary, but just in case there is something in the wrong order)
+    Pics_CT_ordered <- Pics_CT %>% arrange(DateTimeOriginal)
+    
+    
+
+
+
+#delta is going to contain the calculated difference of time between species A and B for each row of the detections of the CT
+    #but only if the two species from row i and i+1 are in the specific order
+    #if the combination of the species names between the row i and i + 1 is equal to the names of the species of interest     stuck togetehr then we calcutalte difftime between the two lines,  otherwise, no
+  
+    delta <- rep(NA, nrow(Pics_CT_ordered)) # create a empty vector with NAs for calculations later
+    
+    
+    for(i in 1: (nrow(Pics_CT_ordered))) # for each row per B-ordered data set, starting from row 1
+      {
+      # wenn die Species namenskombi vom foto und dem nächsten Foto gleich ist wie die der gewünschen specieskombi, dann....
+      if (paste(Pics_CT_ordered[c(i:(i+1)),"Species"], collapse ="") == paste(species, collapse=""))
+        { 
+        # Berechne den zeitunterschied zwischen dem Foto und dem nächsten
+        diff <- difftime(Pics_CT_ordered[i,"DateTimeOriginal"], Pics_CT_ordered[i+1,"DateTimeOriginal"])
+        #if the time difference is more than 12 hours ....
+        if (diff < - 12)
+          { 
+          # then we set it back to zero because it means too much time has spent
+          delta[i] <- 0 
+        }
+        # if not
+        if (diff >= -12)
+          {
+          # we save the time difference in delta
+          delta[i] <- diff
+          }
+        }
+      }
+    # save delta in the delta species list at the place of k
+    delta_species[[numberEle]] <- delta
+    # save the name of the CT ID
+    names(delta_species)[numberEle] <- as.character(numberCT)
+  
+    }
+  # print(paste0("End Time ", Sys.time()))
+  # end.time <- Sys.time()
+  # time.taken <- end.time - start.time
+  # print(paste0("Time taken ", time.taken))
+  return(delta_species)
+  
+  }
+```
+
+# Hier weiter ######
+Aber: zunächst sollten in Skript 1 die species names gleich am anfang zu den englischen namen geändert werden. Macht vieles leichter
+Dann sollten auch dort diese ganzen Wiederholungen in Funktionen bzw loops gepackt werden. Anstatt dass man alles einzeln auflisten muss
+
+```{r}
+# Als function???
+#### TEST ####
+calc_mean <- function(species_interest) {
+  for (i in seq_along(species_interest)) {
+    species <- c(species_interest[[i]], species_interest[[i+1]])
+    
+    delta_species1_species2 <- calculate_delta(species)
+    
+    df_time_diff_species1_species2 <- plyr::ldply(delta_species1_species2, rbind)
+    
+    average_diff_species1_species2_id <- df_time_diff_species1_species2 %>%
+                          mutate(User_uid = as.numeric(.id)) %>%
+                          mutate(mean = rowMeans(df_time_diff_species1_species2[,-1], na.rm = T)) %>% #rowmeans
+                          dplyr::select(User_uid, mean) #keeping only the mean and the id column
+    assign(x = paste("average_diff",species_interest[[i]], species_interest[[i+1]], sep="_"), 
+           value = average_diff_species1_species2_id) 
+  
+  
+  }
+}
+
+
+##selecting the species squirrel and cat
+species <- c(species_interest[1],species_interest[2])
+delta_squirrel_cat <- calculate_delta(species) #loop in a loop in a loop I know it's not very efficient.... sorry
+delta_squirrel_cat <- calculate_delta_2(species)
+#putting this in a dataframe 
+df_time_diff_squirrel_cat1 = plyr::ldply(delta_squirrel_cat, rbind)
+
+##selecting the species raccoon and cat
+species = c(species_interest[2],species_interest[1])
+delta_raccoon_cat <- calculate_delta(species) 
+#putting this in a dataframe 
+df_time_diff_raccoon_cat = plyr::ldply(delta_raccoon_cat, rbind)
+
+##selecting the species cat and fox
+species = c(species_interest[1],species_interest[3])
+delta_cat_fox <- calculate_delta(species)
+#putting this in a dataframe 
+df_time_diff_cat_fox = plyr::ldply(delta_cat_fox, rbind)
+
+##selecting the species fox and cat
+species = c(species_interest[3],species_interest[1])
+delta_fox_cat <- calculate_delta(species)
+#putting this in a dataframe 
+df_time_diff_fox_cat = plyr::ldply(delta_fox_cat, rbind)
+
+##selecting the species cat and marten
+species = c(species_interest[1],species_interest[4])
+delta_cat_marten <- calculate_delta(species)
+#putting this in a dataframe 
+df_time_diff_cat_marten = plyr::ldply(delta_cat_marten, rbind)
+
+##selecting the species marten and cat
+species = c(species_interest[4],species_interest[1])
+delta_marten_cat <- calculate_delta(species)
+#putting this in a dataframe 
+df_time_diff_marten_cat = plyr::ldply(delta_marten_cat, rbind)
+
+##selecting the species cat and cat
+species = c(species_interest[1],species_interest[1])
+delta_cat_cat <- calculate_delta(species) #loop in a loop in a loop I know it's not very efficitent.... sorry
+#putting this in a dataframe 
+df_time_diff_cat_cat = plyr::ldply(delta_cat_cat, rbind)
+
+
+
+##selecting the species fox and raccoon
+species = c(species_interest[3],species_interest[2])
+delta_fox_raccoon <- calculate_delta(species) #loop in a loop in a loop I know it's not very efficitent.... sorry
+#putting this in a dataframe 
+df_time_diff_fox_raccoon = plyr::ldply(delta_fox_raccoon, rbind)
+
+##selecting the species raccoon and fox
+species = c(species_interest[2],species_interest[3])
+delta_raccoon_fox <- calculate_delta(species) 
+#putting this in a dataframe 
+df_time_diff_raccoon_fox = plyr::ldply(delta_raccoon_fox, rbind)
+
+##selecting the species fox and marten
+species = c(species_interest[3],species_interest[4])
+delta_fox_marten <- calculate_delta(species) #loop in a loop in a loop I know it's not very efficitent.... sorry
+#putting this in a dataframe 
+df_time_diff_fox_marten = plyr::ldply(delta_fox_marten, rbind)
+
+##selecting the species marten and fox
+species = c(species_interest[4],species_interest[3])
+delta_marten_fox <- calculate_delta(species) 
+#putting this in a dataframe 
+df_time_diff_marten_fox = plyr::ldply(delta_marten_fox, rbind)
+
+##selecting the species fox and fox
+species = c(species_interest[3],species_interest[3])
+delta_fox_fox <- calculate_delta(species) #loop in a loop in a loop I know it's not very efficitent.... sorry
+#putting this in a dataframe 
+df_time_diff_fox_fox = plyr::ldply(delta_fox_fox, rbind)
+
+
+
+#selecting the species raccoon and marten
+species = c(species_interest[2],species_interest[4])
+delta_raccon_marten <- calculate_delta(species) #loop in a loop in a loop I know it's not very efficitent.... sorry
+#putting this in a dataframe 
+df_time_diff_raccoon_marten = plyr::ldply(delta_raccon_marten, rbind)
+
+##selecting the species marten and raccoon
+species = c(species_interest[4],species_interest[2])
+delta_marten_raccoon <- calculate_delta(species) 
+#putting this in a dataframe 
+df_time_diff_marten_raccoon = plyr::ldply(delta_marten_raccoon, rbind)
+
+##selecting the species raccoon and raccoon
+species = c(species_interest[2],species_interest[2])
+delta_raccoon_raccoon <- calculate_delta(species) #loop in a loop in a loop I know it's not very efficitent.... sorry
+#putting this in a dataframe 
+df_time_diff_raccoon_raccoon = plyr::ldply(delta_raccoon_raccoon, rbind)
+
+
+##selecting the species marten and marten
+species = c(species_interest[4],species_interest[4])
+delta_marten_marten <- calculate_delta(species) #loop in a loop in a loop I know it's not very efficitent.... sorry
+#putting this in a dataframe 
+df_time_diff_marten_marten = plyr::ldply(delta_marten_marten, rbind)
+```
+
+
+```{r}
+average_diff_squirrel_cat_id1 <- df_time_diff_squirrel_cat1 %>%
+                          mutate(User_uid = as.numeric(.id)) %>%
+                          mutate(mean = rowMeans(df_time_diff_squirrel_cat1[,-1], na.rm = T)) %>% #rowmeans
+                          dplyr::select(User_uid, mean) #keeping only the mean and the id column
+
+average_diff_cat_raccoon_id <- df_time_diff_cat_raccoon %>%
+                          mutate(User_uid = as.numeric(.id)) %>%
+                          mutate(mean = rowMeans(df_time_diff_cat_raccoon[,-1], na.rm = T)) %>% #rowmeans
+                          dplyr::select(User_uid, mean) #keeping only the mean and the id column
+
+average_diff_raccoon_cat_id <- df_time_diff_raccoon_cat %>%
+                          mutate(User_uid = as.numeric(.id)) %>%
+                          mutate(mean = rowMeans(df_time_diff_raccoon_cat[,-1], na.rm = T)) %>% #rowmeans
+                          dplyr::select(User_uid, mean) #keeping only the mean and the id column
+
+average_diff_cat_fox_id <- df_time_diff_cat_fox %>%
+                          mutate(User_uid = as.numeric(.id)) %>%
+                          mutate(mean = rowMeans(df_time_diff_cat_fox[,-1], na.rm = T)) %>% #rowmeans
+                          dplyr::select(User_uid, mean) #keeping only the mean and the id column
+
+average_diff_fox_cat_id <- df_time_diff_fox_cat %>%
+                          mutate(User_uid = as.numeric(.id)) %>%
+                          mutate(mean = rowMeans(df_time_diff_fox_cat[,-1], na.rm = T)) %>% #rowmeans
+                          dplyr::select(User_uid, mean) #keeping only the mean and the id column
+
+average_diff_cat_marten_id <- df_time_diff_cat_marten %>%
+                          mutate(User_uid = as.numeric(.id)) %>%
+                          mutate(mean = rowMeans(df_time_diff_cat_marten[,-1], na.rm = T)) %>% #rowmeans
+                          dplyr::select(User_uid, mean) #keeping only the mean and the id column
+
+average_diff_marten_cat_id <- df_time_diff_marten_cat %>%
+                          mutate(User_uid = as.numeric(.id)) %>%
+                          mutate(mean = rowMeans(df_time_diff_marten_cat[,-1], na.rm = T)) %>% #rowmeans
+                          dplyr::select(User_uid, mean) #keeping only the mean and the id column
+
+average_diff_cat_cat_id <- df_time_diff_cat_cat %>%
+                          mutate(User_uid = as.numeric(.id)) %>%
+                          mutate(mean = rowMeans(df_time_diff_cat_cat[,-1], na.rm = T)) %>% #rowmeans
+                          dplyr::select(User_uid, mean) #keeping only the mean and the id column
+
+
+
+average_diff_fox_raccoon_id <- df_time_diff_fox_raccoon %>%
+                          mutate(User_uid = as.numeric(.id)) %>%
+                          mutate(mean = rowMeans(df_time_diff_fox_raccoon[,-1], na.rm = T)) %>% #rowmeans
+                          dplyr::select(User_uid, mean) #keeping only the mean and the id column
+
+average_diff_raccoon_fox_id <- df_time_diff_raccoon_fox %>%
+                          mutate(User_uid = as.numeric(.id)) %>%
+                          mutate(mean = rowMeans(df_time_diff_raccoon_fox[,-1], na.rm = T)) %>% #rowmeans
+                          dplyr::select(User_uid, mean) #keeping only the mean and the id column
+
+average_diff_fox_marten_id <- df_time_diff_fox_marten %>%
+                          mutate(User_uid = as.numeric(.id)) %>%
+                          mutate(mean = rowMeans(df_time_diff_fox_marten[,-1], na.rm = T)) %>% #rowmeans
+                          dplyr::select(User_uid, mean) #keeping only the mean and the id column
+
+average_diff_marten_fox_id <- df_time_diff_marten_fox %>%
+                          mutate(User_uid = as.numeric(.id)) %>%
+                          mutate(mean = rowMeans(df_time_diff_marten_fox[,-1], na.rm = T)) %>% #rowmeans
+                          dplyr::select(User_uid, mean) #keeping only the mean and the id column
+
+average_diff_fox_fox_id <- df_time_diff_fox_fox %>%
+                          mutate(User_uid = as.numeric(.id)) %>%
+                          mutate(mean = rowMeans(df_time_diff_fox_fox[,-1], na.rm = T)) %>% #rowmeans
+                          dplyr::select(User_uid, mean) #keeping only the mean and the id column
+
+
+
+
+average_diff_raccoon_marten_id <- df_time_diff_raccoon_marten %>%
+                          mutate(User_uid = as.numeric(.id)) %>%
+                          mutate(mean = rowMeans(df_time_diff_raccoon_marten[,-1], na.rm = T)) %>% #rowmeans
+                          dplyr::select(User_uid, mean) #keeping only the mean and the id column
+
+average_diff_marten_raccoon_id <- df_time_diff_marten_raccoon %>%
+                              mutate(User_uid = as.numeric(.id)) %>%
+                              mutate(mean = rowMeans(df_time_diff_marten_raccoon[,-1], na.rm = T)) %>% #rowmeans
+                              dplyr::select(User_uid, mean) #keeping only the mean and the id column
+
+average_diff_raccoon_raccoon_id <- df_time_diff_raccoon_raccoon %>%
+                            mutate(User_uid = as.numeric(.id)) %>%
+                            mutate(mean = rowMeans(df_time_diff_raccoon_raccoon[,-1], na.rm = T)) %>% #rowmeans
+                            dplyr::select(User_uid, mean) #keeping only the mean and the id column
+
+
+
+average_diff_marten_marten_id <- df_time_diff_marten_marten %>%
+                          mutate(User_uid = as.numeric(.id)) %>%
+                          mutate(mean = rowMeans(df_time_diff_marten_marten[,-1], na.rm = T)) %>% #rowmeans
+                          dplyr::select(User_uid, mean) #keeping only the mean and the id column
+
+```
+
+
+***
+
+<details><summary>Session Info</summary>
+
+```{r sessionInfo}
+## DO NOT REMOVE!
+## We store the settings of your computer and the current versions of the
+## packages used to allow for reproducibility
+Sys.time()
+#git2r::repository() ## uncomment if you are using GitHub
+sessionInfo()
+```
+
+</details>
