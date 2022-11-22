@@ -39,7 +39,7 @@ XYZ...
 
 ## Collaborators
 
-Julie Louvrier, Stephanie Kramer-Schadt
+Julie Louvrier, Aimara Planillo, Marius Grabow, Conny Landgraf, Stephanie Kramer-Schadt
 
 ## Keyword List
 
@@ -66,6 +66,8 @@ List of keywords for the modelling notebook (from Ayllon et al. 2021 + own terms
 +--------------------------------------------+-------------------------------------------------------------------+
 | Model output corroboration                 | Output corroboration; Validation                                  |
 +--------------------------------------------+-------------------------------------------------------------------+
+| Other                                      | Meeting, Text                                                     |
++--------------------------------------------+-------------------------------------------------------------------+
 
 # Topical index
 
@@ -83,6 +85,7 @@ List of locations of files most relevant to the project, with a description of t
 
 **Date**:\
 **Author**: Sinah Drenske\
+**Entry Type**:\
 **TRACE tag**:\
 **Keywords**:\
 **Title**:\
@@ -93,12 +96,220 @@ List of locations of files most relevant to the project, with a description of t
 
 XYZ...
 
+## 17.11.2022
+
+### General information
+
+**Date**: 17.11.2022\
+**Author**: Sinah Drenske\
+**Entry Type**: Meeting notes\
+**TRACE tag**: Other\
+**Keywords**: Meeting, Text, Code\
+**Title**: Meeting with Aimara, Julie and Marius\
+**Overview**:\
+**Files**:
+
+### Specific details
+
+#### Next Meeting
+
+24.11. 13:30 with Julie and Aimara
+
+Goal:
+
+-   Develop hypothesis
+
+    -   More squirrel activity during lockdown, because people were feeding the squirrels (LIT)
+
+        -   or less activity because of the increased human presence?
+
+    -   Less activity in areas with high imperviousness
+
+    -   But also less activity in areas near green spaces because the squirrels can avoid gardens? (areas with low human population density + low distance to open green areas)
+
+    -   squirrels avoid gardens where dogs or cats live
+
+    -   squirrels are more active during times when people are probably not at home
+
+    -   Sunrise???? Squirrels activity depends on the sunrise (can I analyse that?)
+
+    -   Squirrels avoid a garden when a cat has visited it. Raccoons, martens and foxes are rather nocturnal, thus there is no particularly long waiting time to be expected
+
+        Or: squirrels generally avoid gardens where potential predators are present (even if some are nocturnal)
+
+    -   Squirrel activity is higher in areas with higher distance to roads (or on the contrary, less activity is observed there, as they tend to move to open green areas
+
+    -   Squirrel acitivty is higher in areas with high tree coverage
+
+    -   Fence height, compost have no effect
+
+    -   Less acitivty in areas with higher noise level, traffic volume, human population density, imperviousness (but I think many of them are correlated)
+
+    -   Garden size ? I am not sure...
+
+-   Check literature: which environmental covariates are used in other studies?
+
+-   Plots for the environmental covariates and the number of pictures - how does the number of pictures change with tree cover, fence height, etc.
+
+-   Add a column for the season (spring vs autumn) - then I have to rename the column season (1-5) maybe to project_phase (according to the table with env covariates of the camera stations)
+
+    -   
+
+-   Plot of the camera stations
+
+-   Marius: calculates the distance to border with focal mean + correlation tests of the environmental covariates
+
+-   ~~Julie: will send the table with more covariates (pets, tree composition etc.)~~
+
+#### Other notes
+
+Resolution of the environmental data should be 100m
+
+Julie made the activity plots with ggplot
+
+Ideas: Can I calculate the mean activity hour per season with group_by(species, season) %\>% summarize(mean_time = mean(Time))?????
+
+**End of February**: First draft of the manuscript
+
+## 31.10.2022
+
+### General information
+
+**Date**: 31.10.2022\
+**Author**: Sinah Drenske\
+**Entry Type**: Meeting notes\
+**TRACE tag**: Other\
+**Keywords**: Meeting, Text\
+**Title**: Meeting with Aimara and Marius\
+**Overview**:\
+**Files**: C:\\Users\\drenske\\Nextcloud\\Projects\\sciurus_vulgaris_b\_cttemp_drenske_s\\docs\\literature
+
+### Specific details
+
+#### Caveats/Possible problems
+
+-   Check the time zone of the camera traps (table?)
+-   Plot all camera traps: Are all in Berlin?
+-   correlation of environmental covariates (Script + Data by **Marius**)
+-   nr pictures independent? They are not. Run models with a) all pictures and b) only pictures where there are 30mins between 2 pictures of a squirrel
+
+#### To Do Part1: General description
+
+-   Data: WTimpact, autumn 2018-autumn 2020, 5 seasons
+
+1.  Summaries:\
+    Per season: Nr pictures per season, activity patterns (peak time, nr pictures over the day), average for all individuals per season
+    1.  For now especially for squirrels
+
+    2.  Later for the predators (fox, cat, raccoon, marten)
+2.  Test:
+    1.  Check the Japanese Paper (Uchida et al. 2016)
+
+    2.  Activity \~ season + covid + environmental covariates (tree cover, garden type, ...)
+
+        1.  Environmental covariates: garden scale + urban scale (100m)
+
+        2.  Define activity: Check Japanese Paper (peak activity time or nr of pictures)
+
+#### To Do Part2: Daily patterns
+
+-   Try to include each predator on its own in the models, do not pool them. If we have enough data of a species. If we have not enough data of species - pool them together as predators
+
+-   test: activity (nr pictures) \~ season + covid + (presence of predator OR, if we have enough data, presence of fox + cat + marten + raccoon) + (1 \| ID camera trap)
+
+    -   Presence of a predator/species: time after a squirrel visits a garden after a predator was there - night before
+
+        -   night: 9pm-5am, day: 5am-9pm
+
+        -   predator morning: 5am-9am
+
+        -   include night + morning as different variables in the model. if that does not work, we try it in different models
+
+-   test: time spent (maybe same as nr pictures) \~ minutes to sunrise + season + covid + presence of predator in the night/ or if there is enough data: presence of fox, cat, marten, raccoon) + presence of poredator in the morning + (1\|ID -- garden = camera trap ID)
+
+-   time of delay (Julies Paper): Here, there should be an interval of at least 30 minutes between images of the same species.
+
+    -   Analysis on a daily basis (reset on midnight)
+
+    -   Squirrel - first species after the squirrel = time since predator
+
+    -   Predator - squirrel = time to predator
+
+    -   Squirrel - squirrel = Time to next squirrel, at least 30 minutes
+
+    -   Model: time of delay \~ Fox + squirrel + marten + cat + raccoon + (1 \| ID camera trap)
+
+#### Time frame
+
+Next meeting: 16.11. (wednesday) Seasonal analyses finished (general part + summaries)
+
+Mid January: Finish data analysis
+
+31.03.2023: Submit article
+
+## 27.10.2022
+
+### General information
+
+**Date**: 27.10.2022\
+**Author**: Sinah Drenske\
+**Entry Type**: Text\
+**TRACE tag**: Other\
+**Keywords**: Meeting, Text\
+**Title**: Submitting the abstract\
+**Overview**:\
+**Files**: C:\\Users\\drenske\\Nextcloud\\Projects\\sciurus_vulgaris_b\_cttemp_drenske_s\\docs\\manuscript\\Drenske_et_al-2023-Activity_Squirrels_20221025_SUBMIT
+
+### Specific details
+
+I submitted the preliminary abstract :)...
+
+## 19.10.2022
+
+### General information
+
+**Date**: 19.10.2022\
+**Author**: Sinah Drenske\
+**Entry Type**: Meeting notes\
+**TRACE tag**: Other\
+**Keywords**: Meeting, Text\
+**Title**: Meeting with Aimara for the Abstract for FEE\
+**Overview**:\
+**Files**: C:\\Users\\drenske\\Nextcloud\\Projects\\sciurus_vulgaris_b\_cttemp_drenske_s\\docs\\manuscript\\Drenske_et_al-2023-Activity_Squirrels_20221025_SUBMIT
+
+### Specific details
+
+Activity of Squirrels in urban environments
+
+1.  General description -\> (average per) season -\> Breeding season vs. winter preparation season + Environmental covariates
+
+<!-- -->
+
+a.  and everything for the potential predators (marten, raccoon, fox, cats)
+
+<!-- -->
+
+2.  Daily patterns -\> interactions -\> squirrels + potential predators
+
+<!-- -->
+
+a.  Intensity, peak activity, time
+
+b.  Time of delay: squirrel -- squirrel, squirrel -- predator
+
+**Leading to the following research questions**
+
+1 We investigate seasonal differences of activity patterns of red squirrels in the urban environment
+
+2 And how urbanization alters species interactions with potential predators, determining niche partitioning
+
 ## 13.08.2022
 
 ### General information
 
 **Date**:13.08.2022\
 **Author**: Sinah Drenske\
+**Entry Type**: Code\
 **TRACE tag**:\
 **Keywords**:\
 **Title**:\
@@ -109,12 +320,13 @@ XYZ...
 
 QUestion: Script 02, function calculate_delta, part with diff & difftime: why do we calculate negative differences? Why the first picture - later picute and not later picture - picture before?
 
-## 03.08.2022
+## 03.08.2022.
 
 ### General information
 
 **Date**:03.08.2022\
 **Author**: Sinah Drenske\
+**Entry Type**: Code\
 **TRACE tag**:\
 **Keywords**:\
 **Title**: Preparation of the temporal analyses\
@@ -135,6 +347,7 @@ Idea: replace German species names directly at the beginning in Script 01. Then 
 
 **Date**: 02.08.2022\
 **Author**: Sinah Drenske\
+**Entry Type**: Code\
 **TRACE tag**:\
 **Keywords**:\
 **Title**: Refreshing memories\
@@ -147,13 +360,11 @@ I want to get familiar again with the data and the scripts and to continue my wo
 
 Decision: For now I will not work on datasets for the jsdm (because I am not sure if we will develop one for this study)
 
-Ideas: defining time windows depending on the hour of the day (for example: 04-10 am - morning, 10-3pm - noon, 3-7pm - afternoon, 7-11pm - evening, 11pm-04am - night)
-Characterise the stations better - where are they, what are the characteristics and so on. Because if more stations are under specific conditions, we will of course see more animals there
+Ideas: defining time windows depending on the hour of the day (for example: 04-10 am - morning, 10-3pm - noon, 3-7pm - afternoon, 7-11pm - evening, 11pm-04am - night) Characterise the stations better - where are they, what are the characteristics and so on. Because if more stations are under specific conditions, we will of course see more animals there
 
 For all (study) species: define hours per day. When are they active?
 
-For squirrels (or all species?): activity during the seasons (ist aber auch eigentlich schon in einem der ersten plots vermerkt) Aber vielleicht genauer ansehen? Wann sind Eichhörnchen in den Seasons vor allem aktiv also zu welchen uhrzeiten? Gibt es da Unterschiede? 
-
+For squirrels (or all species?): activity during the seasons (ist aber auch eigentlich schon in einem der ersten plots vermerkt) Aber vielleicht genauer ansehen? Wann sind Eichhörnchen in den Seasons vor allem aktiv also zu welchen uhrzeiten? Gibt es da Unterschiede?
 
 ## 08.06.2022
 
@@ -161,16 +372,15 @@ For squirrels (or all species?): activity during the seasons (ist aber auch eige
 
 **Date**:08.06.2022\
 **Author**: Sinah Drenske\
+**Entry Type**: Labbook Setup\
 **TRACE tag**:\
-**Keywords**:Setup\
+**Keywords**: Setup\
 **Title**: Setting up the modelling notebook\
 **Overview**:Designing layout and structure of the modelling notebook\
 **Files**:
 
 ### Specific details
 
-I have started the modelling notebook and will now record all progress on this project here.
-Why did we choose the specific species?
-Squirrels are our study species and we choose each possible predator where we have data from even if the probability to get eaten by this animal is low. therefore we choose cats, martens, foxes and raccoons as possible predators
+I have started the modelling notebook and will now record all progress on this project here. Why did we choose the specific species? Squirrels are our study species and we choose each possible predator where we have data from even if the probability to get eaten by this animal is low. therefore we choose cats, martens, foxes and raccoons as possible predators
 
 ## TBA

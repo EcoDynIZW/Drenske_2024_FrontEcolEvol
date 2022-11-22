@@ -1,0 +1,225 @@
+---
+title: "Quick_test"
+author: "Sinah Drenske"
+date: "19 10 2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setup
+## Packages
+```{r packages, message=FALSE, warning=FALSE}
+## for non-CRAN packages please keep install instruction
+## but commented so it is not run each time, e.g.
+# devtools::install_github("EcoDynIZW/template")
+
+## libraries used in this script
+## please add ALL LIBRARIES NEEDED HERE
+## please remove libraries from the list that are not needed anymore 
+## at a later stage
+package.list=c("camtrapR",
+               "dplyr",
+               "evaluate",
+               "ggplot2",
+               "gdata",
+               "ggpubr",
+               "here",
+               "janitor",
+               "lubridate",
+               "maptools",
+               # "optimbase", maybe needed but has to be installed from the CRAN archive https://cran.r-project.org/web/packages/optimbase/index.html
+               "plyr",
+               "raster",
+               "readxl",
+               #"rgdal",
+               #"rgeos",
+               #"rjags",
+               "rlecuyer",
+               #"sf",
+               "showtext",
+               "skimr",
+               "snowfall",
+               #"sp",
+               "stringr",
+               "tidyverse",
+               "vroom"
+               )
+
+for (package in package.list) {
+  if (!require(package, character.only=T, quietly=T)) {
+    install.packages(package)
+    library(package, character.only=T)
+  }
+}
+
+```
+
+## Data
+```{r data}
+##Camera Traps detection histories
+
+#already formatted and filtered data with a delta of 30 mins
+CT_act_date_formated <- readRDS(here::here("data-raw", "r-raw","CT_act_allspecies_NoDelta_filtered2022_01_19.RDS"))
+```
+
+```{r}
+x <- 1:50
+case_when(
+  x %% 35 == 0 ~ "fizz buzz",
+  x %% 5 == 0 ~ "fizz",
+  x %% 7 == 0 ~ "buzz",
+  TRUE ~ as.character(x)
+)
+
+case_when()
+```
+```{r}
+test <- CT_cat2[19090:19110,]
+```
+
+```{r}
+test$Season2 <- ifelse(test = test$Date >= list_date_monthly[[3]][1] & test$Date <= list_date_monthly[[3]][2], 
+                      yes = 3, 
+                      no = 99 )
+
+
+case_when(
+  test$Date >= list_date_monthly[[3]][1] & Date <= list_date_monthly[[3]][2] ~ season == 3
+)
+```
+
+
+
+```{r}
+# table(CT_act_date_formated$Season)
+# table(CT_act_date_formated$Season, CT_act_date_formated$Species)
+```
+```{r}
+# all wildlife photos (nrow dataset)
+sum(12290,10990,11951,11589,15588)
+# sum photos of squirrels
+sum(996,152,687,276,1036)
+# mean number of photos during spring
+mean(c(152,276))
+# mean number of photos during autumn
+mean(c(996,687,1036))
+```
+```{r}
+CT_per_species <- CT_act_date_formated %>% 
+  group_by(Species) %>% 
+  summarise(count =  n())
+```
+
+
+```{r}
+# CT_per_species$Species[CT_per_species$Species == "Biber"] <- "Beaver"
+# CT_per_species$Species[CT_per_species$Species == "cat"] <- "Cat"
+# CT_per_species$Species[CT_per_species$Species == "Dachs"] <- "Badger"
+# CT_per_species$Species[CT_per_species$Species == "Eichhörnchen"] <- "Squirrel"
+# CT_per_species$Species[CT_per_species$Species == "Feldhasen"] <- "Hare"
+# CT_per_species$Species[CT_per_species$Species == "Igel"] <- "Hedgehog"
+# CT_per_species$Species[CT_per_species$Species == "Marder_(Baum-und_Steinmarder)"] <- "Marten"
+# CT_per_species$Species[CT_per_species$Species == "Maus"] <- "Mouse"
+# CT_per_species$Species[CT_per_species$Species == "Ratte"] <- "Rat"
+# CT_per_species$Species[CT_per_species$Species == "Reh"] <- "Deer"
+# CT_per_species$Species[CT_per_species$Species == "Rotfuchs"] <- "Red Fox"
+# CT_per_species$Species[CT_per_species$Species == "Waschbär"] <- "Raccoon"
+# CT_per_species$Species[CT_per_species$Species == "Wildkaninchen"] <- "Rabbit"
+# CT_per_species$Species[CT_per_species$Species == "Wildschwein"] <- "Wild Boar"
+```
+
+```{r}
+# Change species names to english and to begin with uppercase
+species_names <- unique(CT_act_date_formated$Species)
+CT_act_date_formated$Species[CT_act_date_formated$Species == species_names[1]  ] <- "Raccoon"
+CT_act_date_formated$Species[CT_act_date_formated$Species == species_names[2]  ] <- "Fox"
+CT_act_date_formated$Species[CT_act_date_formated$Species == species_names[3]  ] <- "Marten"
+CT_act_date_formated$Species[CT_act_date_formated$Species == species_names[4]  ] <- "Hedgehog"
+CT_act_date_formated$Species[CT_act_date_formated$Species == species_names[5]  ] <- "Cat"
+CT_act_date_formated$Species[CT_act_date_formated$Species == species_names[6]  ] <- "Squirrel"
+CT_act_date_formated$Species[CT_act_date_formated$Species == species_names[7]  ] <- "Deer"
+CT_act_date_formated$Species[CT_act_date_formated$Species == species_names[8]  ] <- "Rat"
+CT_act_date_formated$Species[CT_act_date_formated$Species == species_names[9]  ] <- "Badger"
+CT_act_date_formated$Species[CT_act_date_formated$Species == species_names[10]  ] <- "Boar"
+CT_act_date_formated$Species[CT_act_date_formated$Species == species_names[11]  ] <- "Mouse"
+CT_act_date_formated$Species[CT_act_date_formated$Species == species_names[12]  ] <- "Rabbit"
+CT_act_date_formated$Species[CT_act_date_formated$Species == species_names[13] ] <- "Beaver"
+CT_act_date_formated$Species[CT_act_date_formated$Species == species_names[14] ] <- "Hare"
+
+```
+
+```{r}
+ggplot(data = CT_act_date_formated, mapping = aes(x = Species)) + 
+  geom_bar()
+
+ggdotchart(data = CT_per_species, x = "Species", y = "count", 
+           sorting = "descending")
+```
+```{r}
+#ggdotchart(data = CT_per_species, x = "Species", y = "count", 
+#           sorting = "descending")
+
+ggdotchart(data = CT_per_species, x = "Species", y = "count", 
+           sorting = "descending", 
+           ylab = "Nr pictures",
+           shape = 19, 
+           dot.size = 5,
+           add = "segments", 
+           add.params = list(color = "lightgray", size = 2), 
+           color = "Species",
+           #palette = "magma",
+           rotate = FALSE, 
+           show.legend = FALSE, 
+           ggtheme = theme_pubr()) + 
+  theme(legend.position = "none", 
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", size = 1)) + 
+  labs_pubr() + 
+  scale_colour_ochre(palette="emu_woman_paired")  
+
+#ggsave(filename = here::here("plots", "pics_per_species.png"))
+```
+
+
+# Activity plots
+## overall
+```{r}
+# All data
+activityRadial(recordTable = CT_act_date_formated, species = "Eichhörnchen", lwd = 3)
+activityRadial(recordTable = CT_act_date_formated, species = "Eichhörnchen", lwd = 3, rp.type = "p", poly.col = gray(0.5, alpha = 0.5))
+
+
+```
+
+## per season
+```{r}
+CT_data_per_season <- split(x = CT_act_date_formated, f = CT_act_date_formated$Season)
+CT_data_season1 <- as.data.frame(CT_data_per_season[[1]])
+CT_data_season2 <- as.data.frame(CT_data_per_season[[2]])
+CT_data_season3 <- as.data.frame(CT_data_per_season[[3]])
+CT_data_season4 <- as.data.frame(CT_data_per_season[[4]])
+CT_data_season5 <- as.data.frame(CT_data_per_season[[5]])
+```
+
+```{r}
+activityRadial(recordTable = CT_data_season1, 
+               species = "Eichhörnchen", 
+               speciesCol = "Species",
+               rp.type = "r",
+               #labels = NULL,
+               main = "Hello",
+               lwd = 3)
+```
+
+
+```{r}
+activityRadial(recordTable = CT_data_season1, species = "Eichhörnchen", lwd = 3)
+activityRadial(recordTable = CT_data_season2, species = "Eichhörnchen", lwd = 3)
+activityRadial(recordTable = CT_data_season3, species = "Eichhörnchen", lwd = 3)
+activityRadial(recordTable = CT_data_season4, species = "Eichhörnchen", lwd = 3)
+activityRadial(recordTable = CT_data_season5, species = "Eichhörnchen", lwd = 3)
+```
+

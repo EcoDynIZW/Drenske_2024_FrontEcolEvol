@@ -9,7 +9,7 @@
 .Ruserdata
 
 # Specific file formats
-*.doc
+*.doc*
 *.pptx
 *.xls*
 *.tif
