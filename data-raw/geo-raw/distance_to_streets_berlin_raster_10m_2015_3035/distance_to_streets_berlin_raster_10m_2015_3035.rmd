@@ -1,0 +1,131 @@
+---
+title: "distance to streets berlin 2010" ## name of your project
+author: "Moritz Wenzler"                     ## your name(s)
+date: "`r Sys.Date()`"                  ## current date
+output:
+  rmdformats::readthedown:
+    code_folding: hide                  ## hide or show code by default?
+    toc_depth: 3                        ## 3-level TOC
+---
+
+```{r setup, include=FALSE}
+## You can ignore this chunk in most cases
+## If you want to modify chunk options, you can do it here for all chunks or
+## add the options in the repsective chunk header, e.g. `{r, message = FALSE}`
+knitr::opts_chunk$set(echo = TRUE, warning = TRUE, message = TRUE,
+                      fig.width = 9, fig.height = 6, dpi = 500, 
+                      retina = 1, fig.showtext = TRUE)
+```
+
+* **Research question:**
+* **Study area:**
+* **Data:** 
+
+
+# Setup
+
+```{r packages}
+sapply(list("sf", "tidyverse", "raster", "ows4R", "here"), 
+       library, character.only = TRUE, logical.return = TRUE)
+
+source(here("R", "download_fisbroker_metadata.R"))
+```
+
+
+# Data
+
+```{r data}
+streets_3542 <- st_read(here("data-raw", "germany", "Roads_germany_2015_03035_XXX_shp", "c3542", 
+                   "ver01_l.shp")) %>% mutate(ras = 1) %>% st_transform(3035)
+streets_3546 <- st_read(here("data-raw", "germany", "Roads_germany_2015_03035_XXX_shp", "c3546", 
+                   "ver01_l.shp")) %>% mutate(ras = 1) %>% st_transform(3035)
+streets_3942 <- st_read(here("data-raw", "germany", "Roads_germany_2015_03035_XXX_shp", "c3942", 
+                   "ver01_l.shp")) %>% mutate(ras = 1) %>% st_transform(3035)
+streets_3946 <- st_read(here("data-raw", "germany", "Roads_germany_2015_03035_XXX_shp", "c3946", 
+                   "ver01_l.shp")) %>% mutate(ras = 1) %>% st_transform(3035)
+
+berlin_district <- st_read(here("data-raw", "berlin", "berlin_districts_2020_3035", "berlin_districts_2020_3035.gpkg"))
+
+temp_ras <- raster(here("data-proc", "berlin", "template_raster_berlin_10m_2020_3035", "template_raster_berlin_10m_2020_3035.tif"))
+
+temp_ras_20 <- merge(raster(here("data-raw", "europe",
+                            "ForestType_europe_2015_20m_03035_Copernicus_tif", 
+                            "FTY_2015_020m_eu_03035_d04_E40N30.tif")),
+                      raster(here("data-raw", "europe",
+                            "ForestType_europe_2015_20m_03035_Copernicus_tif", 
+                            "FTY_2015_020m_eu_03035_d04_E40N20.tif")))
+values(temp_ras_20) <- NA
+
+ext_b <- extent(c(st_bbox(streets_3942)$xmin[[1]],
+                st_bbox(streets_3546)$xmax[[1]], 
+                st_bbox(streets_3942)$ymin[[1]],
+                st_bbox(streets_3546)$ymax[[1]]))
+
+temp_ras_20_c <- crop(temp_ras_20, ext_b)
+
+temp_ras_10 <- raster::disaggregate(temp_ras_20_c, 2)
+
+ras_3542 <- raster::rasterize(x = streets_3542 %>% as("Spatial"),
+                            y = temp_ras,
+                                   field = "ras")
+ras_3546 <- raster::rasterize(x = streets_3546 %>% as("Spatial"),
+                            y = temp_ras,
+                                   field = "ras")
+ras_3942 <- raster::rasterize(x = streets_3942 %>% as("Spatial"),
+                            y = temp_ras,
+                                   field = "ras")
+ras_3946 <- raster::rasterize(x = streets_3946 %>% as("Spatial"),
+                            y = temp_ras,
+                                   field = "ras")
+
+ras_l <- list(ras_3542, ras_3546, ras_3942, ras_3946)
+
+  beginCluster(15)
+  ras_m <- do.call(raster::merge, ras_l)
+  endCluster()
+
+  beginCluster(15)
+  dist_b<- clusterR(ras_m, 
+                             raster::distance,
+                             progress = "text")
+   endCluster()
+
+plot(dist_b)
+
+dist_b_mask <- raster::mask(x = dist_b, 
+                                 mask = berlin_district,
+                                 updatevalue = NA
+                                 )
+plot(dist_b_mask)
+
+create_meta_raster(dist_b_mask, 
+                   name = "distance_to_streets_berlin_raster_10m",
+                   date = "2015",
+                   epsg = "3035",
+                   units = "m",
+                   descr = NA,
+                   orig_source = NA,
+                   data_source = here("data-raw", "berlin", "Roads_germany_2015_03035_XXX_shp"),
+                   d_down = NA,
+                   mod = "values outside of Berlin borders where set to NA",
+                   path = "data-proc/berlin",
+                   folder = TRUE)
+
+writeRaster(dist_b_mask, here("data-proc", "berlin", "distance_to_streets_berlin_raster_10m_2015_3035", "distance_to_streets_berlin_raster_10m_2015_3035.tif"), overwrite = TRUE)
+```
+
+
+***
+
+<details><summary>Session Info</summary>
+
+```{r sessionInfo}
+## DO NOT REMOVE!
+## We store the settings of your computer and the current versions of the
+## packages used to allow for reproducibility
+Sys.time()
+#git2r::repository() ## uncomment if you are using GitHub
+sessionInfo()
+```
+
+</details>

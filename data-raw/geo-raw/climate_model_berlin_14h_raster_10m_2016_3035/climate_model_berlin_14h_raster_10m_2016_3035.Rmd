@@ -1,0 +1,80 @@
+---
+title: "reproject and resample climate model 14h raster berlin" ## name of your project
+author: "Moritz Wenzler"                     ## your name(s)
+date: "`r Sys.Date()`"                  ## current date
+output:
+  rmdformats::readthedown:
+    code_folding: hide                  ## hide or show code by default?
+    toc_depth: 3                        ## 3-level TOC
+---
+
+```{r setup, include=FALSE}
+## You can ignore this chunk in most cases
+## If you want to modify chunk options, you can do it here for all chunks or
+## add the options in the repsective chunk header, e.g. `{r, message = FALSE}`
+knitr::opts_chunk$set(echo = TRUE, warning = TRUE, message = TRUE,
+                      fig.width = 9, fig.height = 6, dpi = 500, 
+                      retina = 1, fig.showtext = TRUE)
+```
+
+* **Research question:**
+* **Study area:**
+* **Data:** 
+
+
+# Setup
+
+```{r packages}
+sapply(list("sf", "tidyverse", "raster", "ows4R"), 
+       library, character.only = TRUE, logical.return = TRUE)
+
+source(here("R", "download_fisbroker_metadata.R"))
+```
+
+
+# Data
+
+```{r data}
+temp_14 <- raster(here("data-raw", "berlin", "climate_model_berlin_14h_2016_25833", "t2m14h", "t2m14h.tif"))
+
+crs(temp_14) <- st_crs(25833)$proj4string
+
+dummy_ras <- raster(here("data-proc", "berlin", 
+                                   "dummy_raster_berlin_10m_2020_3035",
+                                   "dummy_raster_berlin_10m_2020_3035.tif"))
+
+temp_14_3035 <- projectRaster(temp_14, dummy_ras)
+
+temp_14_3035_res <- resample(temp_14_3035, dummy_ras)
+
+create_meta_raster(file = temp_14_3035_res,
+                   name = "climate_model_berlin_14h",
+                   epsg = "3035",
+                   date = "2016",
+                   units = "°C in 2 m height",
+                   descr = "reprojected to 3035 and resampled",
+                   source = here("data-raw", "berlin", "climate_model_berlin_14h_2016_25833", "t2m14h", "t2m14h.tif"),
+                   d_down = NA,
+                   mod = "reprojected to 3035 and resampled",
+                   path = "data-proc/berlin",
+                   folder = TRUE)
+
+writeRaster(temp_14_3035_res, here("data-proc", "berlin", "climate_model_berlin_14h_2016_3035", "climate_model_berlin_14h_2016_3035.tif"))
+
+```
+
+
+***
+
+<details><summary>Session Info</summary>
+
+```{r sessionInfo}
+## DO NOT REMOVE!
+## We store the settings of your computer and the current versions of the
+## packages used to allow for reproducibility
+Sys.time()
+#git2r::repository() ## uncomment if you are using GitHub
+sessionInfo()
+```
+
+</details>

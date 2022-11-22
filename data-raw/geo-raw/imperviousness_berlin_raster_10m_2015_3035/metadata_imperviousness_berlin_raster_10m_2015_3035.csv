@@ -1,0 +1,2 @@
+"","Name","CRS","EPSG","resolution","year_of_data","short_description","units_of_data","source","date_of_download","modified"
+"1","imperviousness_berlin_raster_10m","+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs","3035",10,"2015",NA,"percentage of imperviousness per cell","C:/Users/wenzler/PopDynIZW Dropbox/GeoData/data-raw/berlin/landuse_imperviousness_berlin_2015_3035/landuse_imperviousness_berlin_2015_3035.gpkg",NA,"NAs (zero values) inside Berlin borders where set to 0"

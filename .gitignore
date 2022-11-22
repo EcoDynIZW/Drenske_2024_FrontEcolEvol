@@ -12,6 +12,7 @@
 *.doc
 *.pptx
 *.xls*
+*.tif
 
 # Temporary files
 *.utf8.md

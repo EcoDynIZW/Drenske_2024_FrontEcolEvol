@@ -1,0 +1,2 @@
+"","Name","CRS","EPSG","resolution","year_of_data","short_description","units_of_data","data_source","orig_source","date_of_download","modified"
+"1","template_raster_berlin_10m","+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs","3035",10,"2020","template raster for Berlin in 10m resolution and in 3035 projection",NA,NA,NA,NA,NA
