@@ -1,2 +1,0 @@
-"","Name","CRS","EPSG","resolution","year_of_data","short_description","units_of_data","data_source","orig_source","date_of_download","modified"
-"1","distance_to_streets_berlin_raster_10m","+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs","3035",10,"2015",NA,"m","C:/Users/wenzler/PopDynIZW Dropbox/GeoData/data-raw/berlin/Roads_germany_2015_03035_XXX_shp",NA,NA,"values outside of Berlin borders where set to NA"
