@@ -1,0 +1,90 @@
+---
+title: "tmp"
+author: "Aimara Planillo"
+date: '2022-11-23'
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(dplyr)
+library(lubridate)
+```
+
+# times and weekdays
+
+```{r load data}
+data <- read.csv("resting_example.csv")
+
+head(data)
+str(data)
+```
+
+When R loads data from a csv, usually interprets the date-time columns as character.
+To work with them, we need:
+1. Give the correct "datetime" format
+2. Assign the correct time zone that it was taken
+3. Operate
+
+
+```{r format data}
+## this data was originally recorded in UTC, thus we specify this in the call, or the computer might take the system time
+data_times <- data %>% 
+  mutate(animals_id = as.factor(as.character(animals_id)),
+         # add formatted dates and times
+         timestamp = as_datetime(timestamp, tz = "UTC"), # this assigns the time zone UTC to the data
+         time_CentralEurope = as_datetime(timestamp,tz = "Europe/Berlin"),  # this assignes the time zone Berlin to the data
+         
+         #get only dates
+         date_UTC = as_date(timestamp), # date based on the utc times
+         date_CE = as_date(time_CentralEurope), # date based on the berlin times
+         # get times
+         time = strftime(timestamp, format="%H:%M:%S"),
+         time_CE = strftime(time_CentralEurope, format="%H:%M:%S"),
+         # get hour
+         hour = strftime(timestamp, format = "%H"), 
+         hour_CE = strftime(time_CentralEurope, format = "%H"))
+```
+
+```{r get day of the week}
+data_times_day <- data_times %>% 
+  mutate(# Assign week day with week start: Monday
+         weekday_number = lubridate::wday(timestamp, 
+                                   week_start = getOption("lubridate.week.start", 1),
+                                   locale = "UTC",
+                                   abbr = FALSE,
+                                   label = FALSE),
+         weekday_name_system = lubridate::wday(timestamp, 
+                                   week_start = getOption("lubridate.week.start", 1),
+                                   abbr = FALSE,
+                                   label = TRUE),
+         weekday_name_english = lubridate::wday(timestamp, 
+                                   week_start = getOption("lubridate.week.start", 1),
+                                   locale = "English_United Kingdom", ## give language to computer, example english in windows
+                                   abbr = FALSE,
+                                   label = TRUE),
+         weekday_name_german = lubridate::wday(timestamp, 
+                                   week_start = getOption("lubridate.week.start", 1),
+                                   locale = "German_Germany", ## german in Windows (englished based)
+                                   abbr = FALSE,
+                                   label = TRUE)
+         ) %>% 
+  ## transform the numbers into strings
+  mutate(weekday_basedon_number = case_when(
+    weekday_number == 1 ~ "Monday_Montag",
+    weekday_number == 2 ~ "Tuesday_Dienstag",
+    weekday_number == 3 ~ "Wednesday_Mittwoch",
+    weekday_number == 4 ~ "Thursday_Donnerstag",
+    weekday_number == 5 ~ "Friday_Freitag",
+    weekday_number == 6 ~ "Saturday_Samstag",
+    weekday_number == 7 ~ "Sunday_Sonntag"))
+
+data_times_day
+```
+

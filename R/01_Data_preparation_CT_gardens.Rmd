@@ -1,0 +1,1028 @@
+---
+title: "Squirrel activity: Data Preparation" ## name of your project and analysis step
+description: |
+    The aim of this study is...
+author:
+    ## author information; single arguemnts can be deleted if not needed
+    - name: "Sinah Drenske"
+      url: https://izw-berlin.de/en/john-smith-en.html  
+      affiliation: Leibniz Institute for Zoo and Wildlife Research, Technical University Berlin
+      affiliation_url: https://izw-berlin.de/en/
+      orcid_id: 0000-0000-0000-0000
+    - name: "Julie"
+      url: https://janedoe.com
+      affiliation: Leibniz Institute for Zoo and Wildlife Research
+      affiliation_url: https://izw-berlin.de/en/
+      orcid_id: 0000-0000-0000-0000
+    - name: "Stephanie Kramer-Schadt"
+      url: https://janedoe.com
+      affiliation: Leibniz Institute for Zoo and Wildlife Research, Technical University Berlin
+      affiliation_url: https://izw-berlin.de/en/
+      orcid_id: 0000-0000-0000-0000
+    ## add more authors with the same intendation and styling if needed 
+    ## a new author always starts with a hyphen!
+date: "`r Sys.Date()`"
+output: 
+    distill::distill_article:
+        highlight: kate      ## styling of code
+        code_folding: true  ## if `true` you can expand and shrink code chunks
+        toc: true            ## if `true` adds a table of content
+        toc_depth: 2         ## level to be displayed in the table of content
+---
+
+* **Research question:**
+* **Study area:**
+* **Data:** Already filtered data used by Julie .... in "...."
+
+
+# Setup
+```{r packages, message=FALSE, warning=FALSE}
+# Please install the package librarian, it loads and installs (if necessary) the specified packages from CRAN, GitHub or Bioconductor
+
+#devtools::install_github("DesiQuintans/librarian")
+librarian::shelf(#camtrapR,
+                 #dplyr,
+                 #evaluate, 
+                 gdata, 
+                 #ggplot2, 
+                 ggpubr, 
+                 here, 
+                 #janitor, 
+                 lubridate, 
+                 #maptools, 
+                 ropenscilabs / ochRe,
+                 # "optimbase", maybe needed but has to be installed from the CRAN archive https://cran.r-project.org/web/packages/optimbase/index.html
+                 plyr,
+                 raster,
+                 readxl, 
+                 #rgdal, 
+                 #rgeos, 
+                 #rjags, 
+                 #rlecuyer, 
+                 #sf, 
+                 #showtext, 
+                 skimr, 
+                 #snowfall, 
+                 #sp, 
+                 stringr, 
+                 tidyverse, 
+                 vroom
+                 )
+```
+
+# Data
+```{r data}
+##Camera Traps detection histories
+#loading the environmental variables and using only the user IDs that are within the cov table
+stacked_raster_values_and_garden_CT_all_seasons_no_nas <- readRDS(here::here("data-raw", "r-raw", "stacked_raster_values_and_garden_CT_all_seasons_allcovs_Renamed2022_01_19.RDS"))
+
+#already formatted and filtered data 
+CT_act_date_formated <- readRDS(here::here("data-raw", "r-raw","CT_act_allspecies_NoDelta_filtered2022_01_19.RDS"))
+
+## raw data of ALL variables of the gardens (we will extract some columns for additional explanatory variables)
+all_garden_vars_pics_all_seasons <- vroom(here::here("data-raw", "r-raw", "mammals_de_b_camtrap_wtimpact_20210208.csv"))
+```
+
+## Format environmental data
+Some columns exist twice - once in German and once in English. We delete the German ones
+Column 2 (project phase) has some mistakes, we delete it
+```{r}
+stacked_raster_values_and_garden_CT_all_seasons_no_nas <- stacked_raster_values_and_garden_CT_all_seasons_no_nas[, -(2:7)]
+stacked_raster_values_and_garden_CT_all_seasons_no_nas <- droplevels(stacked_raster_values_and_garden_CT_all_seasons_no_nas)
+```
+
+
+### Change german names to english
+```{r}
+# garden type
+table(stacked_raster_values_and_garden_CT_all_seasons_no_nas$garden_type)
+stacked_raster_values_and_garden_CT_all_seasons_no_nas$garden_type[stacked_raster_values_and_garden_CT_all_seasons_no_nas$garden_type == "Wohngrundstueck"] <- "garden"
+stacked_raster_values_and_garden_CT_all_seasons_no_nas$garden_type[stacked_raster_values_and_garden_CT_all_seasons_no_nas$garden_type == "Kleingarten"] <- "allotment"
+table(stacked_raster_values_and_garden_CT_all_seasons_no_nas$garden_type)
+# compost type
+table(stacked_raster_values_and_garden_CT_all_seasons_no_nas$compost)
+stacked_raster_values_and_garden_CT_all_seasons_no_nas$compost[stacked_raster_values_and_garden_CT_all_seasons_no_nas$compost == "Offen"] <- "open"
+stacked_raster_values_and_garden_CT_all_seasons_no_nas$compost[stacked_raster_values_and_garden_CT_all_seasons_no_nas$compost == "Geschlossen"] <- "closed"
+stacked_raster_values_and_garden_CT_all_seasons_no_nas$compost[stacked_raster_values_and_garden_CT_all_seasons_no_nas$compost == "Keiner"] <- "none"
+table(stacked_raster_values_and_garden_CT_all_seasons_no_nas$compost)
+```
+
+
+## Format environmental data including ALL variables
+### Reduce the number of rows to one row per station
+```{r}
+unique_all_garden_vars <- unique(all_garden_vars_pics_all_seasons[, c(13:15, 26:30)])
+```
+
+### Define new variables
+#### dogs_binary
+If a pet is present at the station, regardless of whether the pet is always outside or only during the day, it is a 1, otherwise a 0.
+
+```{r}
+unique_all_garden_vars$dogs_binary <- 
+  ifelse(test = unique_all_garden_vars$haustiere_Hund == "Nachts_Haus" | unique_all_garden_vars$haustiere_Hund == "Immer_Freigang", 
+         yes = 1, 
+         no = 0)
+```
+
+
+#### cats_binary
+```{r}
+unique_all_garden_vars$cats_binary <- 
+  ifelse(test = unique_all_garden_vars$haustiere_Katze == "Nachts_Haus" | unique_all_garden_vars$haustiere_Katze == "Immer_Freigang", 
+         yes = 1, 
+         no = 0)
+```
+
+#### trees_of_interest
+```{r}
+unique_all_garden_vars$trees_of_interest <- 
+  ifelse(test = unique_all_garden_vars$baeume_Buchen == "Ja" | unique_all_garden_vars$baeume_Eichen == "Ja" | 
+                unique_all_garden_vars$baeume_Nadelbaueme == "Ja" | unique_all_garden_vars$baeume_Nussbaueme == "Ja" | 
+                unique_all_garden_vars$baeume_Obstbaueme == "Ja", 
+         yes = 1, 
+         no = 0)
+```
+
+### combine this data set with the already filtered data sets
+```{r}
+stacked_raster_values_and_garden_CT_all_seasons_no_nas <- stacked_raster_values_and_garden_CT_all_seasons_no_nas %>%
+  left_join(y = unique_all_garden_vars[c(1,9:11)], by = c("Station" = "User_uid"))
+```
+
+### Change column types
+```{r}
+stacked_raster_values_and_garden_CT_all_seasons_no_nas <- 
+  stacked_raster_values_and_garden_CT_all_seasons_no_nas %>%
+  dplyr::mutate(across(.cols = c(garden_type, compost, dogs_binary, cats_binary, trees_of_interest),
+                       .fns =  as.factor))
+```
+
+
+## Format CT data
+### Rename species
+the species names are in german, we translate them to english
+```{r}
+unique(CT_act_date_formated$Species)
+```
+
+```{r}
+CT_act_date_formated$Species[CT_act_date_formated$Species == "Biber"] <- "Beaver"
+CT_act_date_formated$Species[CT_act_date_formated$Species == "cat"] <- "Cat"
+CT_act_date_formated$Species[CT_act_date_formated$Species == "Dachs"] <- "Badger"
+CT_act_date_formated$Species[CT_act_date_formated$Species == "Eichhörnchen"] <- "Squirrel"
+CT_act_date_formated$Species[CT_act_date_formated$Species == "Feldhasen"] <- "Hare"
+CT_act_date_formated$Species[CT_act_date_formated$Species == "Igel"] <- "Hedgehog"
+CT_act_date_formated$Species[CT_act_date_formated$Species == "Marder_(Baum-und_Steinmarder)"] <- "Marten"
+CT_act_date_formated$Species[CT_act_date_formated$Species == "Maus"] <- "Mouse"
+CT_act_date_formated$Species[CT_act_date_formated$Species == "Ratte"] <- "Rat"
+CT_act_date_formated$Species[CT_act_date_formated$Species == "Reh"] <- "Deer"
+CT_act_date_formated$Species[CT_act_date_formated$Species == "Rotfuchs"] <- "Red Fox"
+CT_act_date_formated$Species[CT_act_date_formated$Species == "Waschbär"] <- "Raccoon"
+CT_act_date_formated$Species[CT_act_date_formated$Species == "Wildkaninchen"] <- "Rabbit"
+CT_act_date_formated$Species[CT_act_date_formated$Species == "Wildschwein"] <- "Wild Boar"
+```
+
+### Reassign the project phases and seasons
+Unfortunately there was a mistake in the seasons column (now called project_phase). We reassign them
+```{r}
+#let's create a list that would contain the dates of beginning and end for each season
+list_date_monthly <- list()
+list_date_monthly[[1]] <- c(as.Date("2018-10-07"),
+                           as.Date("2018-11-04")) #P1
+list_date_monthly[[2]] <- c(as.Date("2019-04-01"),
+                           as.Date("2019-04-28")) #P2
+list_date_monthly[[3]] <- c(as.Date("2019-09-30"), 
+                           as.Date("2019-10-27")) #P3
+list_date_monthly[[4]] <- c(as.Date("2020-03-30"),
+                           as.Date("2020-04-26")) #P4
+list_date_monthly[[5]] <- c(as.Date("2020-09-28"), 
+                           as.Date("2020-10-26")) #P5
+```
+
+```{r}
+# Reassign the number of the project phase and rename the column
+CT_act_date_formated$project_phase <- 
+  # nested ifelse statements to assign the correct project phase. if the date when the picture was taken, is between the first 2 dates of the list, it is project phase 1, if not the next ifelse follows and so on
+  # Project phase 1
+  ifelse(test = CT_act_date_formated$Date >= list_date_monthly[[1]][1] & 
+                CT_act_date_formated$Date <= list_date_monthly[[1]][2], 
+         yes = 1, 
+         # Project phase 2
+         no = ifelse(test = CT_act_date_formated$Date >= list_date_monthly[[2]][1] & 
+                            CT_act_date_formated$Date <= list_date_monthly[[2]][2], 
+                     yes = 2, 
+                     # Project phase 3
+                     no = ifelse(test = CT_act_date_formated$Date >= list_date_monthly[[3]][1] & 
+                                        CT_act_date_formated$Date <= list_date_monthly[[3]][2], 
+                                 yes = 3, 
+                                 # Project phase 4
+                                 no = ifelse(test = CT_act_date_formated$Date >= list_date_monthly[[4]][1] & 
+                                                    CT_act_date_formated$Date <= list_date_monthly[[4]][2], 
+                                             yes = 4, 
+                                             # Project phase 5
+                                             no = ifelse(test = CT_act_date_formated$Date >= list_date_monthly[[5]][1] & 
+                                                                CT_act_date_formated$Date <= list_date_monthly[[5]][2], 
+                                                         yes = 5, 
+                                                         no = 99)))))
+
+# Compare the two columns. What changed?
+table(CT_act_date_formated$Season)
+table(CT_act_date_formated$project_phase)
+table(CT_act_date_formated$Season == CT_act_date_formated$project_phase) # 44 pictures were the project phase was wrong
+```
+
+```{r}
+CT_act_date_formated$Season <- ifelse(test = CT_act_date_formated$project_phase == 1 | 
+                                             CT_act_date_formated$project_phase == 3 | 
+                                             CT_act_date_formated$project_phase == 5, 
+                                      yes = "autumn", 
+                                      no = "spring")
+table(CT_act_date_formated$Season)
+```
+
+
+### Add a column for Covid-19 lockdowns
+In which seasons were there lockdowns? 4 and 5 (spring and autumn 2020)
+```{r}
+CT_act_date_formated$lockdown <- ifelse(test = CT_act_date_formated$project_phase == 4 | 
+                                               CT_act_date_formated$project_phase == 5, 
+                                        yes = 1, 
+                                        no =  0)
+
+table(CT_act_date_formated$lockdown)
+```
+
+### Separate weekdays and weekends
+```{r}
+# Set the locale to UTC, weeks start on Monday, show the day as number not with labels
+CT_act_date_formated <- CT_act_date_formated %>% 
+  mutate(date_wday = lubridate::wday(x = CT_act_date_formated$Date, 
+                                     week_start = getOption("lubridate.week.start", 1), 
+                                     locale = "UTC",
+                                     label = FALSE, 
+                                     abbr = FALSE)) %>% 
+#binary variable for weekdays or weekends: 0 for weekends, 1 for weekdays
+ dplyr::mutate(weekdays_binary = factor(ifelse(date_wday == "6"| date_wday == "7", "0", "1")))
+```
+
+### Remove rows with conflicted data
+#### Wrong coordinates or outside Berlin
+```{r}
+table(CT_act_date_formated$Station %in% stacked_raster_values_and_garden_CT_all_seasons_no_nas$Station)
+Ct_act_date_full <- CT_act_date_formated
+
+CT_act_data_wrong_station <- CT_act_date_formated[!(CT_act_date_formated$Station %in% stacked_raster_values_and_garden_CT_all_seasons_no_nas$Station), ]
+table(CT_act_data_wrong_station$Species)
+unique(CT_act_data_wrong_station$Station)
+
+CT_act_date_formated <- CT_act_date_formated[CT_act_date_formated$Station %in% stacked_raster_values_and_garden_CT_all_seasons_no_nas$Station, ] # 199 rows from wrong stations
+```
+
+#### Data from the same station in different seasons
+Is there data from a station in different seasons?
+```{r}
+CT_stations_phase <- CT_act_date_formated %>%
+  group_by(Station) %>%
+  summarise(count = n_distinct(project_phase))
+
+CT_stations_phase[which(CT_stations_phase$count > 1), ]
+
+# Station 1553 has data from different project phases. We do not know why, we will delete it
+```
+
+Are there strange values for the phases of different stations?
+```{r}
+options(max.print = 10000)
+table(CT_act_date_formated$Station, CT_act_date_formated$project_phase)
+
+# for stations 1769 and 1869 maybe wrong dates were specified. We delete them too
+```
+
+Remove the rows with conflicted information
+```{r}
+CT_act_data_wrong_station <- CT_act_date_formated
+length(which(CT_act_date_formated$Station == 1553))
+length(which(CT_act_date_formated$Station == 1769))
+length(which(CT_act_date_formated$Station == 1869))
+# we delete 100 rows
+
+CT_act_date_formated <- CT_act_date_formated %>% 
+  filter(Station != 1553 & Station != 1769 & Station != 1869)
+```
+
+Remove unnecessary stations from the table of the environmental variables
+```{r}
+stacked_raster_values_and_garden_CT_all_seasons_no_nas <- stacked_raster_values_and_garden_CT_all_seasons_no_nas %>% 
+  filter(Station != 1553 & Station != 1769 & Station != 1869)
+```
+
+
+### Filter by species of interest
+We do not consider all species in our analysis. The species that are not considered are removed from the dataset
+```{r}
+CT_species_interest <- CT_act_date_formated %>%
+  filter(Species == "Squirrel" | 
+           Species == "Cat" | 
+           Species == "Marten" | 
+           Species == "Raccoon" | 
+           Species == "Red Fox")
+```
+
+
+## Calculate time differences between pictures of the same species
+When the motion sensors of the cameras were triggered, several photos were taken. We delete all photos that were taken within one minute of the previous photo. Then we recalculate the time difference between the remaining photos.
+
+```{r}
+CT_species_interest_time <- CT_species_interest %>%
+  dplyr::group_by(Species, project_phase, Station) %>%
+  dplyr::arrange(DateTimeOriginal) %>% 
+  mutate(diff_samespecies = as.numeric(difftime(time1 = DateTimeOriginal, 
+                                                time2 = dplyr::lag(DateTimeOriginal), 
+                                                units = "mins"))) %>%
+  ungroup() %>%
+  mutate(diff_samespecies = case_when(
+    is.na(diff_samespecies) ~ 999, 
+    TRUE ~ diff_samespecies)) %>% 
+  group_by(project_phase, Station, Date) %>%
+  filter(diff_samespecies > 1) %>%
+  ungroup() %>%
+  dplyr::group_by(Species, project_phase, Station) %>%
+  dplyr::arrange(DateTimeOriginal) %>% 
+  mutate(diff_samespecies = as.numeric(difftime(time1 = DateTimeOriginal, 
+                                                time2 = dplyr::lag(DateTimeOriginal), 
+                                                units = "mins"))) %>%
+  ungroup() %>%
+  mutate(diff_samespecies = case_when(
+    is.na(diff_samespecies) ~ 999, 
+    TRUE ~ diff_samespecies)) %>% 
+  group_by(project_phase, Station, Date) %>%
+  filter(diff_samespecies > 1) %>%
+  ungroup()
+```
+
+## Change column types
+```{r}
+CT_species_interest_time <- 
+  CT_species_interest_time %>%
+  dplyr::mutate(across(.cols = c(Species, Season, weekdays_binary, project_phase, lockdown),
+                       .fns =  as.factor))
+```
+
+Add the project phase and lockdown to the table of the environmental variables
+```{r}
+stacked_raster_values_and_garden_CT_all_seasons_no_nas <- CT_act_date_formated[, c(2,3,7,8)] %>%
+  unique() %>%
+  right_join(y = stacked_raster_values_and_garden_CT_all_seasons_no_nas, by = "Station")
+```
+
+
+
+## Rearrange columns
+In bot the CT data and the environmental variables
+```{r}
+names(CT_species_interest_time)
+```
+
+```{r}
+CT_species_interest_time <- CT_species_interest_time %>%
+  dplyr::select(Species, Station, project_phase, Season, lockdown, DateTimeOriginal, Date, Time, diff_samespecies, date_wday,         weekdays_binary) %>%
+  dplyr::arrange(DateTimeOriginal)
+names(CT_species_interest_time)
+```
+
+```{r}
+names(stacked_raster_values_and_garden_CT_all_seasons_no_nas)
+```
+```{r}
+stacked_raster_values_and_garden_CT_all_seasons_no_nas <- stacked_raster_values_and_garden_CT_all_seasons_no_nas %>% 
+  dplyr::select(Station, project_phase, Season, lockdown, 
+                garden_type, garden_size, Local_tree_cover, fence_height, compost, dogs_binary, cats_binary, trees_of_interest, 
+                Lat, Long, inside, pop_100, dist_water_100, imperv_100, noise_100, tree_cover_100, distance_border, ) %>%
+  dplyr::arrange(Station)
+```
+
+
+# Data overview
+## Camera trap detection histories
+Project phase 1: Fall 2018 
+Project phase 2: Spring 2019
+Project phase 3: Fall 2019
+Project phase 4: Spring 2020
+Project phase 5: Fall 2020
+
+```{r}
+skim(CT_species_interest_time)
+```
+
+```{r}
+skim(CT_species_interest)
+```
+
+```{r}
+table(CT_species_interest$Species) 
+table(CT_species_interest_time$Species)
+
+# Difference
+table(CT_species_interest$Species) - table(CT_species_interest_time$Species)
+```
+
+## Environmental variables
+```{r}
+skim(stacked_raster_values_and_garden_CT_all_seasons_no_nas)
+```
+
+
+```{r}
+print("Garden types")
+table(stacked_raster_values_and_garden_CT_all_seasons_no_nas$garden_type)
+print("Compost types")
+table(stacked_raster_values_and_garden_CT_all_seasons_no_nas$compost)
+print("Compost types & garden types")
+table(stacked_raster_values_and_garden_CT_all_seasons_no_nas$compost, stacked_raster_values_and_garden_CT_all_seasons_no_nas$garden_type)
+print("Dogs")
+table(stacked_raster_values_and_garden_CT_all_seasons_no_nas$dogs_binary)
+print("Cats")
+table(stacked_raster_values_and_garden_CT_all_seasons_no_nas$cats_binary)
+print("Trees of interest")
+table(stacked_raster_values_and_garden_CT_all_seasons_no_nas$trees_of_interest)
+```
+
+# Build a combined table of CT data and evironmental data
+```{r}
+CT_species_interest_time <- CT_species_interest_time %>%
+  left_join(y = stacked_raster_values_and_garden_CT_all_seasons_no_nas[, c(1, 5:21)], by = "Station")
+```
+
+## Build a table only for squirrels
+```{r}
+CT_squirrels <- CT_species_interest_time %>%
+  filter(Species == "Squirrel")
+
+# and with a time difference of at least 30 minutes between squirrel pictures at the same station
+CT_squirrels_30min <- CT_squirrels %>%
+  filter(diff_samespecies > 30)
+```
+
+
+# - NOT USED - Dataset of the activity per Station per weekend or weekday 
+We calculated the activity (nr of photos per species) per station and divided if the photos were taken during the week or during the weekend
+
+```{r weekdays weekends}
+
+# #filter by date
+# P1 <- activity_data %>% filter(Date >= list_date_monthly[[1]][1] & Date <= list_date_monthly[[1]][2])
+# P2 <- activity_data %>% filter(Date >= list_date_monthly[[2]][1] & Date <= list_date_monthly[[2]][2])
+# P3 <- activity_data %>% filter(Date >= list_date_monthly[[3]][1] & Date <= list_date_monthly[[3]][2])
+# P4 <- activity_data %>% filter(Date >= list_date_monthly[[4]][1] & Date <= list_date_monthly[[4]][2])
+# P5 <- activity_data %>% filter(Date >= list_date_monthly[[5]][1] & Date <= list_date_monthly[[5]][2])
+# 
+# #separating for weekends and weekdays
+# P1_weekdays <- P1 %>% dplyr::filter(weekdays_binary == 1)
+# P1_weekends <- P1 %>% dplyr::filter(weekdays_binary == 0)
+# 
+# P2_weekdays <- P2 %>% dplyr::filter(weekdays_binary == 1)
+# P2_weekends <- P2 %>% dplyr::filter(weekdays_binary == 0)
+# 
+# P3_weekdays <- P3 %>% dplyr::filter(weekdays_binary == 1)
+# P3_weekends <- P3 %>% dplyr::filter(weekdays_binary == 0)
+# 
+# P4_weekdays <- P4 %>% dplyr::filter(weekdays_binary == 1)
+# P4_weekends <- P4 %>% dplyr::filter(weekdays_binary == 0)
+# 
+# P5_weekdays <- P5 %>% dplyr::filter(weekdays_binary == 1)
+# P5_weekends <- P5 %>% dplyr::filter(weekdays_binary == 0)
+```
+
+```{r activity function}
+#function for counting the number of pictures for each species
+# activity <- function(species, CT)
+# {
+#   CT_species <- CT %>% filter(Species == species)
+# 
+#   Unique_CT <- unique(CT_species$Station)
+#   l <- list(0)
+# 
+#   for(i in Unique_CT)
+#     {
+#       l[[which(Unique_CT == i)]] <- 
+#       nrow(CT_species %>% filter(Station == i)) 
+#      #% of pictures taken during the night
+#       names(l)[which(Unique_CT == i)] <- as.character(i)
+#        }
+#    x <- data.frame(unlist(l))
+#    x <- dplyr::rename(x, activity = unlist.l.)
+#    x <- x %>% mutate(User_uid = as.numeric(rownames(x)))
+#    x_covenv <- dplyr::inner_join(x = x,
+#                                  y = stacked_raster_values_and_garden_CT_all_seasons_no_nas, 
+#                                  by = c("User_uid" = "Station")) 
+#                 #merging with the covenv
+#    return(x_covenv)
+# 
+# }
+```
+
+## Create a table per species per phase/season per weekdays/weekend
+```{r table per species per season per weekends/weekdays}
+# ## P1
+# squirrel_P1_activity_weekdays <- activity("Squirrel", P1_weekdays) %>%
+#   mutate(species = "Squirrel", weekdays = 1)
+# squirrel_P1_activity_weekends <- activity("Squirrel", P1_weekends) %>%
+#   mutate(species = "Squirrel", weekdays = 0)
+# 
+# cat_P1_activity_weekdays <- activity("Cat", P1_weekdays) %>%
+#   mutate(species = "Cat", weekdays = 1)
+# cat_P1_activity_weekends <- activity("Cat", P1_weekends) %>%
+#   mutate(species = "Cat", weekdays = 0)
+# 
+# fox_P1_activity_weekdays <- activity("Red Fox", P1_weekdays) %>%
+#   mutate(species = "Red Fox", weekdays = 1)
+# fox_P1_activity_weekends <- activity("Red Fox", P1_weekends) %>%
+#   mutate(species = "Red Fox", weekdays = 0)
+# 
+# marten_P1_activity_weekdays <- activity("Marten", P1_weekdays) %>%
+#   mutate(species = "Marten", weekdays = 1)
+# marten_P1_activity_weekends <- activity("Marten", P1_weekends) %>%
+#   mutate(species = "Marten", weekdays = 0)
+# 
+# raccoon_P1_activity_weekdays <- activity("Raccoon", P1_weekdays) %>%
+#   mutate(species = "Raccoon", weekdays = 1)
+# raccoon_P1_activity_weekends <- activity("Raccoon", P1_weekends) %>%
+#   mutate(species = "Raccoon", weekdays = 0)
+# 
+# ## P2
+# squirrel_P2_activity_weekdays <- activity("Squirrel", P2_weekdays) %>%
+#   mutate(species = "Squirrel", weekdays = 1)
+# squirrel_P2_activity_weekends <- activity("Squirrel", P2_weekends) %>%
+#   mutate(species = "Squirrel", weekdays = 0)
+# 
+# cat_P2_activity_weekdays <- activity("Cat", P2_weekdays) %>%
+#   mutate(species = "Cat", weekdays = 1)
+# cat_P2_activity_weekends <- activity("Cat", P2_weekends) %>%
+#   mutate(species = "Cat", weekdays = 0)
+# 
+# fox_P2_activity_weekdays <- activity("Red Fox", P2_weekdays) %>%
+#   mutate(species = "Red Fox", weekdays = 1)
+# fox_P2_activity_weekends <- activity("Red Fox", P2_weekends) %>%
+#   mutate(species = "Red Fox", weekdays = 0)
+# 
+# marten_P2_activity_weekdays <- activity("Marten", P2_weekdays) %>%
+#   mutate(species = "Marten", weekdays = 1)
+# marten_P2_activity_weekends <- activity("Marten", P2_weekends) %>%
+#   mutate(species = "Marten", weekdays = 0)
+# 
+# raccoon_P2_activity_weekdays <- activity("Raccoon", P2_weekdays) %>%
+#   mutate(species = "Raccoon", weekdays = 1)
+# raccoon_P2_activity_weekends <- activity("Raccoon", P2_weekends) %>%
+#   mutate(species = "Raccoon", weekdays = 0)
+# 
+# ## P3
+# squirrel_P3_activity_weekdays <- activity("Squirrel", P3_weekdays) %>%
+#   mutate(species = "Squirrel", weekdays = 1)
+# squirrel_P3_activity_weekends <- activity("Squirrel", P3_weekends) %>%
+#   mutate(species = "Squirrel", weekdays = 0)
+# 
+# cat_P3_activity_weekdays <- activity("Cat", P3_weekdays) %>%
+#   mutate(species = "Cat", weekdays = 1)
+# cat_P3_activity_weekends <- activity("Cat", P3_weekends) %>%
+#   mutate(species = "Cat", weekdays = 0)
+# 
+# fox_P3_activity_weekdays <- activity("Red Fox", P3_weekdays) %>%
+#   mutate(species = "Red Fox", weekdays = 1)
+# fox_P3_activity_weekends <- activity("Red Fox", P3_weekends) %>%
+#   mutate(species = "Red Fox", weekdays = 0)
+# 
+# marten_P3_activity_weekdays <- activity("Marten", P3_weekdays) %>%
+#   mutate(species = "Marten", weekdays = 1)
+# marten_P3_activity_weekends <- activity("Marten", P3_weekends) %>%
+#   mutate(species = "Marten", weekdays = 0)
+# 
+# raccoon_P3_activity_weekdays <- activity("Raccoon", P3_weekdays) %>%
+#   mutate(species = "Raccoon", weekdays = 1)
+# raccoon_P3_activity_weekends <- activity("Raccoon", P3_weekends) %>%
+#   mutate(species = "Raccoon", weekdays = 0)
+# 
+# #P4
+# squirrel_P4_activity_weekdays <- activity("Squirrel", P4_weekdays) %>%
+#   mutate(species = "Squirrel", weekdays = 1)
+# squirrel_P4_activity_weekends <- activity("Squirrel", P4_weekends) %>%
+#   mutate(species = "Squirrel", weekdays = 0)
+# 
+# cat_P4_activity_weekdays <- activity("Cat", P4_weekdays) %>%
+#   mutate(species = "Cat", weekdays = 1)
+# cat_P4_activity_weekends <- activity("Cat", P4_weekends) %>%
+#   mutate(species = "Cat", weekdays = 0)
+# 
+# fox_P4_activity_weekdays <- activity("Red Fox", P4_weekdays) %>%
+#   mutate(species = "Red Fox", weekdays = 1)
+# fox_P4_activity_weekends <- activity("Red Fox", P4_weekends) %>%
+#   mutate(species = "Red Fox", weekdays = 0)
+# 
+# marten_P4_activity_weekdays <- activity("Marten", P4_weekdays) %>%
+#   mutate(species = "Marten", weekdays = 1)
+# marten_P4_activity_weekends <- activity("Marten", P4_weekends) %>%
+#   mutate(species = "Marten", weekdays = 0)
+# 
+# raccoon_P4_activity_weekdays <- activity("Raccoon", P4_weekdays) %>%
+#   mutate(species = "Raccoon", weekdays = 1)
+# raccoon_P4_activity_weekends <- activity("Raccoon", P4_weekends) %>%
+#   mutate(species = "Raccoon", weekdays = 0)
+# 
+# #P5
+# squirrel_P5_activity_weekdays <- activity("Squirrel", P5_weekdays) %>%
+#   mutate(species = "Squirrel", weekdays = 1)
+# squirrel_P5_activity_weekends <- activity("Squirrel", P5_weekends) %>%
+#   mutate(species = "Squirrel", weekdays = 0)
+# 
+# cat_P5_activity_weekdays <- activity("Cat", P5_weekdays) %>%
+#   mutate(species = "Cat", weekdays = 1)
+# cat_P5_activity_weekends <- activity("Cat", P5_weekends) %>%
+#   mutate(species = "Cat", weekdays = 0)
+# 
+# fox_P5_activity_weekdays <- activity("Red Fox", P5_weekdays) %>%
+#   mutate(species = "Red Fox", weekdays = 1)
+# fox_P5_activity_weekends <- activity("Red Fox", P5_weekends) %>%
+#   mutate(species = "Red Fox", weekdays = 0)
+# 
+# marten_P5_activity_weekdays <- activity("Marten", P5_weekdays) %>%
+#   mutate(species = "Marten", weekdays = 1)
+# marten_P5_activity_weekends <- activity("Marten", P5_weekends) %>%
+#   mutate(species = "Marten", weekdays = 0)
+# 
+# raccoon_P5_activity_weekdays <- activity("Raccoon", P5_weekdays) %>%
+#   mutate(species = "Raccoon", weekdays = 1)
+# raccoon_P5_activity_weekends <- activity("Raccoon", P5_weekends) %>%
+#   mutate(species = "Raccoon", weekdays = 0)
+# 
+# # Combine all data sets
+# Activity_squirrel_pred_Berlin_all_seasons <- 
+#   rbind(# P1
+#     squirrel_P1_activity_weekdays, squirrel_P1_activity_weekends, 
+#     cat_P1_activity_weekdays,cat_P1_activity_weekends,
+#     fox_P1_activity_weekdays,fox_P1_activity_weekends,
+#     marten_P1_activity_weekdays,marten_P1_activity_weekends,
+#     raccoon_P1_activity_weekdays,raccoon_P1_activity_weekends,
+#     # P2
+#     squirrel_P2_activity_weekdays, squirrel_P2_activity_weekends, 
+#     cat_P2_activity_weekdays, cat_P2_activity_weekends, 
+#     fox_P2_activity_weekdays, fox_P2_activity_weekends, 
+#     marten_P2_activity_weekdays, marten_P2_activity_weekends,
+#     raccoon_P2_activity_weekdays, raccoon_P2_activity_weekends,
+#     # P3
+#     squirrel_P3_activity_weekdays, squirrel_P3_activity_weekends,
+#     cat_P3_activity_weekdays, cat_P3_activity_weekends,
+#     fox_P3_activity_weekdays, fox_P3_activity_weekends, 
+#     marten_P3_activity_weekdays, marten_P3_activity_weekends,
+#     raccoon_P3_activity_weekdays, raccoon_P3_activity_weekends,
+#     # P4
+#     squirrel_P4_activity_weekdays, squirrel_P4_activity_weekends,
+#     cat_P4_activity_weekdays, cat_P4_activity_weekends,
+#     fox_P4_activity_weekdays, fox_P4_activity_weekends,
+#     marten_P4_activity_weekdays, marten_P4_activity_weekends,
+#     raccoon_P4_activity_weekdays, raccoon_P4_activity_weekends,
+#     # P5
+#     squirrel_P5_activity_weekdays, squirrel_P5_activity_weekends,
+#     cat_P5_activity_weekdays, cat_P5_activity_weekends,
+#     fox_P5_activity_weekdays, fox_P5_activity_weekends,
+#     marten_P5_activity_weekdays, marten_P5_activity_weekends, 
+#     raccoon_P5_activity_weekdays, raccoon_P5_activity_weekends)
+# 
+# length(unique(Activity_squirrel_pred_Berlin_all_seasons$User_uid)) #669
+```
+
+
+
+## Overview
+```{r}
+# # 
+# table(Activity_squirrel_pred_Berlin_all_seasons$species)
+# 
+# # 
+# Activity_squirrel_pred_Berlin_all_seasons %>% 
+#   group_by(species) %>%
+#   dplyr::summarise(n_pics = sum(activity))
+# 
+# # 
+# table(Activity_squirrel_pred_Berlin_all_seasons$species, Activity_squirrel_pred_Berlin_all_seasons$project_phase) 
+# 
+# ggplot(data = Activity_squirrel_pred_Berlin_all_seasons, mapping = aes(x = species)) + 
+#   geom_bar() + 
+#   facet_grid(weekdays ~ .)
+# # 0 = weekend, 1 = week
+# 
+# ggplot(data = Activity_squirrel_pred_Berlin_all_seasons, mapping = aes(x = species)) + 
+#   geom_bar() + 
+#   facet_grid(garden_type ~ .)
+# 
+# ggplot(data = Activity_squirrel_pred_Berlin_all_seasons, mapping = aes(x = species)) + 
+#   geom_bar() + 
+#   facet_grid(compost ~ .)
+# 
+# ggplot(data = Activity_squirrel_pred_Berlin_all_seasons, 
+#        mapping = aes(x = species, y = Local_tree_cover)) + 
+#   geom_boxplot()
+# 
+# ggplot(data = Activity_squirrel_pred_Berlin_all_seasons, 
+#        mapping = aes(x = species, y = pop_100)) + 
+#   geom_boxplot()
+# 
+# ggplot(data = Activity_squirrel_pred_Berlin_all_seasons, 
+#        mapping = aes(x = species, y = imperv_100)) + 
+#   geom_boxplot()
+```
+
+
+# - NOT USED - Squirrels only 
+We build a data set only for the squirrels.
+```{r squirrel data set}
+# squirrels_CT <- CT_act_date_formated[CT_act_date_formated$Species == "Squirrel",]
+# # add a column for the hour of the day
+# squirrels_CT$hour <- hour(squirrels_CT$Time)
+```
+
+# - NOT USED - Diurnality 
+Squirrels where active between 5am and 7pm. So we will filter our data for the time between 5am-7pm for the whole month divided by weekdays and weekends
+```{r diurnality function}
+# #function for counting the number of pictures for each species
+# diurnality <- function(species, CT) # one has to insert the species and the data set for the filtering
+# {
+#   CT_species <- CT %>% filter(Species == species) # 
+# 
+#   Unique_CT <- unique(CT_species$Station)
+#   l <- list(0)
+#   k <- list(0)
+# 
+#   for(i in Unique_CT)
+#     { #% of pictures taken during the day
+#       l[[which(Unique_CT == i)]] <- 
+#       (nrow(CT_species %>% filter(Station == i) %>% dplyr::filter(Time >= hms("05:00:00") 
+#                                 & Time <= hms("19:00:00"))))/nrow(CT_species %>%
+#                            filter(Station == i)) 
+#       names(l)[which(Unique_CT == i)] <- as.character(i)
+#       
+#       #number of pictures taken during the day
+#       k[[which(Unique_CT == i)]] <- 
+#       (nrow(CT_species %>% filter(Station == i) %>% dplyr::filter(Time >= hms("05:00:00") 
+#                                 & Time <= hms("19:00:00")))) 
+#       names(k)[which(Unique_CT == i)] <- as.character(i)
+# 
+#        }
+#    x <- data.frame(unlist(l))
+#    x <- dplyr::rename(x, diurnality = unlist.l.)
+#    x <- x %>% mutate(User_uid = as.numeric(rownames(x)))
+#    x_covenv <- dplyr::inner_join(x = x,
+#                                  y = stacked_raster_values_and_garden_CT_all_seasons_no_nas, 
+#                                  by = c("User_uid" = "Station")) #merging with the covenv
+# 
+#    y <- data.frame(unlist(k))
+#    y <- dplyr::rename(y, nbr_pictures_day = unlist.k.)
+#    y <- y %>% mutate(User_uid = as.numeric(rownames(y)))
+#    y_covenv <- dplyr::inner_join(x = y,
+#                                  y = x_covenv) #merging with the covenv
+#    return(y_covenv)
+#    
+# }
+```
+
+
+## Create a table per species per season per weekdays/weekend
+```{r diurnality table}
+# #P1
+# squirrel_P1_diurnality_weekdays <- diurnality("Eichhörnchen", P1_weekdays) %>%
+#   mutate(species = "Squirrel", weekdays = 1)
+# squirrel_P1_diurnality_weekends <- diurnality("Eichhörnchen", P1_weekends) %>%
+#   mutate(species = "Squirrel", weekdays = 0)
+# 
+# cat_P1_diurnality_weekdays <- diurnality("cat", P1_weekdays) %>%
+#   mutate(species = "Cat", weekdays = 1)
+# cat_P1_diurnality_weekends <- diurnality("cat", P1_weekends) %>%
+#   mutate(species = "Cat", weekdays = 0)
+# 
+# fox_P1_diurnality_weekdays <- diurnality("Rotfuchs", P1_weekdays) %>%
+#   mutate(species = "Fox", weekdays = 1)
+# fox_P1_diurnality_weekends <- diurnality("Rotfuchs", P1_weekends) %>%
+#   mutate(species = "Fox", weekdays = 0)
+# 
+# marten_P1_diurnality_weekdays <- diurnality("Marder_(Baum-und_Steinmarder)", P1_weekdays) %>%
+#   mutate(species = "Marten", weekdays = 1)
+# marten_P1_diurnality_weekends <- diurnality("Marder_(Baum-und_Steinmarder)", P1_weekends) %>%
+#   mutate(species = "Marten", weekdays = 0)
+# 
+# raccoon_P1_diurnality_weekdays <- diurnality("Waschbär", P1_weekdays) %>%
+#   mutate(species = "Raccoon", weekdays = 1)
+# raccoon_P1_diurnality_weekends <- diurnality("Waschbär", P1_weekends) %>%
+#   mutate(species = "Raccoon", weekdays = 0)
+# 
+# #P2
+# squirrel_P2_diurnality_weekdays <- diurnality("Eichhörnchen", P2_weekdays) %>%
+#   mutate(species = "Squirrel", weekdays = 1)
+# squirrel_P2_diurnality_weekends <- diurnality("Eichhörnchen", P2_weekends) %>%
+#   mutate(species = "Squirrel", weekdays = 0)
+# 
+# cat_P2_diurnality_weekdays <- diurnality("cat", P2_weekdays) %>%
+#   mutate(species = "Cat", weekdays = 1)
+# cat_P2_diurnality_weekends <- diurnality("cat", P2_weekends) %>%
+#   mutate(species = "Cat", weekdays = 0)
+# 
+# fox_P2_diurnality_weekdays <- diurnality("Rotfuchs", P2_weekdays) %>%
+#   mutate(species = "Fox", weekdays = 1)
+# fox_P2_diurnality_weekends <- diurnality("Rotfuchs", P2_weekends) %>%
+#   mutate(species = "Fox", weekdays = 0)
+# 
+# marten_P2_diurnality_weekdays <- diurnality("Marder_(Baum-und_Steinmarder)", P2_weekdays) %>%
+#   mutate(species = "Marten", weekdays = 1)
+# marten_P2_diurnality_weekends <- diurnality("Marder_(Baum-und_Steinmarder)", P2_weekends) %>%
+#   mutate(species = "Marten", weekdays = 0)
+# 
+# raccoon_P2_diurnality_weekdays <- diurnality("Waschbär", P2_weekdays) %>%
+#   mutate(species = "Raccoon", weekdays = 1)
+# raccoon_P2_diurnality_weekends <- diurnality("Waschbär", P2_weekends) %>%
+#   mutate(species = "Raccoon", weekdays = 0)
+# 
+# #P3
+# squirrel_P3_diurnality_weekdays <- diurnality("Eichhörnchen", P3_weekdays) %>%
+#   mutate(species = "Squirrel", weekdays = 1)
+# squirrel_P3_diurnality_weekends <- diurnality("Eichhörnchen", P3_weekends) %>%
+#   mutate(species = "Squirrel", weekdays = 0)
+# 
+# cat_P3_diurnality_weekdays <- diurnality("cat", P3_weekdays) %>%
+#   mutate(species = "Cat", weekdays = 1)
+# cat_P3_diurnality_weekends <- diurnality("cat", P3_weekends) %>%
+#   mutate(species = "Cat", weekdays = 0)
+# 
+# fox_P3_diurnality_weekdays <- diurnality("Rotfuchs", P3_weekdays) %>%
+#   mutate(species = "Fox", weekdays = 1)
+# fox_P3_diurnality_weekends <- diurnality("Rotfuchs", P3_weekends) %>%
+#   mutate(species = "Fox", weekdays = 0)
+# 
+# marten_P3_diurnality_weekdays <- diurnality("Marder_(Baum-und_Steinmarder)", P3_weekdays) %>%
+#   mutate(species = "Marten", weekdays = 1)
+# marten_P3_diurnality_weekends <- diurnality("Marder_(Baum-und_Steinmarder)", P3_weekends) %>%
+#   mutate(species = "Marten", weekdays = 0)
+# 
+# raccoon_P3_diurnality_weekdays <- diurnality("Waschbär", P3_weekdays) %>%
+#   mutate(species = "Raccoon", weekdays = 1)
+# raccoon_P3_diurnality_weekends <- diurnality("Waschbär", P3_weekends) %>%
+#   mutate(species = "Raccoon", weekdays = 0)
+# 
+# #P4
+# squirrel_P4_diurnality_weekdays <- diurnality("Eichhörnchen", P4_weekdays) %>%
+#   mutate(species = "Squirrel", weekdays = 1)
+# squirrel_P4_diurnality_weekends <- diurnality("Eichhörnchen", P4_weekends) %>%
+#   mutate(species = "Squirrel", weekdays = 0)
+# 
+# cat_P4_diurnality_weekdays <- diurnality("cat", P4_weekdays) %>%
+#   mutate(species = "Cat", weekdays = 1)
+# cat_P4_diurnality_weekends <- diurnality("cat", P4_weekends) %>%
+#   mutate(species = "Cat", weekdays = 0)
+# 
+# fox_P4_diurnality_weekdays <- diurnality("Rotfuchs", P4_weekdays) %>%
+#   mutate(species = "Fox", weekdays = 1)
+# fox_P4_diurnality_weekends <- diurnality("Rotfuchs", P4_weekends) %>%
+#   mutate(species = "Fox", weekdays = 0)
+# 
+# marten_P4_diurnality_weekdays <- diurnality("Marder_(Baum-und_Steinmarder)", P4_weekdays) %>%
+#   mutate(species = "Marten", weekdays = 1)
+# marten_P4_diurnality_weekends <- diurnality("Marder_(Baum-und_Steinmarder)", P4_weekends) %>%
+#   mutate(species = "Marten", weekdays = 0)
+# 
+# raccoon_P4_diurnality_weekdays <- diurnality("Waschbär", P4_weekdays) %>%
+#   mutate(species = "Raccoon", weekdays = 1)
+# raccoon_P4_diurnality_weekends <- diurnality("Waschbär", P4_weekends) %>%
+#   mutate(species = "Raccoon", weekdays = 0)
+# 
+# #P5
+# squirrel_P5_diurnality_weekdays <- diurnality("Eichhörnchen", P5_weekdays) %>%
+#   mutate(species = "Squirrel", weekdays = 1)
+# squirrel_P5_diurnality_weekends <- diurnality("Eichhörnchen", P5_weekends) %>%
+#   mutate(species = "Squirrel", weekdays = 0)
+# 
+# cat_P5_diurnality_weekdays <- diurnality("cat", P5_weekdays) %>%
+#   mutate(species = "Cat", weekdays = 1)
+# cat_P5_diurnality_weekends <- diurnality("cat", P5_weekends) %>%
+#   mutate(species = "Cat", weekdays = 0)
+# 
+# fox_P5_diurnality_weekdays <- diurnality("Rotfuchs", P5_weekdays) %>%
+#   mutate(species = "Fox", weekdays = 1)
+# fox_P5_diurnality_weekends <- diurnality("Rotfuchs", P5_weekends) %>%
+#   mutate(species = "Fox", weekdays = 0)
+# 
+# marten_P5_diurnality_weekdays <- diurnality("Marder_(Baum-und_Steinmarder)", P5_weekdays) %>%
+#   mutate(species = "Marten", weekdays = 1)
+# marten_P5_diurnality_weekends <- diurnality("Marder_(Baum-und_Steinmarder)", P5_weekends) %>%
+#   mutate(species = "Marten", weekdays = 0)
+# 
+# raccoon_P5_diurnality_weekdays <- diurnality("Waschbär", P5_weekdays) %>%
+#   mutate(species = "Raccoon", weekdays = 1)
+# raccoon_P5_diurnality_weekends <- diurnality("Waschbär", P5_weekends) %>%
+#   mutate(species = "Raccoon", weekdays = 0)
+# 
+# # Combine the data sets
+# diurnality_predprey_Berlin_all_seasons <- 
+#   rbind( # P1
+#     squirrel_P1_diurnality_weekdays, squirrel_P1_diurnality_weekends,
+#     cat_P1_diurnality_weekdays, cat_P1_diurnality_weekends,
+#     fox_P1_diurnality_weekdays, fox_P1_diurnality_weekends, 
+#     marten_P1_diurnality_weekdays, marten_P1_diurnality_weekends,
+#     raccoon_P1_diurnality_weekdays, raccoon_P1_diurnality_weekends,
+#     # P2
+#     squirrel_P2_diurnality_weekdays, squirrel_P2_diurnality_weekends,
+#     cat_P2_diurnality_weekdays, cat_P2_diurnality_weekends,
+#     fox_P2_diurnality_weekdays, fox_P2_diurnality_weekends,
+#     marten_P2_diurnality_weekdays, marten_P2_diurnality_weekends, 
+#     raccoon_P2_diurnality_weekdays, raccoon_P2_diurnality_weekends,
+#     # P3
+#     squirrel_P3_diurnality_weekdays, squirrel_P3_diurnality_weekends,
+#     cat_P3_diurnality_weekdays, cat_P3_diurnality_weekends,
+#     fox_P3_diurnality_weekdays, fox_P3_diurnality_weekends, 
+#     marten_P3_diurnality_weekdays, marten_P3_diurnality_weekends,
+#     raccoon_P3_diurnality_weekdays, raccoon_P3_diurnality_weekends,
+#     # P4
+#     squirrel_P4_diurnality_weekdays, squirrel_P4_diurnality_weekends,
+#     cat_P4_diurnality_weekdays, cat_P4_diurnality_weekends,
+#     fox_P4_diurnality_weekdays, fox_P4_diurnality_weekends, 
+#     marten_P4_diurnality_weekdays, marten_P4_diurnality_weekends,
+#     raccoon_P4_diurnality_weekdays, raccoon_P4_diurnality_weekends,
+#     # P5
+#     squirrel_P5_diurnality_weekdays, squirrel_P5_diurnality_weekends,
+#     cat_P5_diurnality_weekdays, cat_P5_diurnality_weekends,
+#     fox_P5_diurnality_weekdays, fox_P5_diurnality_weekends,
+#     marten_P5_diurnality_weekdays, marten_P5_diurnality_weekends, 
+#     raccoon_P5_diurnality_weekdays, raccoon_P5_diurnality_weekends)
+# 
+# length(unique(diurnality_predprey_Berlin_all_seasons$User_uid))
+```
+
+Hint: it is fine that the number of rows in the datasets for activity and diurnality are the same. But the number of pictures per day per station is different
+
+# Save data
+```{r}
+# # CT_act_date_formated
+# saveRDS(object = CT_act_date_formated,
+#         file = here::here("output", 
+#                           "data-proc", 
+#                           "all_seasons",
+#                           "CT_act_date_proc_20230124.RDS"))
+# 
+# # CT Species interest
+# saveRDS(object = CT_species_interest_time,
+#         file = here::here("output", 
+#                           "data-proc", 
+#                           "all_seasons",
+#                           "CT_species_interest_time_20230124.RDS"))
+# 
+# # CT Squirrels
+# saveRDS(object = CT_squirrels,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "all_seasons",
+#                           "CT_squirrels_20230124.RDS"))
+# 
+# # CT Squirrels 30 mins
+# saveRDS(object = CT_squirrels_30min,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "all_seasons",
+#                           "CT_squirrels_30min_20230124.RDS"))
+# 
+# # stacked_raster_values_and_garden_CT_all_seasons_no_nas
+# saveRDS(object = stacked_raster_values_and_garden_CT_all_seasons_no_nas,
+#         file = here::here("output", 
+#                           "data-proc", 
+#                           "all_seasons",
+#                           "stacked_raster_values_and_garden_CT_all_seasons_no_nas_proc_20230124.RDS"))
+# 
+########### NOT USED AT THE MOMENT ##
+# 
+# # Activity_squirrel_pred_Berlin_all_seasons
+# saveRDS(object = Activity_squirrel_pred_Berlin_all_seasons,
+#         file = here::here("output", "data-proc", "all_seasons",
+#                           "Activity_squirrel_pred_Berlin_all_seasons_20221117.RDS"))
+# 
+# 
+# # squirrels_CT
+# saveRDS(object = squirrels_CT,
+#         file = here::here("output", "data-proc", "all_seasons",
+#                           "squirrels_CT_20221117.RDS"))
+#
+#
+# # Diurnality
+# # saveRDS(object = diurnality_predprey_Berlin_all_seasons,
+# #         file = here::here("output", "data-proc", "all_seasons",
+# #                           "diurnality_predprey_Berlin_all_seasons_20220802.RDS"))
+```
+
+***
+
+<details><summary>Session Info</summary>
+
+```{r sessionInfo}
+## DO NOT REMOVE!
+## We store the settings of your computer and the current versions of the
+## packages used to allow for reproducibility
+Sys.time()
+#git2r::repository() ## uncomment if you are using GitHub
+sessionInfo()
+```
+
+</details>

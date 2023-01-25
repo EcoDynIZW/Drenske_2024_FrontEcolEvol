@@ -57,169 +57,338 @@ for (package in package.list) {
 
 ```
 
+
+
+
 ## Data
-```{r data}
-##Camera Traps detection histories
-
-#already formatted and filtered data with a delta of 30 mins
-CT_act_date_formated <- readRDS(here::here("data-raw", "r-raw","CT_act_allspecies_NoDelta_filtered2022_01_19.RDS"))
+```{r}
+# julie_data <- readRDS(here::here("data-raw", "r-raw", "Old", "Louvrier_2021_JAE_UrbanMesocarnivores_Covariates_cameras_Dryad2021_10_29.RDS"))
+# 
+# julie_data2 <- readRDS(here::here("data-raw", "r-raw", "Old", "Louvrier_2021_JAE_UrbanMesocarnivores_Camera_detections_Dryad2021_11_05.RDS"))
 ```
 
 ```{r}
-x <- 1:50
-case_when(
-  x %% 35 == 0 ~ "fizz buzz",
-  x %% 5 == 0 ~ "fizz",
-  x %% 7 == 0 ~ "buzz",
-  TRUE ~ as.character(x)
-)
-
-case_when()
-```
-```{r}
-test <- CT_cat2[19090:19110,]
+# ct_test <- unique(CT_act_date_formated[ ,2:3 ])
+# table(ct_test$Season)
+# table(stacked_raster_values_and_garden_CT_all_seasons_no_nas$project_phase)
+# table(env_var2$project_phase)
 ```
 
+# Problem season and station
 ```{r}
-test$Season2 <- ifelse(test = test$Date >= list_date_monthly[[3]][1] & test$Date <= list_date_monthly[[3]][2], 
-                      yes = 3, 
-                      no = 99 )
-
-
-case_when(
-  test$Date >= list_date_monthly[[3]][1] & Date <= list_date_monthly[[3]][2] ~ season == 3
-)
+# CT_unique <- CT_act_date_formated[!duplicated(CT_act_date_formated$Station), ]
+# stacked_raster_values_and_garden_CT_all_seasons_no_nas %>% 
+#   left_join(y = CT_unique)
 ```
 
-
-
 ```{r}
-# table(CT_act_date_formated$Season)
-# table(CT_act_date_formated$Season, CT_act_date_formated$Species)
-```
-```{r}
-# all wildlife photos (nrow dataset)
-sum(12290,10990,11951,11589,15588)
-# sum photos of squirrels
-sum(996,152,687,276,1036)
-# mean number of photos during spring
-mean(c(152,276))
-# mean number of photos during autumn
-mean(c(996,687,1036))
-```
-```{r}
-CT_per_species <- CT_act_date_formated %>% 
-  group_by(Species) %>% 
-  summarise(count =  n())
+# CT_stations_phase <- CT_act_date_formated %>%
+#   group_by(Station) %>%
+#   summarise(count = n_distinct(project_phase))
 ```
 
 
 ```{r}
-# CT_per_species$Species[CT_per_species$Species == "Biber"] <- "Beaver"
-# CT_per_species$Species[CT_per_species$Species == "cat"] <- "Cat"
-# CT_per_species$Species[CT_per_species$Species == "Dachs"] <- "Badger"
-# CT_per_species$Species[CT_per_species$Species == "Eichhörnchen"] <- "Squirrel"
-# CT_per_species$Species[CT_per_species$Species == "Feldhasen"] <- "Hare"
-# CT_per_species$Species[CT_per_species$Species == "Igel"] <- "Hedgehog"
-# CT_per_species$Species[CT_per_species$Species == "Marder_(Baum-und_Steinmarder)"] <- "Marten"
-# CT_per_species$Species[CT_per_species$Species == "Maus"] <- "Mouse"
-# CT_per_species$Species[CT_per_species$Species == "Ratte"] <- "Rat"
-# CT_per_species$Species[CT_per_species$Species == "Reh"] <- "Deer"
-# CT_per_species$Species[CT_per_species$Species == "Rotfuchs"] <- "Red Fox"
-# CT_per_species$Species[CT_per_species$Species == "Waschbär"] <- "Raccoon"
-# CT_per_species$Species[CT_per_species$Species == "Wildkaninchen"] <- "Rabbit"
-# CT_per_species$Species[CT_per_species$Species == "Wildschwein"] <- "Wild Boar"
-```
-
-```{r}
-# Change species names to english and to begin with uppercase
-species_names <- unique(CT_act_date_formated$Species)
-CT_act_date_formated$Species[CT_act_date_formated$Species == species_names[1]  ] <- "Raccoon"
-CT_act_date_formated$Species[CT_act_date_formated$Species == species_names[2]  ] <- "Fox"
-CT_act_date_formated$Species[CT_act_date_formated$Species == species_names[3]  ] <- "Marten"
-CT_act_date_formated$Species[CT_act_date_formated$Species == species_names[4]  ] <- "Hedgehog"
-CT_act_date_formated$Species[CT_act_date_formated$Species == species_names[5]  ] <- "Cat"
-CT_act_date_formated$Species[CT_act_date_formated$Species == species_names[6]  ] <- "Squirrel"
-CT_act_date_formated$Species[CT_act_date_formated$Species == species_names[7]  ] <- "Deer"
-CT_act_date_formated$Species[CT_act_date_formated$Species == species_names[8]  ] <- "Rat"
-CT_act_date_formated$Species[CT_act_date_formated$Species == species_names[9]  ] <- "Badger"
-CT_act_date_formated$Species[CT_act_date_formated$Species == species_names[10]  ] <- "Boar"
-CT_act_date_formated$Species[CT_act_date_formated$Species == species_names[11]  ] <- "Mouse"
-CT_act_date_formated$Species[CT_act_date_formated$Species == species_names[12]  ] <- "Rabbit"
-CT_act_date_formated$Species[CT_act_date_formated$Species == species_names[13] ] <- "Beaver"
-CT_act_date_formated$Species[CT_act_date_formated$Species == species_names[14] ] <- "Hare"
-
-```
-
-```{r}
-ggplot(data = CT_act_date_formated, mapping = aes(x = Species)) + 
-  geom_bar()
-
-ggdotchart(data = CT_per_species, x = "Species", y = "count", 
-           sorting = "descending")
-```
-```{r}
-#ggdotchart(data = CT_per_species, x = "Species", y = "count", 
-#           sorting = "descending")
-
-ggdotchart(data = CT_per_species, x = "Species", y = "count", 
-           sorting = "descending", 
-           ylab = "Nr pictures",
-           shape = 19, 
-           dot.size = 5,
-           add = "segments", 
-           add.params = list(color = "lightgray", size = 2), 
-           color = "Species",
-           #palette = "magma",
-           rotate = FALSE, 
-           show.legend = FALSE, 
-           ggtheme = theme_pubr()) + 
-  theme(legend.position = "none", 
-        panel.border = element_rect(colour = "black", fill=NA, size=2), 
-        axis.ticks = element_line(colour = "black", size = 1)) + 
-  labs_pubr() + 
-  scale_colour_ochre(palette="emu_woman_paired")  
-
-#ggsave(filename = here::here("plots", "pics_per_species.png"))
-```
-
-
-# Activity plots
-## overall
-```{r}
-# All data
-activityRadial(recordTable = CT_act_date_formated, species = "Eichhörnchen", lwd = 3)
-activityRadial(recordTable = CT_act_date_formated, species = "Eichhörnchen", lwd = 3, rp.type = "p", poly.col = gray(0.5, alpha = 0.5))
-
-
-```
-
-## per season
-```{r}
-CT_data_per_season <- split(x = CT_act_date_formated, f = CT_act_date_formated$Season)
-CT_data_season1 <- as.data.frame(CT_data_per_season[[1]])
-CT_data_season2 <- as.data.frame(CT_data_per_season[[2]])
-CT_data_season3 <- as.data.frame(CT_data_per_season[[3]])
-CT_data_season4 <- as.data.frame(CT_data_per_season[[4]])
-CT_data_season5 <- as.data.frame(CT_data_per_season[[5]])
-```
-
-```{r}
-activityRadial(recordTable = CT_data_season1, 
-               species = "Eichhörnchen", 
-               speciesCol = "Species",
-               rp.type = "r",
-               #labels = NULL,
-               main = "Hello",
-               lwd = 3)
+# options(max.print = 10000)
+# table(CT_act_date_formated$Station, CT_act_date_formated$project_phase)
 ```
 
 
 ```{r}
-activityRadial(recordTable = CT_data_season1, species = "Eichhörnchen", lwd = 3)
-activityRadial(recordTable = CT_data_season2, species = "Eichhörnchen", lwd = 3)
-activityRadial(recordTable = CT_data_season3, species = "Eichhörnchen", lwd = 3)
-activityRadial(recordTable = CT_data_season4, species = "Eichhörnchen", lwd = 3)
-activityRadial(recordTable = CT_data_season5, species = "Eichhörnchen", lwd = 3)
+# CT_1553 <- CT_act_date_formated[CT_act_date_formated$Station == 1553, ]
+# CT_1769 <- CT_act_date_formated[CT_act_date_formated$Station == 1769, ]
+# CT_1869 <- CT_act_date_formated[CT_act_date_formated$Station == 1869, ]
+```
+
+
+# Exploratory data analysis
+```{r}
+# library("DataExplorer")
+# library("tidyverse")
+```
+
+
+```{r}
+# gss_cat
+# 
+# gss_cat %>% glimpse()
+```
+
+```{r}
+# gss_cat %>% 
+#   create_report(output_file = "gss_cat_data_profile_report", 
+#                 output_dir = "", 
+#                 y = "rincome", 
+#                 report_title = "EDA Report - GSS data")
+```
+
+
+```{r}
+# garden_variables %>% 
+#   create_report(output_file = "garden_variables_data_report", 
+#                 #output_dir = "", 
+#                 #y = "rincome", 
+#                 report_title = "EDA report of the garden variables")
+```
+
+# Import fonts
+```{r}
+# # Loading fonts (with package extrafont)
+# library(extrafont)
+# #font_import()
+# loadfonts(device = "win")
+# fonts()
+
+```
+
+
+```{r}
+# windowsFonts()
+# wf <- windowsFonts()
+# names(wf[wf=="Roboto"])
+```
+
+```{r}
+# ggplot(mtcars, aes(factor(cyl), fill = factor(vs))) +
+#   geom_bar(position = "dodge")
+# 
+# ggplot(mtcars, aes(factor(cyl), fill = factor(vs))) +
+#   geom_bar(position = "dodge2")
+# 
+# ggplot(mtcars, aes(factor(cyl), fill = factor(vs))) +
+#   geom_bar(position = position_dodge(width = 0.9, preserve = "single"))
+```
+
+# Overlap plots + calculation
+```{r}
+# dat$time <- (hour(dat$DateTime)*60 + minute(dat$DateTime))/(24*60)  #time of day as fraction
+# dat$radtime <- dat$time * 2 * pi
+
+CT_squirrels$time_frac <- (hour(CT_squirrels$DateTimeOriginal)*60 + minute(CT_squirrels$DateTimeOriginal))/(24*60)
+CT_squirrels$time_frac
+CT_squirrels$radtime <- CT_squirrels$time_frac * 2 * pi
+CT_squirrels$radtime
+
+CT_squirrels <- sf::st_drop_geometry(CT_squirrels)
+CT_squirrels_dogs <- CT_squirrels[CT_squirrels$dogs_binary == 1, ]$radtime
+CT_squirrels_no_dogs <- CT_squirrels[CT_squirrels$dogs_binary == 0, ]$radtime
+```
+
+```{r}
+overlapEst(A = CT_squirrels_dogs, B = CT_squirrels_no_dogs, kmax = 3, type = "all")
+#overlap::overlapEst
+
+```
+
+
+# Mean activity time
+```{r}
+mean_squirrel_time2 <- CT_squirrels$Time %>%
+  hms() %>%
+  period_to_seconds() %>%
+  mean() %>%
+  seconds_to_period()
+
+mean_squirrel_time
+mean_squirrel_time2
+
+typeof(CT_squirrels$Time)
+class(CT_squirrels$Time)
+```
+
+
+# Time diff between pics
+```{r}
+CT_test <- CT_species_interest
+
+id_CT <- unique(CT_test$Station)
+species_CT <- unique(CT_test$Species)
+
+CT_test$time_diff <- NA
+```
+
+```{r}
+CT_squirrel2 <- CT_species_interest %>%
+  filter(Species == "Squirrel")
+
+id_CT <- unique(CT_squirrel2$Station)
+
+CT_squirrel2$time_diff <- NA
+
+# for (id in species_CT) {
+# CT_ID <- CT_Test %>% 
+#   filter(Species == species_CT[id])  
+# CT_ID
+
+
+for (pic in 1:(nrow(CT_squirrel2)-1)) {
+ # for (i in id_CT) {
+    if (CT_squirrel2$Station[pic+1] == CT_squirrel2$Station[pic]) {
+      CT_squirrel2$time_diff[pic+1] <- difftime(time1 = CT_squirrel2$DateTimeOriginal[pic+1], time2 = CT_squirrel2$DateTimeOriginal[pic], units = "mins") 
+    }
+}
+#}
+```
+
+
+## new approach
+```{r}
+CT_squirrel <- CT_species_interest %>%
+  filter(Species == "Squirrel")
+
+id_CT <- unique(CT_squirrel$Station)
+
+CT_squirrel <- CT_squirrel %>%
+  dplyr::group_by(project_phase, Station) %>%
+  dplyr::arrange(DateTimeOriginal) %>% 
+  mutate(diff_squirrels = as.numeric(difftime(time1 = DateTimeOriginal, time2 = dplyr::lag(DateTimeOriginal), units = "mins"))) %>%
+  ungroup() %>%
+  mutate(diff_squirrels = case_when(
+    is.na(diff_squirrels) ~ 999, 
+    TRUE ~ diff_squirrels)) %>% 
+  group_by(project_phase, Station, Date) %>%
+  filter(diff_squirrels > 1) %>%
+  ungroup()
+```
+
+
+```{r}
+CT_time_diff <- CT_species_interest %>%
+  dplyr::group_by(Species, project_phase, Station) %>%
+  dplyr::arrange(DateTimeOriginal) %>% 
+  mutate(diff_squirrels = as.numeric(difftime(time1 = DateTimeOriginal, time2 = dplyr::lag(DateTimeOriginal), units = "mins"))) %>%
+  ungroup() %>%
+  mutate(diff_squirrels = case_when(
+    is.na(diff_squirrels) ~ 999, 
+    TRUE ~ diff_squirrels)) %>% 
+  group_by(project_phase, Station, Date) %>%
+  filter(diff_squirrels > 1) %>%
+  ungroup()
+```
+
+
+```{r}
+CT_time_diff2 <- CT_time_diff %>%
+  dplyr::group_by(Species, project_phase, Station) %>%
+  dplyr::arrange(DateTimeOriginal) %>% 
+  mutate(diff_squirrels2 = as.numeric(difftime(time1 = DateTimeOriginal, time2 = dplyr::lag(DateTimeOriginal), units = "mins"))) %>%
+  ungroup() %>%
+  mutate(diff_squirrels2 = case_when(
+    is.na(diff_squirrels2) ~ 999, 
+    TRUE ~ diff_squirrels2)) %>% 
+  group_by(project_phase, Station, Date) %>%
+  filter(diff_squirrels2 > 1) %>%
+  ungroup()
+```
+
+```{r}
+CT_time_diff3 <- CT_species_interest %>%
+  dplyr::group_by(Species, project_phase, Station) %>%
+  dplyr::arrange(DateTimeOriginal) %>% 
+  mutate(diff_samespecies = as.numeric(difftime(time1 = DateTimeOriginal, 
+                                                time2 = dplyr::lag(DateTimeOriginal), 
+                                                units = "mins"))) %>%
+  ungroup() %>%
+  mutate(diff_samespecies = case_when(
+    is.na(diff_samespecies) ~ 999, 
+    TRUE ~ diff_samespecies)) %>% 
+  group_by(project_phase, Station, Date) %>%
+  filter(diff_samespecies > 1) %>%
+  ungroup() %>%
+  dplyr::group_by(Species, project_phase, Station) %>%
+  dplyr::arrange(DateTimeOriginal) %>% 
+  mutate(diff_samespecies = as.numeric(difftime(time1 = DateTimeOriginal, 
+                                                time2 = dplyr::lag(DateTimeOriginal), 
+                                                units = "mins"))) %>%
+  ungroup() %>%
+  mutate(diff_samespecies = case_when(
+    is.na(diff_samespecies) ~ 999, 
+    TRUE ~ diff_samespecies)) %>% 
+  group_by(project_phase, Station, Date) %>%
+  filter(diff_samespecies > 1) %>%
+  ungroup()
+```
+
+```{r}
+range(CT_time_diff$diff_squirrels)
+range(CT_time_diff2$diff_squirrels2)
+range(CT_time_diff3$diff_samespecies)
+```
+
+
+
+```{r}
+# CT_time_diff2 <- CT_species_interest %>%
+#   dplyr::group_by(Species, project_phase, Station) %>%
+#   dplyr::arrange(DateTimeOriginal) %>% 
+#   mutate(diff_squirrels = as.numeric(difftime(time1 = DateTimeOriginal, time2 = dplyr::lag(DateTimeOriginal), units = "mins"))) %>%
+#   ungroup() #%>%
+  # mutate(diff_squirrels = case_when(
+  #   is.na(diff_squirrels) ~ 999, 
+  #   TRUE ~ diff_squirrels)) %>% 
+  # group_by(project_phase, Station, Date) %>%
+  # filter(diff_squirrels > 1) %>%
+  # ungroup()
+```
+
+
+
+## Old
+```{r}
+CT_squirrel$time_diff <- NA
+
+
+for (pic in 1:(nrow(CT_squirrel)-1)) {
+ # for (i in id_CT) {
+    if (CT_squirrel$Station[pic+1] == CT_squirrel$Station[pic]) {
+      CT_squirrel$time_diff[pic+1] <- difftime(time1 = CT_squirrel$DateTimeOriginal[pic+1], time2 = CT_squirrel$DateTimeOriginal[pic], units = "mins") 
+    }
+}
+
+```
+
+### all species
+```{r}
+CT_test <- CT_act_date_proc[1:1000, ]
+
+id_CT <- unique(CT_test$Station)
+```
+
+
+```{r}
+CT_test$time_diff <- NA
+
+
+for (pic in 1:(nrow(CT_test)-1)) {
+ # for (i in id_CT) {
+    if (CT_test$Station[pic+1] == CT_test$Station[pic]) {
+      CT_test$time_diff[pic+1] <- difftime(time1 = CT_test$DateTimeOriginal[pic+1], time2 = CT_test$DateTimeOriginal[pic], units = "mins") 
+    }
+}
+
+```
+
+
+### test
+```{r}
+
+filterdate <- as.POSIXct("2020-10-21")
+test1 <- CT_squirrel %>% 
+  filter(Station == 1800) %>% 
+  filter(Date == filterdate)
+
+test1 %>% group_by(project_phase, Station) %>% 
+  filter(time_diff < 1)
+
+
+test2 <- CT_squirrel %>% 
+  mutate(time_diff2 = case_when(
+    is.na(time_diff) ~ 999,
+    TRUE ~ time_diff)) %>% 
+  group_by(project_phase, Station, Date) %>%
+  filter(time_diff2 > 1) %>% 
+  ungroup()
+  
+
 ```
 
