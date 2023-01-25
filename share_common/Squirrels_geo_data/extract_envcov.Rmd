@@ -1,0 +1,169 @@
+---
+title: "extract_envcov"
+author: "Aimara Planillo"
+date: '2023-01-10'
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages}
+library(sf)
+library(dplyr)
+library(tmap)
+library(raster)
+```
+
+```{r load data}
+## camera trap data
+cameras <- read.csv("./data/Use_envir_alldata_nodupl_noNa_mar21.csv")
+cameras
+
+## berlin city border
+berlin <- st_read("./geo_data/berlin_city_border_25833.gpkg", crs = 25833)
+```
+
+
+## transform data into correct projections
+```{r}
+berlin_rp <- berlin %>% 
+  st_union() %>% 
+  st_transform(crs = 3035) %>% 
+  st_cast(to = 'LINESTRING')
+  
+cameras_sf <- st_as_sf(cameras, coords = c("Long", "Lat"), crs = 25833) 
+cameras_sf <- st_transform(cameras_sf, crs = 3035)
+
+
+tmap_mode("view")
+tm_shape(berlin) +
+  tm_borders() +
+  tm_shape(cameras_sf) +
+  tm_dots()
+```
+
+## get distance to border
+```{r}
+camera_points <- cameras_sf %>% 
+  dplyr::select(User_uid)
+
+dist_border <- st_distance(camera_points, berlin_rp)
+
+
+
+dist_border <- cbind(cameras_sf, dist_border)
+
+dist_border_raster<-raster::distance(template,berlin_rp)
+
+
+```
+
+
+# get new population density layer from vector 2019
+This is commented out because only needs to run once
+```{r}
+pop2019 <- st_read("./geo_data/umweltatlas_popdens_2019_vector_25833.gpkg") %>% 
+   st_transform(3035)
+# 
+# plot(pop2019)
+# 
+# pop2019 <- pop2019 %>%
+#   dplyr::select(ew2019)
+
+## population per ha
+pop_ha2019 <- pop2019 %>%
+  dplyr::select(ew_ha_2019)
+
+## remomve empty polygons and transform everything to polygon class
+pop_ha2019 <- pop_ha2019[!st_is_empty(pop_ha2019),, drop = FALSE]
+pop_ha2019_poly <- st_cast(pop_ha2019, "POLYGON")
+
+tm_shape(pop_ha2019_poly) +
+  tm_fill(col = "ew_ha_2019")
+## get a raster with proper resolution and extent. The values are not used here, only extent and cell size
+template <- raster("./geo_data/human_population_density_raster_10m_template_wrongdata.tif")
+
+library(fasterize)
+
+## get people per ha
+r <- fasterize(pop_ha2019_poly, template, field = "ew_ha_2019", fun="sum")
+
+plot(r)
+writeRaster(r,'./output/population_density_ha_berlin_10m_2019_3035.tif',overwrite=T)
+```
+
+## get focal means at 100 m
+
+```{r}
+popden <- raster('./output/population_density_ha_berlin_10m_2019_3035.tif')
+
+## change NA for 0 for calculation reasons
+
+popden[is.na(popden)] <- 0
+plot(popden)
+#### Focal mean: POPULATION DENSITY #####
+
+# Each pixel represents people in 10x10 m. To compute the population in different areas, we should sum the pixels. 
+# But focal function does the mean, so we are going to cheat it by recalculating the value of 
+# each pixel as population density in the area of interest
+
+## 100 m
+# Proportion new pixel/original pixel for multiplying the layer
+(110*110)/(10*10)
+# [1] 121
+popden_110m <- popden * 121
+
+#Relation new/original pixel for the matrix in focal means
+110/10
+# [1] 11
+
+focal_popden <- raster::focal(popden_110m, matrix(1/(11*11), nrow =  11, ncol = 11),
+                        fun=mean, na.rm = TRUE , pad=TRUE, padValue=0)
+plot(focal_popden)
+
+# writeRaster(focal_popden,'./output/focal_mean_popden_110m_berlin_10m_3035.tif')
+```
+
+# add population density focal means to env data
+```{r}
+pop_110m <- extract(focal_popden, cameras_sf)
+
+envcov_data_tmp <- cbind(dist_border, pop_110m)
+
+envcov_data_tmp
+
+## population per ha
+mean(envcov_data_tmp$pop_110m, na.rm = TRUE)
+
+## save new environmental data
+envcov_data <- envcov_data_tmp %>% 
+  rename(old_popdensity = pop_100,
+         new_popdensity_110m = pop_110m,
+         old_distanceborder = distance_border,
+         new_dist_border = dist_border) %>% 
+  mutate(x_coord = st_coordinates(envcov_data_tmp)[,1],
+         y_coord = st_coordinates(envcov_data_tmp)[,2]) %>% 
+  st_drop_geometry()
+  
+envcov_data
+
+# write.csv(envcov_data, "./output/environmental_data_cameratraps_epsg3035.csv")
+```
+
+# Plotting
+```{r}
+## for plotting, removing the 0
+plot_popden <- focal_popden
+plot_popden[plot_popden==0] <- NA
+tmap_mode("view")
+
+tm_shape(plot_popden) +
+  tm_raster() +
+  tm_shape(envcov_data_tmp) +
+  tm_dots(col = "blue", alpha = 0.2, size = "pop_110m")
+```
+
