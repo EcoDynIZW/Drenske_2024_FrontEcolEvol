@@ -25,8 +25,8 @@ library(scico)
 Resting percentage of lynxes - example
 
 ```{r}
-data <- read.csv("act_by_hour_example.csv")
-
+data <- read.csv(here::here("R", "Scripts_Aimara", "act_by_hour_example.csv"))
+# pct_rest_hour = n_rest_hour/ n_total_hour
 
 # get percentages to plot averaged across days
 data_pct <- data %>% 
@@ -116,6 +116,58 @@ my_bilbao <- my_palette[-1]
       plot.background = element_rect(fill = "grey90")) 
 )
 ```
+
+```{r}
+# Tests made by Sinah
+(plot_light2 <- ggplot(ind_tmp) +
+    geom_col(aes(hour, mean_pct, fill = mean_pct), color = NA, width = 0.95) +
+    #coord_polar(start = 25) +
+    theme_light() +
+    ylab("percentage of resting time\n") +
+    scale_fill_gradientn(colours = rev(my_bilbao)) +
+    labs(title = paste0("Resting pattern ind ", labels_tmp$animals_id),  
+         subtitle = paste0("Average daily resting time: ", labels_tmp$label_2, "%"), 
+         fill = "Daily percentage") +
+    theme(title = element_text(size = 16, face = "bold"),
+      axis.title = element_text(size = 14), 
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(colour = "black", size = 14),
+      axis.text.y = element_text(colour = "grey20", size = 14),
+      legend.title = element_text(size = 12, face = "bold"),
+      legend.text = element_text(size = 12),
+      legend.background = element_rect(colour = "grey90", fill = "grey90"),
+      legend.justification = c(0,1),
+        panel.border = element_blank(),
+        panel.grid = element_line(colour = "grey70"),
+        panel.background = element_rect(fill = "grey90"), 
+      plot.background = element_rect(fill = "grey90")) 
+)
+
+(plot_light3 <- ggplot(ind_tmp) +
+    geom_line(aes(x = hour, y = mean_pct), color = "red", linewidth = 2) + # , fill = mean_pct
+    #coord_polar(start = 25) +
+    theme_light() +
+    ylab("percentage of resting time\n") +
+    scale_fill_gradientn(colours = rev(my_bilbao)) +
+    labs(title = paste0("Resting pattern ind ", labels_tmp$animals_id),  
+         subtitle = paste0("Average daily resting time: ", labels_tmp$label_2, "%"), 
+         fill = "Daily percentage") +
+    theme(title = element_text(size = 16, face = "bold"),
+      axis.title = element_text(size = 14), 
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(colour = "black", size = 14),
+      axis.text.y = element_text(colour = "grey20", size = 14),
+      legend.title = element_text(size = 12, face = "bold"),
+      legend.text = element_text(size = 12),
+      legend.background = element_rect(colour = "grey90", fill = "grey90"),
+      legend.justification = c(0,1),
+        panel.border = element_blank(),
+        panel.grid = element_line(colour = "grey70"),
+        panel.background = element_rect(fill = "grey90"), 
+      plot.background = element_rect(fill = "grey90")) 
+)
+```
+
 
 ```{r plot resting behaviour 1 ind - light blue}
 (plot_lightblue <- ggplot(ind_tmp, aes(x = hour)) +

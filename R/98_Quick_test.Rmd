@@ -134,10 +134,10 @@ for (package in package.list) {
 # Import fonts
 ```{r}
 # # Loading fonts (with package extrafont)
-# library(extrafont)
-# #font_import()
-# loadfonts(device = "win")
-# fonts()
+library(extrafont)
+#font_import()
+loadfonts(device = "win")
+fonts()
 
 ```
 
@@ -159,25 +159,192 @@ for (package in package.list) {
 #   geom_bar(position = position_dodge(width = 0.9, preserve = "single"))
 ```
 
+```{r}
+rgb(red = 228, green =  202, blue =  165, maxColorValue = 255) # beige
+rgb(red = 131, green =  116, blue =  097, maxColorValue = 255) # brown
+rgb(red = 200, green =  054, blue =  073, maxColorValue = 255) # red
+rgb(red = 077, green =  100, blue =  118, maxColorValue = 255) # greyblue
+rgb(red = 048, green =  059, blue =  074, maxColorValue = 255) # darkdarkblue
+```
+# 3a Description plots
+```{r}
+# Garden type
+ggplot(data = CT_squirrels_station, mapping = aes(x = garden_type, y = n)) + 
+  stat_halfeye(mapping = aes(
+    color = garden_type, 
+    fill = after_scale(lighten(color, .5))),
+    width = 0.75, 
+    .width = 0, 
+    adjust = 0.5, 
+    justification = -.3,
+    point_color = NA) +
+  geom_boxplot(mapping = aes(
+    color = garden_type, 
+    color = after_scale(darken(color, .1, space = "HLS")),
+    fill = after_scale(desaturate(lighten(color, .8), .4))), 
+    width = 0.32, 
+    outlier.shape = NA) +
+  # geom_point(mapping = aes(
+  #   color = garden_type, 
+  #   color = after_scale(darken(color, .1, space = "HLS"))), 
+  #   fill = "white", 
+  #   shape = 21, 
+  #   size = 2, 
+  #   stroke = .4,
+  #   position = position_jitter(seed = 1, width = 0.12)) +
+  geom_point(mapping = aes(
+    fill = garden_type), 
+    color = "transparent", 
+    shape = 21, 
+    size = 3, 
+    stroke = .4,
+    alpha = .5,
+    position = position_jitter(seed = 1, width = 0.12)) + 
+  stat_summary(
+    geom = "text",
+    fun = "median",
+    aes(label = round(..y.., 2),
+        color = garden_type,
+        color = after_scale(darken(color, .1, space = "HLS"))),
+    family = "Roboto",
+    fontface = "bold",
+    size = 5,
+    vjust = -3.5) + 
+  annotate(geom="text", family = "Roboto", 
+           x=2.4, y=30, 
+           label="n = 185",
+           color=after_scale(darken("#572F22", .1, space = "HLS")), size = 4) + 
+  annotate(geom="text", family = "Roboto", 
+           x=1.4, y=30, 
+           label="n = 44",
+           color=after_scale(darken("#CD524C", .1, space = "HLS")), size = 4) + 
+  coord_flip(clip = "off") + 
+  scale_y_continuous(
+    limits = c(-5, 200),
+    breaks = seq(0, 200, by = 50),
+    expand = c(.001, .001)) + 
+  labs(x = "Garden type", 
+       y = "Number of pictures") + 
+  theme_pubr() + 
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank(), 
+        legend.position = "none", 
+        panel.background = element_rect(fill = "white"), 
+        plot.background = element_rect(fill = "white"),
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 2), 
+        axis.ticks.length = unit(0.25, "cm"), 
+        plot.margin = margin(6, 10, 4, 4)) + 
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") +
+  scale_fill_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001))
+```
+
+
 # Overlap plots + calculation
 ```{r}
 # dat$time <- (hour(dat$DateTime)*60 + minute(dat$DateTime))/(24*60)  #time of day as fraction
 # dat$radtime <- dat$time * 2 * pi
 
+# transform hours to minutes + minutes / minutes of a day
+# CT_squirrels$minute_day <- (hour(CT_squirrels$DateTimeOriginal)*60 + minute(CT_squirrels$DateTimeOriginal))
+# CT_squirrels$tot_min <- 24*60
+# CT_squirrels$time_frac2 <- CT_squirrels$minute_day / CT_squirrels$tot_min
+
 CT_squirrels$time_frac <- (hour(CT_squirrels$DateTimeOriginal)*60 + minute(CT_squirrels$DateTimeOriginal))/(24*60)
-CT_squirrels$time_frac
+# CT_squirrels$seconds_day <- period_to_seconds(hms(CT_squirrels$Time))
+# CT_squirrels$time_frac_s <- CT_squirrels$seconds_day / (24*60*60)
+# CT_squirrels$radtime_s <- CT_squirrels$time_frac_s * 2 * pi
+# CT_squirrels$rad_s_reverse <- CT_squirrels$radtime_s / 2 / pi 
+# CT_squirrels$time_frac_s_reverse <- CT_squirrels$rad_s_reverse * (24*60*60)
+# CT_squirrels$time_s_reverse <- seconds_to_period(CT_squirrels$time_frac_s_reverse)
+
+
+# calculate the radiated time
 CT_squirrels$radtime <- CT_squirrels$time_frac * 2 * pi
 CT_squirrels$radtime
+# CT_squirrels$rad_reverse <- CT_squirrels$radtime / 2 / pi 
+# CT_squirrels$minute_day_reverse <- CT_squirrels$rad_reverse * CT_squirrels$tot_min
+# CT_squirrels$seconds <- CT_squirrels$minute_day_reverse * 60
+# CT_squirrels$time_interest <- seconds_to_period(CT_squirrels$seconds)
+# minutes
 
-CT_squirrels <- sf::st_drop_geometry(CT_squirrels)
-CT_squirrels_dogs <- CT_squirrels[CT_squirrels$dogs_binary == 1, ]$radtime
-CT_squirrels_no_dogs <- CT_squirrels[CT_squirrels$dogs_binary == 0, ]$radtime
+#CT_squirrels <- sf::st_drop_geometry(CT_squirrels)
+CT_squirrels_dogs <- CT_squirrels[CT_squirrels$dogs_binary == 1, ]$radtime_s
+CT_squirrels_no_dogs <- CT_squirrels[CT_squirrels$dogs_binary == 0, ]$radtime_s
+(mean(CT_squirrels_dogs) / 2 / pi)  # = time_frac
+mean(CT_squirrels_no_dogs) / 2 / pi
+
+(mean(CT_squirrels_dogs) / 2 / pi)  # = time_frac
+seconds_to_period(((mean(CT_squirrels_no_dogs) / 2 / pi))*(24*60*60))
+
+CT_squirrels %>%
+  group_by(dogs_binary) %>%
+  dplyr::summarise(mean_act_time = seconds_to_period(mean(Time)))
+CT_squirrels %>%
+  group_by(dogs_binary) %>%
+  dplyr::summarise(mean_act_time = seconds_to_period(
+    mean(
+      period_to_seconds(
+        hms(Time)))))
+
 ```
 
 ```{r}
+test <- CT_squirrels %>%
+  mutate(time_frac = (hour(CT_squirrels$DateTimeOriginal)*60 + minute(CT_squirrels$DateTimeOriginal))/(24*60), 
+         radtime = time_frac * 2 * pi)
+
+test %>% 
+  group_by(dogs_binary) %>%
+  overlapEst(A = radtime, kmax = 3, type = "all")
+
+overlapEst(A = tiger)
+```
+
+
+```{r}
+library(overlap)
 overlapEst(A = CT_squirrels_dogs, B = CT_squirrels_no_dogs, kmax = 3, type = "all")
 #overlap::overlapEst
+overlapEst(A = CT_squirrels_no_dogs, B = CT_squirrels_dogs, kmax = 3, type = "all")
+tigmac <- overlapPlot(CT_squirrels_no_dogs, CT_squirrels_dogs)
 
+ggplot(tigmac, aes(x)) +
+  geom_area(aes(y = pmin(densityA, densityB)),
+            alpha = 0.3) +
+  geom_line(aes(y = densityA, colour = "A")) +
+  geom_line(aes(y = densityB, colour = "B"))
+```
+```{r}
+df <- data.frame(
+  g = c("a", "a", "a", "b", "b", "b"),
+  x = c(1, 3, 5, 2, 4, 6),
+  y = c(2, 5, 1, 3, 6, 7)
+)
+a <- ggplot(df, aes(x, y, fill = g)) +
+  geom_area()
+a
+
+ggplot(states, aes(x = year, group=1)) + 
+  geom_line(aes(y = ttc_avg),colour='#006f91') +
+  geom_line(aes(y = nat_avg), colour='#666666') +
+  geom_ribbon(aes(x=year, ymin = nat_avg, ymax = ttc_avg, fill=ttc_avg > nat_avg)) +
+  scale_fill_manual(values=c("green", "red"), name="fill") +
+  facet_wrap(~state)
+```
+```{r}
+squirrels_CT %>%
+  group_by(Season, hour_day) %>%
+  dplyr::summarize(n_hour = sum(n)) %>%
+  complete(hour_day = c(0:23), fill = list(n_hour = 0)) %>%
+  ungroup() %>%
+  ggplot(mapping = aes(x = hour_day, y = n_hour, colour = Season, fill = Season)) + 
+  geom_line(size =2) + 
+  geom_area(aes(y = pmin(n_hour)),
+            alpha = 0.3)
 ```
 
 
@@ -391,4 +558,423 @@ test2 <- CT_squirrel %>%
   
 
 ```
+
+# Activity plots old
+
+
+
+#### Old
+```{r}
+CT_data_lockdown <- split(x = CT_squirrels, f = CT_squirrels$lockdown)
+```
+
+```{r}
+# Kleingarten
+activityDensity(recordTable = CT_data_lockdown[[1]], 
+               species = "Squirrel",
+               lwd = 3, 
+               ylim = c(0,0.3)) # no lockdown
+# Grundstück
+activityDensity(recordTable = CT_data_lockdown[[2]],
+               species = "Squirrel",
+               lwd = 3, 
+               ylim = c(0,0.3)) # lockdown
+
+# Overlap plot
+activityOverlap(recordTable = CT_squirrels, speciesA = 0, speciesB = 1, speciesCol = "lockdown")
+```
+
+#### per project phase
+```{r}
+CT_data_per_phase <- split(x = CT_act_date_proc, f = CT_act_date_proc$project_phase)
+CT_data_phase1 <- as.data.frame(CT_data_per_phase[[1]])
+CT_data_phase2 <- as.data.frame(CT_data_per_phase[[2]])
+CT_data_phase3 <- as.data.frame(CT_data_per_phase[[3]])
+CT_data_phase4 <- as.data.frame(CT_data_per_phase[[4]])
+CT_data_phase5 <- as.data.frame(CT_data_per_phase[[5]])
+```
+
+```{r}
+activityRadial(recordTable = CT_data_phase1, 
+               species = "Squirrel", 
+               rp.type = "p", 
+               lwd = 3, 
+               radial.lim = c(0,0.25))
+# activityRadial(recordTable = CT_data_per_season[[1]], 
+#                species = "Squirrel", 
+#                lwd = 3)
+activityRadial(recordTable = CT_data_phase2, species = "Squirrel", rp.type = "p", lwd = 3, radial.lim = c(0,0.25))
+activityRadial(recordTable = CT_data_phase3, species = "Squirrel", rp.type = "p", lwd = 3, radial.lim = c(0,0.25))
+activityRadial(recordTable = CT_data_phase4, species = "Squirrel", rp.type = "p", lwd = 3, radial.lim = c(0,0.25))
+activityRadial(recordTable = CT_data_phase5, species = "Squirrel", rp.type = "p", lwd = 3, radial.lim = c(0,0.25))
+
+################## Same scale for all seasons
+################## overlap plots
+#activityOverlap(recordTable = CT_data_per_phase, speciesA = CT_data_per_phase[[1]], speciesB = CT_data_per_phase[[2]])
+```
+
+```{r}
+activityDensity(recordTable = CT_data_phase1, species = "Squirrel", 
+               ylim = c(0,0.2))
+activityDensity(recordTable = CT_data_phase2, species = "Squirrel", 
+               ylim = c(0,0.2))
+activityDensity(recordTable = CT_data_phase3, species = "Squirrel", 
+               ylim = c(0,0.2))
+activityDensity(recordTable = CT_data_phase4, species = "Squirrel", 
+               ylim = c(0,0.2))
+activityDensity(recordTable = CT_data_phase5, species = "Squirrel", 
+               ylim = c(0,0.2))
+```
+
+
+```{r}
+# activityRadial(recordTable = CT_act_date_proc, 
+#                species = "Squirrel", 
+#                lwd = 3)
+# activityRadial(recordTable = CT_act_date_proc, 
+#                species = "Squirrel", 
+#                lwd = 3, 
+#                line.col = "black", rad.col = "grey", 
+#                grid.col = "grey", 
+#                grid.bg = "white")
+```
+
+#### per garden type
+```{r}
+CT_data_garden_type <- split(x = CT_squirrels, f = CT_squirrels$garden_type)
+```
+
+```{r}
+# Kleingarten
+activityRadial(recordTable = CT_data_garden_type[[1]],
+               species = "Squirrel",
+               lwd = 3, 
+               radial.lim = c(0,0.25))
+# Grundstück
+activityRadial(recordTable = CT_data_garden_type[[2]],
+               species = "Squirrel",
+               lwd = 3, 
+               radial.lim = c(0,0.25))
+
+# Kleingarten
+activityDensity(recordTable = CT_data_garden_type[[1]],
+               species = "Squirrel",
+               lwd = 3, 
+               ylim = c(0,0.15))
+# Grundstück
+activityDensity(recordTable = CT_data_garden_type[[2]],
+               species = "Squirrel",
+               lwd = 3, 
+               ylim = c(0,0.15))
+```
+
+#### imperviousness
+```{r}
+CT_with_garden_var <- CT_act_date_proc %>%
+  left_join(y = env_var, by = "Station")
+
+CT_squirrels <- CT_with_garden_var %>% 
+  filter(Species == "Squirrel")
+
+CT_squirrels$imperv_class <- 
+  ifelse(test = CT_squirrels$imperviousness_2018 <20, 
+         yes = 1, 
+         no = ifelse(test = CT_squirrels$imperviousness_2018 <40, 
+                     yes = 2, 
+                     no = ifelse(test = CT_squirrels$imperviousness_2018 <60, 
+                                 yes = 3, 
+                                 no = ifelse(test = CT_squirrels$imperviousness_2018 <80, 
+                                             yes = 4, 
+                                             no = ifelse(test = CT_squirrels$imperviousness_2018 <101, 
+                                                         yes = 5, 
+                                                         no = 99)))))
+
+CT_squirrels$tree_cov_class <- 
+  ifelse(test = CT_squirrels$tree_cover_100 <20, 
+         yes = 1, 
+         no = ifelse(test = CT_squirrels$tree_cover_100 <40, 
+                     yes = 2, 
+                     no = ifelse(test = CT_squirrels$tree_cover_100 <60, 
+                                 yes = 3, 
+                                 no = ifelse(test = CT_squirrels$tree_cover_100 <80, 
+                                             yes = 4, 
+                                             no = ifelse(test = CT_squirrels$tree_cover_100 <101, 
+                                                         yes = 5, 
+                                                         no = 99)))))
+
+CT_squirrels$pop_class <- 
+  ifelse(test = CT_squirrels$population_density_2019 <100, 
+         yes = 1, 
+         no = ifelse(test = CT_squirrels$population_density_2019 <200, 
+                     yes = 2, 
+                     no = ifelse(test = CT_squirrels$population_density_2019 <300, 
+                                 yes = 3, 
+                                 no = ifelse(test = CT_squirrels$population_density_2019 <700, 
+                                             yes = 4, 
+                                             no = 99))))
+
+```
+
+
+```{r}
+CT_data_imperv <- split(x = CT_squirrels, f = CT_squirrels$imperv_class)
+```
+
+```{r}
+# 1
+activityDensity(recordTable = CT_data_imperv[[1]],
+               species = "Squirrel",
+               lwd = 3, 
+               ylim = c(0,0.3))
+# 2
+activityDensity(recordTable = CT_data_imperv[[2]],
+               species = "Squirrel",
+               lwd = 3, 
+               ylim = c(0,0.3))
+# 3
+activityDensity(recordTable = CT_data_imperv[[3]],
+               species = "Squirrel",
+               lwd = 3, 
+               ylim = c(0,0.3))
+# 4
+activityDensity(recordTable = CT_data_imperv[[4]],
+               species = "Squirrel",
+               lwd = 3, 
+               ylim = c(0,0.3))
+# 5
+activityDensity(recordTable = CT_data_imperv[[5]],
+               species = "Squirrel",
+               lwd = 3, 
+               ylim = c(0,0.3))
+```
+#### tree cover
+```{r}
+CT_data_tree <- split(x = CT_squirrels, f = CT_squirrels$tree_cov_class)
+```
+
+```{r}
+# 1
+activityDensity(recordTable = CT_data_tree[[1]],
+               species = "Squirrel",
+               lwd = 3, 
+               ylim = c(0,0.4))
+# 2
+activityDensity(recordTable = CT_data_tree[[2]],
+               species = "Squirrel",
+               lwd = 3, 
+               ylim = c(0,0.4))
+# 3
+activityDensity(recordTable = CT_data_tree[[3]],
+               species = "Squirrel",
+               lwd = 3, 
+               ylim = c(0,0.4))
+# 4
+activityDensity(recordTable = CT_data_tree[[4]],
+               species = "Squirrel",
+               lwd = 3, 
+               ylim = c(0,0.4))
+# 5
+activityDensity(recordTable = CT_data_tree[[5]],
+               species = "Squirrel",
+               lwd = 3, 
+               ylim = c(0,0.4))
+```
+
+
+#### population density
+```{r}
+# CT_squirrels$pop_class <- 
+#   ifelse(test = CT_squirrels$pop_100 <100, 
+#          yes = 1, 
+#          no = ifelse(test = CT_squirrels$pop_100 <200, 
+#                      yes = 2, 
+#                      no = ifelse(test = CT_squirrels$pop_100 <300, 
+#                                  yes = 3, 
+#                                  no = ifelse(test = CT_squirrels$pop_100 <700, 
+#                                              yes = 4, 
+#                                              no = 99))))
+
+CT_data_pop <- split(x = CT_squirrels, f = CT_squirrels$pop_class)
+```
+
+```{r}
+# 1
+activityDensity(recordTable = CT_data_pop[[1]],
+               species = "Squirrel",
+               lwd = 3, 
+               ylim = c(0,0.4))
+# 2
+activityDensity(recordTable = CT_data_pop[[2]],
+               species = "Squirrel",
+               lwd = 3, 
+               ylim = c(0,0.4))
+# 3
+activityDensity(recordTable = CT_data_pop[[3]],
+               species = "Squirrel",
+               lwd = 3, 
+               ylim = c(0,0.4))
+# 4
+activityDensity(recordTable = CT_data_pop[[4]],
+               species = "Squirrel",
+               lwd = 3, 
+               ylim = c(0,0.4))
+```
+
+#### dogs
+```{r}
+CT_data_dogs <- split(x = CT_squirrels, f = CT_squirrels$dogs_binary)
+```
+
+```{r}
+# 1
+activityDensity(recordTable = CT_data_dogs[[1]], # no dog
+               species = "Squirrel",
+               lwd = 3, 
+               ylim = c(0,0.2))
+# 2
+activityDensity(recordTable = CT_data_dogs[[2]], # dog
+               species = "Squirrel",
+               lwd = 3, 
+               ylim = c(0,0.2))
+```
+
+
+```{r}
+table(CT_squirrels$dogs_binary)
+table(CT_squirrels$dogs_binary, CT_squirrels$project_phase)
+```
+Per project phase (we can see this in the overlap plots)
+```{r}
+# activityDensity(recordTable = CT_data_dogs[[1]], # no dog
+#                species = 1, 
+#                speciesCol = "project_phase",
+#                lwd = 3, 
+#                ylim = c(0,0.2))
+# # 2
+# activityDensity(recordTable = CT_data_dogs[[1]], # no dog
+#                species = 2, 
+#                speciesCol = "project_phase",
+#                lwd = 3, 
+#                ylim = c(0,0.2))
+# 
+# activityDensity(recordTable = CT_data_dogs[[1]], # no dog
+#                species = 3, 
+#                speciesCol = "project_phase",
+#                lwd = 3, 
+#                ylim = c(0,0.2))
+# 
+# activityDensity(recordTable = CT_data_dogs[[1]], # no dog
+#                species = 4, 
+#                speciesCol = "project_phase",
+#                lwd = 3, 
+#                ylim = c(0,0.2))
+# 
+# activityDensity(recordTable = CT_data_dogs[[1]], # no dog
+#                species = 5, 
+#                speciesCol = "project_phase",
+#                lwd = 3, 
+#                ylim = c(0,0.2))
+```
+
+##### Overlap plots
+```{r}
+activityOverlap(recordTable = CT_squirrels, speciesA = 0, speciesB = 1, speciesCol = "dogs_binary")
+```
+
+```{r}
+# dogs vs no dogs per season
+CT_data_per_season <- split(x = CT_squirrels, f = CT_squirrels$Season)
+CT_data_autumn <- as.data.frame(CT_data_per_season[[1]])
+CT_data_spring <- as.data.frame(CT_data_per_season[[2]])
+
+# spring
+activityOverlap(recordTable = CT_data_spring, speciesA = 0, speciesB = 1, speciesCol = "dogs_binary", ylim = c(0,0.2))
+
+# Autumn
+activityOverlap(recordTable = CT_data_autumn, speciesA = 0, speciesB = 1, speciesCol = "dogs_binary", ylim = c(0,0.2))
+
+```
+Per project phase
+```{r}
+CT_data_per_phase <- split(x = CT_squirrels, f = CT_squirrels$project_phase)
+CT_data_phase1 <- as.data.frame(CT_data_per_phase[[1]])
+CT_data_phase2 <- as.data.frame(CT_data_per_phase[[2]])
+CT_data_phase3 <- as.data.frame(CT_data_per_phase[[3]])
+CT_data_phase4 <- as.data.frame(CT_data_per_phase[[4]])
+CT_data_phase5 <- as.data.frame(CT_data_per_phase[[5]])
+```
+
+```{r}
+# Phase 1
+activityOverlap(recordTable = CT_data_phase1, speciesA = 0, speciesB = 1, speciesCol = "dogs_binary", ylim = c(0,0.25))
+
+# Phase 2
+activityOverlap(recordTable = CT_data_phase2, speciesA = 0, speciesB = 1, speciesCol = "dogs_binary", ylim = c(0,0.25))
+
+# Phase 3
+activityOverlap(recordTable = CT_data_phase3, speciesA = 0, speciesB = 1, speciesCol = "dogs_binary", ylim = c(0,0.25))
+
+# Phase 4
+activityOverlap(recordTable = CT_data_phase4, speciesA = 0, speciesB = 1, speciesCol = "dogs_binary", ylim = c(0,0.25))
+
+# Phase 5
+activityOverlap(recordTable = CT_data_phase5, speciesA = 0, speciesB = 1, speciesCol = "dogs_binary", ylim = c(0,0.25))
+```
+
+
+#### cats
+```{r}
+CT_data_cats <- split(x = CT_squirrels, f = CT_squirrels$cats_binary)
+table(CT_squirrels$cats_binary)
+table(CT_squirrels$cats_binary, CT_squirrels$project_phase)
+```
+
+```{r}
+# 1
+activityDensity(recordTable = CT_data_cats[[1]], # no cat
+               species = "Squirrel",
+               lwd = 3, 
+               ylim = c(0,0.2))
+# 2
+activityDensity(recordTable = CT_data_cats[[2]], # cat
+               species = "Squirrel",
+               lwd = 3, 
+               ylim = c(0,0.2))
+```
+
+#### trees of interest
+```{r}
+CT_data_tree_interest <- split(x = CT_squirrels, f = CT_squirrels$trees_of_interest)
+```
+
+```{r}
+# 1
+activityDensity(recordTable = CT_data_tree[[1]], # no trees of interest
+               species = "Squirrel",
+               lwd = 3, 
+               ylim = c(0,0.2))
+# 2
+activityDensity(recordTable = CT_data_tree[[2]], # with trees of interest
+               species = "Squirrel",
+               lwd = 3, 
+               ylim = c(0,0.2))
+```
+
+### Save data
+We save the combined dataset of camera trap detections and the environmental variables
+```{r}
+# # CT_with_garden_var
+# saveRDS(object = CT_with_garden_var,
+#         file = here::here("output", "data-proc", "all_seasons", "CT_with_garden_var_20230106.RDS"))
+# 
+# # CT_squirrels
+# saveRDS(object = CT_squirrels,
+#         file = here::here("output", "data-proc", "all_seasons", "CT_squirrels_with_garden_var_20230106.RDS"))
+# 
+# # CT_squirrels_station
+# saveRDS(object = CT_squirrels_station,
+#         file = here::here("output", "data-proc", "all_seasons", "CT_squirrels_station_with_garden_var_20230106.RDS"))
+```
+
+
 
