@@ -49,40 +49,42 @@ Julie Louvrier, Stephanie Kramer-Schadt
 List of keywords for the modelling notebook (from Ayllon et al. 2021 +
 own terms)
 
-+------------------+---------------------------------+
-| Modelling        | Modelling Notebook keyword      |
-| Notebook entry   |                                 |
-| tag/TRACE        |                                 |
-| element          |                                 |
-+==================+=================================+
-| Problem          | Model purpose; Research         |
-| formulation      | questions                       |
-+------------------+---------------------------------+
-| Model            | Model development; Design       |
-| description      | decisions                       |
-+------------------+---------------------------------+
-| Data evaluation  | Parameterization; Patterns      |
-+------------------+---------------------------------+
-| Conceptual model | Conceptual design decisions     |
-| evaluation       |                                 |
-+------------------+---------------------------------+
-| Implementation   | Debugging; Software             |
-| verification     | verification; Testing;          |
-|                  | Usability tools design          |
-+------------------+---------------------------------+
-| Model output     | Output verification;            |
-| verification     | Goodness-of-fit; Calibration;   |
-|                  | tests on\                       |
-|                  | environmental drivers           |
-+------------------+---------------------------------+
-| Model analysis   | Sensitivity analysis;           |
-| and application  | Uncertainty analysis;           |
-|                  | Robustness analysis;\           |
-|                  | Simulation experiment           |
-+------------------+---------------------------------+
-| Model output     | Output corroboration;           |
-| corroboration    | Validation                      |
-+------------------+---------------------------------+
++----------------+------------------------------+
+| Modelling      | Modelling Notebook keyword   |
+| Notebook entry |                              |
+| tag/TRACE      |                              |
+| element        |                              |
++================+==============================+
+| Problem        | Model purpose; Research      |
+| formulation    | questions                    |
++----------------+------------------------------+
+| Model          | Model development; Design    |
+| description    | decisions                    |
++----------------+------------------------------+
+| Data           | Parameterization; Patterns   |
+| evaluation     |                              |
++----------------+------------------------------+
+| Conceptual     | Conceptual design decisions  |
+| model          |                              |
+| evaluation     |                              |
++----------------+------------------------------+
+| Implementation | Debugging; Software          |
+| verification   | verification; Testing;       |
+|                | Usability tools design       |
++----------------+------------------------------+
+| Model output   | Output verification;         |
+| verification   | Goodness-of-fit;             |
+|                | Calibration; tests on\       |
+|                | environmental drivers        |
++----------------+------------------------------+
+| Model analysis | Sensitivity analysis;        |
+| and            | Uncertainty analysis;        |
+| application    | Robustness analysis;\        |
+|                | Simulation experiment        |
++----------------+------------------------------+
+| Model output   | Output corroboration;        |
+| corroboration  | Validation                   |
++----------------+------------------------------+
 
 # Topical index
 
@@ -110,6 +112,100 @@ description of the file and folder taxonomy.
 ### Specific details
 
 XYZ...
+
+## 31.01.2023 - Meeting with Aimara, Marius and Stephanie
+
+### General information
+
+**Date**: 31.01.2023\
+**Author**: Sinah Drenske\
+**Entry Type**:\
+**TRACE tag**:\
+**Keywords**:\
+**Overview**:\
+**Files**:
+
+### Specific details
+
+Questions:
+
+-   Environmental variables
+
+    -   Why are there NAs in Imperviousness and Population density?
+
+    -   Why are there so many zeros in tree cover density?
+
+    -   How should we handle NAs?
+
+-   Models, Exploration:
+
+    -   With or without stations where no pictures of squirrels were
+        taken?
+        -   WITH
+
+Next steps:
+
+-   Text: Little outline of the manuscript, RQ, H, figures + tables
+
+    -   We know that urban variables are drivers for presence (But also
+        for activity???), we want to have a look at temporal
+        distribution
+
+-   Datasets
+
+    -   **Use only corrected data.** Remove the data with the time limit
+        of 30 minutes (01, 03c, ...?)
+
+    -   **With zeros per station, not without zeros**. When I calculate
+        the number of pictures per station: Consider for each analysis
+        also the stations with 0 pictures (also for activity plots etc.)
+
+    -   
+
+-   Environmental variables
+
+    -   Tree cover density: Marius has a look at it and I ask Moritz
+        again
+    -   Plot old raster and new raster
+
+-   Models + Activity
+
+    -   Calculate the average number of pictures per hour per station
+        (not the sum) + SD
+
+    -   Plot the mean number with SD (for example in script 3b)
+
+    -   Question for me? Will the results be so different? Test both
+
+    -   Plot this against dogs, predators, (maybe urban and garden
+        variables)
+
+        -   Predators: also mean number of pictures per hour (but maybe
+            also only presence absence?) for nocturnal animals there
+            will be many zeros
+
+-   Models:
+
+    -   Until now I build different models for population density and
+        distance to border. The correlation coefficient is 0.43. But now
+        I will consider both of them in the same model. We will not
+        consider correlations with a coefficient \< 0.7 (as long as it
+        is only for one variable)
+
+    -   We remove cats and dogs from the models, because there are no
+        dogs in allotments and there is only 1 cat in an allotment
+
+        -   We build a new model only for gardens where we consider cats
+            and dogs
+
+        -   Or we build a new variable with 3 levels (garden with dog,
+            garden without dog, allotment without dog
+
+    -   We have to find a way to calculate R^2^ for poisson models. This
+        will be a Pseudo R^2^
+
+    -   Results table: Add column for delta WAIC, order the models by
+        ascending WAIC
 
 ## 19.01.2023 - Meeting with Aimara and Marius
 
