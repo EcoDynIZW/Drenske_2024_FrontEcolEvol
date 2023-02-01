@@ -155,7 +155,8 @@ stacked_raster_values_and_garden_CT_all_seasons_no_nas <- stacked_raster_values_
 stacked_raster_values_and_garden_CT_all_seasons_no_nas <- 
   stacked_raster_values_and_garden_CT_all_seasons_no_nas %>%
   dplyr::mutate(across(.cols = c(garden_type, compost, dogs_binary, cats_binary, trees_of_interest),
-                       .fns =  as.factor))
+                       .fns =  as.factor))%>%
+  droplevels()
 ```
 
 
@@ -318,6 +319,22 @@ stacked_raster_values_and_garden_CT_all_seasons_no_nas <- stacked_raster_values_
 ```
 
 
+### Change column types
+```{r}
+CT_act_date_formated <- 
+  CT_act_date_formated %>%
+  dplyr::mutate(across(.cols = c(Species, Season, weekdays_binary, project_phase, lockdown),
+                       .fns =  as.factor)) %>%
+  droplevels()
+```
+
+Add season, project phase and lockdown to the table of the environmental variables
+```{r}
+stacked_raster_values_and_garden_CT_all_seasons_no_nas <- CT_act_date_formated[, c(2,3,7,8)] %>%
+  unique() %>%
+  right_join(y = stacked_raster_values_and_garden_CT_all_seasons_no_nas, by = "Station")
+```
+
 ### Filter by species of interest
 We do not consider all species in our analysis. The species that are not considered are removed from the dataset
 ```{r}
@@ -329,8 +346,7 @@ CT_species_interest <- CT_act_date_formated %>%
            Species == "Red Fox")
 ```
 
-
-## Calculate time differences between pictures of the same species
+### Calculate time differences between pictures of the same species
 When the motion sensors of the cameras were triggered, several photos were taken. We delete all photos that were taken within one minute of the previous photo. Then we recalculate the time difference between the remaining photos.
 
 ```{r}
@@ -361,25 +377,9 @@ CT_species_interest_time <- CT_species_interest %>%
   ungroup()
 ```
 
-## Change column types
-```{r}
-CT_species_interest_time <- 
-  CT_species_interest_time %>%
-  dplyr::mutate(across(.cols = c(Species, Season, weekdays_binary, project_phase, lockdown),
-                       .fns =  as.factor))
-```
-
-Add the project phase and lockdown to the table of the environmental variables
-```{r}
-stacked_raster_values_and_garden_CT_all_seasons_no_nas <- CT_act_date_formated[, c(2,3,7,8)] %>%
-  unique() %>%
-  right_join(y = stacked_raster_values_and_garden_CT_all_seasons_no_nas, by = "Station")
-```
-
-
 
 ## Rearrange columns
-In bot the CT data and the environmental variables
+In both the CT data and the environmental variables
 ```{r}
 names(CT_species_interest_time)
 ```
@@ -446,22 +446,6 @@ print("Cats")
 table(stacked_raster_values_and_garden_CT_all_seasons_no_nas$cats_binary)
 print("Trees of interest")
 table(stacked_raster_values_and_garden_CT_all_seasons_no_nas$trees_of_interest)
-```
-
-# Build a combined table of CT data and evironmental data
-```{r}
-CT_species_interest_time <- CT_species_interest_time %>%
-  left_join(y = stacked_raster_values_and_garden_CT_all_seasons_no_nas[, c(1, 5:21)], by = "Station")
-```
-
-## Build a table only for squirrels
-```{r}
-CT_squirrels <- CT_species_interest_time %>%
-  filter(Species == "Squirrel")
-
-# and with a time difference of at least 30 minutes between squirrel pictures at the same station
-CT_squirrels_30min <- CT_squirrels %>%
-  filter(diff_samespecies > 30)
 ```
 
 
@@ -959,52 +943,36 @@ Hint: it is fine that the number of rows in the datasets for activity and diurna
 ```{r}
 # # CT_act_date_formated
 # saveRDS(object = CT_act_date_formated,
-#         file = here::here("output", 
-#                           "data-proc", 
+#         file = here::here("output",
+#                           "data-proc",
 #                           "all_seasons",
 #                           "CT_act_date_proc_20230124.RDS"))
 # 
 # # CT Species interest
 # saveRDS(object = CT_species_interest_time,
-#         file = here::here("output", 
-#                           "data-proc", 
+#         file = here::here("output",
+#                           "data-proc",
 #                           "all_seasons",
 #                           "CT_species_interest_time_20230124.RDS"))
 # 
-# # CT Squirrels
-# saveRDS(object = CT_squirrels,
-#         file = here::here("output",
-#                           "data-proc",
-#                           "all_seasons",
-#                           "CT_squirrels_20230124.RDS"))
-# 
-# # CT Squirrels 30 mins
-# saveRDS(object = CT_squirrels_30min,
-#         file = here::here("output",
-#                           "data-proc",
-#                           "all_seasons",
-#                           "CT_squirrels_30min_20230124.RDS"))
-# 
 # # stacked_raster_values_and_garden_CT_all_seasons_no_nas
 # saveRDS(object = stacked_raster_values_and_garden_CT_all_seasons_no_nas,
-#         file = here::here("output", 
-#                           "data-proc", 
+#         file = here::here("output",
+#                           "data-proc",
 #                           "all_seasons",
 #                           "stacked_raster_values_and_garden_CT_all_seasons_no_nas_proc_20230124.RDS"))
 # 
-########### NOT USED AT THE MOMENT ##
+# # ########### NOT USED AT THE MOMENT ##
 # 
 # # Activity_squirrel_pred_Berlin_all_seasons
 # saveRDS(object = Activity_squirrel_pred_Berlin_all_seasons,
 #         file = here::here("output", "data-proc", "all_seasons",
 #                           "Activity_squirrel_pred_Berlin_all_seasons_20221117.RDS"))
 # 
-# 
 # # squirrels_CT
 # saveRDS(object = squirrels_CT,
 #         file = here::here("output", "data-proc", "all_seasons",
 #                           "squirrels_CT_20221117.RDS"))
-#
 #
 # # Diurnality
 # # saveRDS(object = diurnality_predprey_Berlin_all_seasons,
