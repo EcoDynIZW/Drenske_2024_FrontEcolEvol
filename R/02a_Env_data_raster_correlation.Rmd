@@ -7,7 +7,7 @@ output:
         toc: true            ## if `true` adds a table of content
         toc_depth: 2         ## level to be displayed in the table of content
 editor_options: 
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 ```{r setup, include=FALSE}
@@ -19,139 +19,228 @@ Sys.setlocale("LC_TIME", "C")
 # Setup
 
 ```{r packages}
-library("tidyverse")
-library("raster")
-library("here")
-library("sf")
+# Please install the package librarian, it loads and installs (if necessary) the specified packages from CRAN, GitHub or Bioconductor
+
+#devtools::install_github("DesiQuintans/librarian")
+librarian::shelf(raster, 
+                 sf,
+                 tidyverse) 
 ```
 
 
 # Data
 
 ```{r data}
-### read all environmental raster data ----
-imperviousness_2018<-
-  raster(here("data-raw",
-            "geo-raw",
-            "imperviousness_berlin_copernicus_raster_10m_2018_3035",
-            "imperviousness_berlin_copernicus_raster_10m_2018_3035.tif"
-            ))%>%focal(w=matrix(1,nrow=11,ncol = 11),fun=mean)
-
-
-crs(imperviousness_2018)<-crs("+init=epsg:3035")
-plot(imperviousness_2018)
-
-population_density_2019<-
-  raster(here("data-raw",
-              "geo-raw",
-              #"population_density_ha_berlin_10m_2019_3035.tif"
-              "population-density_berlin_2019_10m_03035_tif",
-              "population-density_berlin_2019_10m_03035.tif"
-            ))
-
-# population_density_2019_2<-
-#   raster(here("data-raw",
-#               "geo-raw",
-#               "population_density_ha_berlin_10m_2019_3035.tif"
-#               #"population-density_berlin_2019_10m_03035_tif",
-#               #"population-density_berlin_2019_10m_03035.tif"
-#             ))
-
-plot(population_density_2019)
-```
-
-```{r extract data}
-ct_locations<-readRDS(here::here("output",
-                           "data-proc",
-                           "all_seasons",
-                           "stacked_raster_values_and_garden_CT_all_seasons_no_nas_proc_20230105.RDS"))
-                           #"stacked_raster_values_and_garden_CT_all_seasons_no_nas_proc_20221117.RDS"))
-
-ct_spatial<-st_as_sf(ct_locations,coords = c("Long","Lat"),remove=F,crs=32633)%>%
-  st_transform(crs = 3035)
-
-
-#### extract covariates ----
-
-cov_imperviousness_2018<-raster::extract(x=imperviousness_2018,y=ct_spatial)%>%
-  data.frame()
-
-colnames(cov_imperviousness_2018)<-"imperviousness_2018"
-
-# population density
-
-cov_population_density_2019<-terra::extract(x=population_density_2019,y=ct_spatial)%>%
-  data.frame()
-
-colnames(cov_population_density_2019)<-"population_density_2019"
-
-# Pop 2
-cov_population_density_2019_2<-terra::extract(x=population_density_2019_2,y=ct_spatial)%>%
-  data.frame()
-
-colnames(cov_population_density_2019_2)<-"population_density_2019"
-
-
-# distance to border
-
-berlin <- st_read(here("data-raw",
-                       "geo-raw",
-                       "berlin_city_border_25833.gpkg"), crs = 25833)%>% 
+# City border
+berlin <- st_read(here::here("data-raw",
+                             "geo-raw",
+                             "berlin_city_border_25833.gpkg"), crs = 25833)%>% 
   st_union() %>% 
   st_transform(crs = 3035) %>% 
   st_cast(to = 'LINESTRING')
 
-# berlin_districts <- st_read(here("data-raw",
-#                                  "geo-raw",
-#                                  "districs_berlin_2022_poly_03035_gpkg",
-#                                  "districs_berlin_2022_poly_03035.gpkg"), crs = 3035) %>% 
-#   st_union(by_feature = FALSE) %>% 
-#   #st_transform(crs = 3035) %>% 
-#   st_cast(to = 'MULTILINESTRING') %>%
+### read layer with borders of the districts of Berlin NOT WORKING ----
+# Combine them to get the city border
+
+# berlin <- 
+#   st_read(here::here("data-raw",
+#                      "geo-raw",
+#                      "districs_berlin_2022_poly_03035_gpkg",
+#                      "districs_berlin_2022_poly_03035.gpkg"), crs = 3035) %>%
+#   st_union() %>%
+#   st_buffer(100) %>%
+#   st_crop(berlin) %>%
 #   st_cast(to = 'LINESTRING')
+# berlin
 
-#plot(berlin)
-#plot(berlin_districts)
+### read all environmental raster data ----
+## Imperviousness 2018
+imperviousness_2018<-
+  raster(here::here("data-raw",
+                    "geo-raw",
+                    "imperviousness_berlin_copernicus_raster_10m_2018_3035",
+                    "imperviousness_berlin_copernicus_raster_10m_2018_3035.tif"
+  )) %>%
+  focal(w=matrix(1,nrow=11,ncol = 11),fun=mean)
 
+crs(imperviousness_2018)<-crs("+init=epsg:3035")
+
+## Light pollution
+light_pollution_2021<-
+  raster(here::here("data-raw",
+                    "geo-raw",
+                    "light-pollution_berlin_2021_10m_03035_tif",
+                    "light-pollution_berlin_2021_10m_03035.tif"
+  ))
+
+## Noise pollution
+noise_pollution_2017<-
+  raster(here::here("data-raw",
+                    "geo-raw",
+                    "noise-day-night_berlin_2017_10m_03035_tif",
+                    "noise-day-night_berlin_2017_10m_03035.tif"
+  ))
+
+## Population density 2019
+population_density_2019<-
+  raster(here::here("data-raw",
+                    "geo-raw",
+                    "population-density_berlin_2019_10m_03035_tif",
+                    "population-density_berlin_2019_10m_03035.tif"
+  ))
+
+## Tree cover density
+tree_cover_density_2019<-
+  raster(here::here("data-raw",
+                    "geo-raw",
+                    "tree-cover-density_berlin_2018_10m_03035_tif",
+                    "tree-cover-density_berlin_2018_10m_03035.tif"
+  ))
+```
+
+Plot all layers
+```{r}
+plot(berlin)
+plot(imperviousness_2018)
+plot(light_pollution_2021)
+plot(noise_pollution_2017)
+plot(population_density_2019)
+plot(tree_cover_density_2019)
+```
+
+```{r extract data}
+ct_locations <- readRDS(here::here("output",
+                                   "data-proc",
+                                   "all_seasons",
+                                   "stacked_raster_values_and_garden_CT_all_seasons_no_nas_proc_20230124.RDS"))
+
+ct_spatial <- st_as_sf(ct_locations,coords = c("Long","Lat"),remove=F,crs=32633) %>%
+  st_transform(crs = 3035)
+
+
+#### extract covariates ----
+# imperviousness
+cov_imperviousness_2018 <- raster::extract(x=imperviousness_2018,y=ct_spatial) %>%
+  data.frame()
+
+colnames(cov_imperviousness_2018) <- "imperviousness_2018"
+
+# light pollution
+cov_light_2021 <- raster::extract(x=light_pollution_2021,y=ct_spatial) %>%
+  data.frame()
+
+colnames(cov_light_2021) <- "light_2021"
+
+# noise pollution
+cov_noise_2017 <- raster::extract(x=noise_pollution_2017,y=ct_spatial) %>%
+  data.frame()
+
+colnames(cov_noise_2017) <- "noise_2017"
+
+
+# population density
+cov_pop_2019 <- terra::extract(x=population_density_2019,y=ct_spatial) %>%
+  data.frame()
+
+colnames(cov_pop_2019) <- "pop_2019"
+
+# Tree cover density
+cov_tree_cover_2019 <- raster::extract(x=tree_cover_density_2019,y=ct_spatial) %>%
+  data.frame()
+
+colnames(cov_tree_cover_2019) <- "tree_cover_2019"
+
+# distance to border
 dist_border <- st_distance(ct_spatial, berlin)
 
 colnames(dist_border)<-"distance_to_border"
-
+range(dist_border)
 
 # bind data
 ct_cov <- cbind(ct_spatial,
-              cov_imperviousness_2018,
-              cov_population_density_2019, cov_population_density_2019_2,
-              dist_border)#%>%
+                cov_imperviousness_2018, 
+                cov_light_2021, 
+                cov_noise_2017, 
+                cov_pop_2019, 
+                cov_tree_cover_2019, 
+                dist_border
+) %>%
+  st_drop_geometry() %>%
+  as.tibble()
+  
   #dplyr::select(-c(10,12,13,15:18)) # only to compare them
   #dplyr::select(-c(pop_100,distance_border,imperv_100))
 
+ct_cov$distance_to_border <- as.numeric(ct_cov$distance_to_border)
+```
 
-# population density 
 
-# saveRDS(ct_cov,here::here("output",
-#                     "data-proc",
-#                     "all_seasons",
-#                     "ct_focal_covariates_100_20230118.RDS"))
-#                     #"ct_focal_covariates_100.RDS"))
+# Save data
+
+```{r save data}
+# ct_cov_save <- ct_cov %>%
+#   dplyr::select(Station, project_phase, Season, lockdown,
+#                 garden_type, garden_size, Local_tree_cover, fence_height, compost,
+#                 dogs_binary, cats_binary, trees_of_interest, Lat, Long, inside,
+#                 imperviousness_2018, noise_2017, pop_2019, tree_cover_2019, distance_to_border)
+# saveRDS(ct_cov_save,here::here("output",
+#                                "data-proc",
+#                                "all_seasons",
+#                                "ct_focal_covariates_100_20230126.RDS"))
+#                               #"ct_focal_covariates_100.RDS"))
 ```
 
 # Plots
+## Imperviousness
+```{r}
+ggplot(data = ct_cov, mapping = aes(x = Station, y = imperv_100)) + 
+  geom_point() + 
+  labs(title = "Imperviousness")
+ggplot(data = ct_cov, mapping = aes(x = Station, y = imperviousness_2018)) + 
+  geom_point() + 
+  labs(title = "New Imperviousness")
+ggplot(data = ct_cov, mapping = aes(x = imperv_100, y = imperviousness_2018)) + 
+  geom_point() + 
+  labs(title = "comparison of imperviousness values")
+```
+
+## Light pollution
+```{r}
+ggplot(data = ct_cov, mapping = aes(x = Station, y = light_2021)) + 
+  geom_point() + 
+  labs(title = "New Light")
+```
+
+
+## Noise pollution
+```{r}
+ggplot(data = ct_cov, mapping = aes(x = Station, y = noise_100)) + 
+  geom_point() + 
+  labs(title = "Noise")
+ggplot(data = ct_cov, mapping = aes(x = Station, y = noise_2017)) + 
+  geom_point() + 
+  labs(title = "New Noise")
+ggplot(data = ct_cov, mapping = aes(x = noise_100, y = noise_2017)) + 
+  geom_point() + 
+  labs(title = "comparison of noise values")
+```
+
+
 ## Population density
 ```{r}
-ggplot(data = ct_cov, mapping = aes(x = Station, y = population_density_2019.1)) + 
+ggplot(data = ct_cov, mapping = aes(x = Station, y = pop_100)) + 
   geom_point() + 
   ylim(0, 700) + 
   xlim(0, 700) + 
   labs(title = "Population density")
 
-ggplot(data = ct_cov, mapping = aes(x = Station, y = population_density_2019)) + 
+ggplot(data = ct_cov, mapping = aes(x = Station, y = pop_2019)) + 
   geom_point() + 
   ylim(0, 700) + 
   xlim(0, 700) + 
-  labs(title = "Population density by Marius")
+  labs(title = "New Population density")
 
-ggplot(data = ct_cov, mapping = aes(x = population_density_2019.1, y = population_density_2019)) + 
+ggplot(data = ct_cov, mapping = aes(x = pop_100, y = pop_2019)) + 
   geom_point() + 
   ylim(0, 700) + 
   xlim(0, 700) + 
@@ -160,22 +249,29 @@ ggplot(data = ct_cov, mapping = aes(x = population_density_2019.1, y = populatio
 
 ```{r}
 table(is.na(ct_cov$pop_100), useNA = "always")
-table(is.na(ct_cov$population_density_2019), useNA = "always") #113 NaN
+table(is.na(ct_cov$pop_2019), useNA = "always") #113 NaN
 #table(ct_cov$population_density_2019, useNA = "always")
 ```
 
-
-## Imperviousness
+## Tree cover density
 ```{r}
-ggplot(data = ct_cov, mapping = aes(x = Station, y = imperv_100)) + 
+ggplot(data = ct_cov, mapping = aes(x = Station, y = tree_cover_100)) + 
   geom_point() + 
-  labs(title = "Imperviousness")
-ggplot(data = ct_cov, mapping = aes(x = Station, y = imperviousness_2018)) + 
+  ylim(0, 100) +
+  xlim(0, 100) +
+  labs(title = "Tree cover density")
+
+ggplot(data = ct_cov, mapping = aes(x = Station, y = tree_cover_2019)) + 
   geom_point() + 
-  labs(title = "Imperviousness by Marius")
-ggplot(data = ct_cov, mapping = aes(x = imperv_100, y = imperviousness_2018)) + 
+  ylim(0, 100) + 
+  xlim(0, 100) + 
+  labs(title = "New Tree cover density")
+
+ggplot(data = ct_cov, mapping = aes(x = tree_cover_100, y = tree_cover_2019)) + 
   geom_point() + 
-  labs(title = "comparison of imperviousness values")
+  ylim(0, 100) + 
+  xlim(0, 100) + 
+  labs(title = "Comparison of Tree cover density values")
 ```
 
 ## Distance to border
@@ -185,18 +281,19 @@ ggplot(data = ct_cov, mapping = aes(x = Station, y = distance_border)) +
   ylim(0, 20000) + 
   labs(title = "Distance to border")
 
-ggplot(data = ct_cov, mapping = aes(x = Station, y = as.numeric(distance_to_border))) + 
+ggplot(data = ct_cov, mapping = aes(x = Station, y = distance_to_border)) + 
   geom_point()+ 
   ylim(0, 20000) + 
-  labs(title = "Distance to border by Marius")
+  labs(title = "Distance to border New")
 
-ggplot(data = ct_cov, mapping = aes(x = distance_border, y = as.numeric(distance_to_border))) + 
+ggplot(data = ct_cov, mapping = aes(x = distance_border, y = distance_to_border)) + 
   geom_point()+ 
   ylim(0, 15000) + 
   xlim(0, 15000) +
   labs(title = "Comparison of disance to border values")
 ```
 
+# Correlation plots
 ```{r correlation at ct locations}
 
 cov<-ct_cov%>%
@@ -204,13 +301,11 @@ cov<-ct_cov%>%
                 Local_tree_cover,
                 fence_height,
                 dist_water_100,
-                noise_100,
-                tree_cover_100,
-                dogs_binary,
-                cats_binary,
-                trees_of_interest,
                 imperviousness_2018,
-                population_density_2019,
+                light_2021,
+                noise_2017, 
+                pop_2019,
+                tree_cover_2019,
                 distance_to_border                
                 )%>%
   mutate(distance_to_border=as.numeric(distance_to_border))%>%
@@ -246,7 +341,66 @@ ggplot(data = melted_cor_loc, aes(x=Var2, y=forcats::fct_rev(Var1), fill=value))
         legend.title = element_text(size = 20))
 
 
-ggsave(here("plots","ct_correlation.png"),width = 12, height = 9)
+#ggsave(here::here("plots", "01_environmental_variables", "ct_correlation_20230126.png"), width = 12, height = 9)
+
+# Light correlates with imperviousness, population density and distance to border. It is not used for further analysis.
+# Population density and distance to border are correlated. We test each of the variables in a separate model.
+# Distance to water is not of interest and is not used for further analysis. 
+```
+
+```{r correlation at ct locations old and new values}
+
+cov<-ct_cov%>%
+  dplyr::select(garden_size,
+                Local_tree_cover,
+                fence_height,
+                pop_100,
+                dist_water_100,
+                imperv_100,
+                noise_100,
+                tree_cover_100,
+                distance_border,
+                imperviousness_2018,
+                light_2021,
+                noise_2017, 
+                pop_2019,
+                tree_cover_2019,
+                distance_to_border                
+                )%>%
+  mutate(distance_to_border=as.numeric(distance_to_border))%>%
+  st_drop_geometry()
+
+
+
+cor_loc<-cor(cov, use = "complete.obs")%>%
+  data.frame()%>%
+  as.matrix()
+
+melted_cor_loc<-reshape2::melt(cor_loc)
+
+ggplot(data = melted_cor_loc, aes(x=Var2, y=forcats::fct_rev(Var1), fill=value)) +
+  geom_tile() +
+  geom_text(aes(
+    label = format(round(value, 2), nsmall = 2),
+    color = abs(value) < .75
+  )) +
+  coord_fixed(expand = F) +
+  scale_color_manual(values = c("white", "black"),
+                     guide = "none") +
+  scale_fill_distiller(
+    palette = "RdBu", na.value = "white",
+    direction = 1, limits = c(-1, 1)
+  ) +
+  labs(x = NULL, y = NULL) + scale_x_discrete(position = "top")+
+  theme(panel.border = element_rect(color = NA, fill = NA),
+        axis.text.x = element_text(angle = 45, hjust=0,size = 12),
+        axis.text.y = element_text(size = 12),
+        legend.key.size = unit(1.2,"cm"),
+        legend.text = element_text(size = 15),
+        legend.title = element_text(size = 20))
+
+
+#ggsave(here::here("plots", "01_environmental_variables", "ct_correlation_old_new_values.png"), width = 12, height = 9)
 
 ```
 
@@ -282,11 +436,7 @@ ggsave(here("plots","ct_correlation.png"),width = 12, height = 9)
 #         legend.title = element_text(size = 20))
 # 
 # ggsave(here("plots","raster_correlation.png"),width = 12, height = 9)
-
-
 ```
-
-
 
 
 ***

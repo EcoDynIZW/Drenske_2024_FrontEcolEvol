@@ -84,30 +84,25 @@ add_sample <- function(x){
 }
 ```
 
-# Data
 
+# Data
 ```{r data}
 #loading the environmental variables and using only the user IDs that are within the cov table
 env_var <- readRDS(here::here("output", 
                               "data-proc", 
                               "all_seasons",
-                              #"ct_focal_covariates_100_20230125.RDS"))
-                              "stacked_raster_values_and_garden_CT_all_seasons_no_nas_proc_20230124.RDS"))
-
-#already formatted and filtered data 
-# CT_act_date_proc <- readRDS(here::here("output", "data-proc", "all_seasons",
-#                                        "CT_act_date_proc_20230105.RDS"))
-CT_species_interest <- readRDS(here::here("output", 
-                                               "data-proc", 
-                                               "all_seasons",
-                                               "CT_species_interest_time_20230124.RDS"))
-
-# Squirrel data set
-CT_squirrels <- readRDS(here::here("output",
-                                   "data-proc",
-                                   "all_seasons",
-                                   "CT_squirrels_20230124.RDS"))
+                              "ct_focal_covariates_100_20230126.RDS"))
+                              #"stacked_raster_values_and_garden_CT_all_seasons_no_nas_proc_20230124.RDS"))
 ```
+
+## Palettes
+```{r palette}
+# darkdarkblue beige greyblue brown red
+pal_5 <- c("#303B4A", "#E4CAA5", "#4D6476", "#837461", "#C83649") # 
+pal_3 <- c("#E4CAA5", "#4D6476", "#837461")
+pal_2 <- c("#E4CAA5", "#4D6476")
+```
+
 
 # Map of the camera stations
 We create a map to plot the locations of the camera stations
@@ -125,13 +120,15 @@ ct_spatial<-
            crs=32633) %>% # crs of the points
   st_transform(crs = 3035)
 
-ct_spatial$project_phase <- as.factor(ct_spatial$project_phase)
+#ct_spatial$project_phase <- as.factor(ct_spatial$project_phase)
 ```
 
 
 
-
 ```{r}
+base_map_imp() + 
+  geom_sf(data = ct_spatial, aes(colour = project_phase)) 
+
 base_map_imp() + 
   geom_sf(data = ct_spatial, aes(colour = project_phase)) + 
   scale_color_manual(values = c( "1" = "red", "2" = "blue", "3" = "orange", "4" = "green", "5" = "purple"))
@@ -141,82 +138,110 @@ base_map_imp() +
 
 # Urban data exploration
 ```{r}
+## Distance to border
+ggplot(data = env_var, mapping = aes(x = Station, y = distance_to_border)) + 
+  geom_point(colour = "#303B4A") +
+  scale_y_continuous(
+    limits = c(0, 15000),
+    breaks = seq(0, 15000, by = 5000),
+    expand = c(.02, .001)) +
+  labs(x = "Station", y = "Distance to border", title = "Distance to border") +
+  theme_pubr() +
+  theme(legend.position = "none",
+        panel.border = element_rect(colour = "black", fill=NA, linewidth = 2),
+        axis.ticks = element_line(colour = "black", linewidth = 1.5),
+        axis.ticks.length = unit(0.2, "cm"),
+        plot.margin = margin(6, 10, 4, 4)) +
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) +
+  font(object = "xy.text", family = "Roboto", size = 11) +
+  scale_x_discrete(expand = c(0.03, 0.001))
+
+## Imperviousness 2018
+ggplot(data = env_var, mapping = aes(x = Station, y = imperviousness_2018)) + 
+  geom_point(colour = "#303B4A") +
+  scale_y_continuous(
+    limits = c(0, 100),
+    breaks = seq(0, 100, by = 25),
+    expand = c(.02, .001)) +
+  labs(x = "Station", y = "Imperviousness", title = "Imperviousness") +
+  theme_pubr() +
+  theme(legend.position = "none",
+        panel.border = element_rect(colour = "black", fill=NA, linewidth = 2),
+        axis.ticks = element_line(colour = "black", linewidth = 1.5),
+        axis.ticks.length = unit(0.2, "cm"),
+        plot.margin = margin(6, 10, 4, 4)) +
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) +
+  font(object = "xy.text", family = "Roboto", size = 11) +
+  scale_x_discrete(expand = c(0.03, 0.001))
+
+## Noise 2017
+ggplot(data = env_var, mapping = aes(x = Station, y = noise_2017)) + 
+  geom_point(colour = "#303B4A") +
+  scale_y_continuous(
+    limits = c(0, 100),
+    breaks = seq(0, 100, by = 25),
+    expand = c(.02, .001)) +
+  labs(x = "Station", y = "Noise", title = "Noise") +
+  theme_pubr() +
+  theme(legend.position = "none",
+        panel.border = element_rect(colour = "black", fill=NA, linewidth = 2),
+        axis.ticks = element_line(colour = "black", linewidth = 1.5),
+        axis.ticks.length = unit(0.2, "cm"),
+        plot.margin = margin(6, 10, 4, 4)) +
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) +
+  font(object = "xy.text", family = "Roboto", size = 11) +
+  scale_x_discrete(expand = c(0.03, 0.001))
+
+## Population density 2019
+ggplot(data = env_var, mapping = aes(x = Station, y = pop_2019)) + 
+  geom_point(colour = "#303B4A") +
+  scale_y_continuous(
+    limits = c(0, 700),
+    breaks = seq(0, 700, by = 100),
+    expand = c(.02, .001)) +
+  labs(x = "Station", y = "Population density", title = "Population density") +
+  theme_pubr() +
+  theme(legend.position = "none",
+        panel.border = element_rect(colour = "black", fill=NA, linewidth = 2),
+        axis.ticks = element_line(colour = "black", linewidth = 1.5),
+        axis.ticks.length = unit(0.2, "cm"),
+        plot.margin = margin(6, 10, 4, 4)) +
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) +
+  font(object = "xy.text", family = "Roboto", size = 11) +
+  scale_x_discrete(expand = c(0.03, 0.001))
+
+### Tree cover
+# Local tree cover
 ggplot(data = env_var, mapping = aes(x = Station, y = Local_tree_cover)) + 
   geom_point() + 
   ylim(0, 100) + 
   labs(title = "Local tree cover (by Citizens)")
 
-ggplot(data = env_var, mapping = aes(x = Station, y = tree_cover_100)) + 
-  geom_point() + 
-  ylim(0, 100) + 
-  labs(title = "Tree cover")
+# Tree cover density 2019
+ggplot(data = env_var, mapping = aes(x = Station, y = tree_cover_2019)) +
+  geom_point(colour = "#303B4A") +
+  scale_y_continuous(
+    limits = c(0, 100),
+    breaks = seq(0, 100, by = 25),
+    expand = c(.02, .001)) +
+  labs(x = "Station", y = "Tree cover", title = "Tree cover") +
+  theme_pubr() +
+  theme(legend.position = "none",
+        panel.border = element_rect(colour = "black", fill=NA, linewidth = 2),
+        axis.ticks = element_line(colour = "black", linewidth = 1.5),
+        axis.ticks.length = unit(0.2, "cm"),
+        plot.margin = margin(6, 10, 4, 4)) +
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) +
+  font(object = "xy.text", family = "Roboto", size = 11) +
+  scale_x_discrete(expand = c(0.03, 0.001))
 
-ggplot(data = env_var, mapping = aes(x = Local_tree_cover, y = tree_cover_100)) + 
+# Comparison of local tree cover and tree cover density
+ggplot(data = env_var, mapping = aes(x = Local_tree_cover, y = tree_cover_2019)) + 
   geom_point() + 
   ylim(0, 100) + 
   labs(title = "Comparison of Tree cover values")
 ```
 
-```{r}
-summary(env_var$pop_100)
-range(env_var$human_population_density_raster_10m_2017_3035, na.rm = T)
-summary((env_var$human_population_density_raster_10m_2017_3035*100))
-
-ggplot(data = env_var, mapping = aes(x = Station, y = pop_100)) + 
-  geom_point() + 
-  ylim(0, 700) + 
-  labs(title = "Population density")
-
-ggplot(data = env_var, mapping = aes(x = Station, y = (human_population_density_raster_10m_2017_3035*100))) + 
-  geom_point() + 
-  ylim(0, 700) + 
-  labs(title = "Population density by Marius")
-
-ggplot(data = env_var, mapping = aes(x = pop_100, y = (human_population_density_raster_10m_2017_3035*100))) + 
-  geom_point() + 
-  ylim(0, 700) + 
-  labs(title = "Comparison of population density values")
-```
-
-
-```{r}
-ggplot(data = env_var, mapping = aes(x = Station, y = imperv_100)) + 
-  geom_point() + 
-  labs(title = "Imperviousness")
-ggplot(data = env_var, mapping = aes(x = Station, y = imperviousness_berlin_copernicus_raster_10m_2018_3035)) + 
-  geom_point() + 
-  labs(title = "Imperviousness by Marius")
-ggplot(data = env_var, mapping = aes(x = imperv_100, y = imperviousness_berlin_copernicus_raster_10m_2018_3035)) + 
-  geom_point() + 
-  labs(title = "comparison of imperviousness values")
-```
-
-```{r}
-ggplot(data = env_var, mapping = aes(x = Station, y = distance_border)) + 
-  geom_point() + 
-  ylim(0, 20000) + 
-  labs(title = "Distance to border")
-
-ggplot(data = env_var, mapping = aes(x = Station, y = distance_to_border_3035)) + 
-  geom_point()+ 
-  ylim(0, 20000) + 
-  labs(title = "Distance to border by Marius")
-
-ggplot(data = env_var, mapping = aes(x = distance_border, y = distance_to_border_3035)) + 
-  geom_point()+ 
-  ylim(0, 20000) + 
-  labs(title = "Comparison of disance to border values")
-```
-
-```{r}
-ggplot(data = env_var, mapping = aes(x = Station, y = dist_water_100)) + 
-  geom_point() + 
-  labs(title = "Distance to water")
-
-ggplot(data = env_var, mapping = aes(x = Station, y = noise_100)) + 
-  geom_point() + 
-  labs(title = "Noise")
-```
 
 # Garden data exploration
 ```{r}
@@ -236,8 +261,8 @@ ggplot(data = env_var, mapping = aes(x = project_phase, fill = project_phase)) +
         plot.margin = margin(6, 10, 4, 4)) +
   labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
   font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_colour_manual(values = scico(5, palette = "lajolla", begin = 0.4, end = 0.85), guide = "none") +
-  scale_fill_manual(values = scico(5, palette = "lajolla", begin = 0.4, end = 0.85), guide = "none") + 
+  scale_colour_manual(values = pal_5, guide = "none") +
+  scale_fill_manual(values = pal_5, guide = "none") + 
   scale_x_discrete(expand = c(0.2, 0.001))
 
 # Season
@@ -256,8 +281,8 @@ ggplot(data = env_var, mapping = aes(x = Season, fill = Season)) + #y = n,
         plot.margin = margin(6, 10, 4, 4)) +
   labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
   font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_colour_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") +
-  scale_fill_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
   scale_x_discrete(expand = c(0.2, 0.001))
 
 # Lockdown
@@ -276,8 +301,8 @@ ggplot(data = env_var, mapping = aes(x = lockdown, fill = lockdown)) + #y = n,
         plot.margin = margin(6, 10, 4, 4)) +
   labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
   font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_colour_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") +
-  scale_fill_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
   scale_x_discrete(expand = c(0.2, 0.001))
 
 # Garden type
@@ -296,17 +321,17 @@ ggplot(data = env_var, mapping = aes(x = garden_type, fill = garden_type)) + #y 
         plot.margin = margin(6, 10, 4, 4)) +
   labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
   font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_colour_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") +
-  scale_fill_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
   scale_x_discrete(expand = c(0.2, 0.001))
 
 # Garden size
 ggplot(data = env_var, mapping = aes(x = Station, y = garden_size)) + 
-  geom_point() + 
+  geom_point(colour = "#303B4A") + 
   scale_y_continuous(
     limits = c(0, 8000),
     breaks = seq(0, 8000, by = 500),
-    expand = c(.001, .001)) +
+    expand = c(.02, .001)) +
   labs(y = "Garden size") + 
   theme_pubr() + 
   theme(legend.position = "none", 
@@ -333,8 +358,8 @@ ggplot(data = env_var, mapping = aes(x = dogs_binary, fill = dogs_binary)) +
         plot.margin = margin(6, 10, 4, 4)) +
   labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
   font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_colour_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") +
-  scale_fill_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
   scale_x_discrete(expand = c(0.2, 0.001), labels = c("No", "Yes"))
 
 # Cats
@@ -353,8 +378,8 @@ ggplot(data = env_var, mapping = aes(x = cats_binary, fill = cats_binary)) +
         plot.margin = margin(6, 10, 4, 4)) +
   labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
   font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_colour_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") +
-  scale_fill_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
   scale_x_discrete(expand = c(0.2, 0.001), labels = c("No", "Yes"))
 
 # Trees of interest
@@ -373,13 +398,13 @@ ggplot(data = env_var, mapping = aes(x = trees_of_interest, fill = trees_of_inte
         plot.margin = margin(6, 10, 4, 4)) +
   labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
   font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_colour_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") +
-  scale_fill_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
   scale_x_discrete(expand = c(0.2, 0.001), labels = c("No", "Yes"))
 
 # Fence height
 ggplot(data = env_var, mapping = aes(x = Station, y = fence_height)) + 
-  geom_point() + 
+  geom_point(colour = "#303B4A") + 
   scale_y_continuous(
     limits = c(0, 300),
     breaks = seq(0, 300, by = 50),
@@ -410,8 +435,8 @@ geom_bar(position = "dodge") +
         plot.margin = margin(6, 10, 4, 4)) +
   labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
   font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_colour_manual(values = scico(3, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") +
-  scale_fill_manual(values = scico(3, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") + 
+  scale_colour_manual(values = pal_3, guide = "none") +
+  scale_fill_manual(values = pal_3, guide = "none") + 
   scale_x_discrete(expand = c(0.2, 0.001))
 ```
 
@@ -422,49 +447,311 @@ table(env_var$cats_binary)
 table(env_var$trees_of_interest)
 ```
 
-## Garden data correlation
-what should I use? 
-Pearson correlation for numerical variables
-
-and for categorical variables? Chi-square? and for the correlation between categorical and numerical variables - Anova?
+# Correlation binary garden variables
+## dogs
+### Urban scale
 ```{r}
-# remove variables with character
+# Distance to border
+ggplot(data = env_var, mapping = aes(x = dogs_binary, y = distance_to_border)) + 
+  stat_halfeye(mapping = aes(
+    color = dogs_binary, 
+    fill = dogs_binary),
+  width = 0.7, 
+  .width = 0, 
+  adjust = 0.5, 
+  justification = -.3,
+  point_color = NA) +
+  geom_boxplot(mapping = aes(
+    color = dogs_binary, 
+    color = after_scale(darken(color, .1, space = "HLS")),
+    fill = after_scale(desaturate(lighten(color, .8), .4))), 
+    width = 0.32, 
+    outlier.shape = NA) +
+  geom_point(mapping = aes(
+    fill = dogs_binary), 
+    color = "transparent", 
+    shape = 21, 
+    size = 3, 
+    stroke = .4,
+    alpha = .5,
+    position = position_jitter(seed = 1, width = 0.12)) + 
+  scale_y_continuous(
+    limits = c(0, 12000),
+    breaks = seq(0, 12000, by = 1000),
+    expand = c(.02, .001)) +
+  labs(x = "Dog", 
+       y = "Distance to border", 
+       title = "Dogs vs Distance to border") + 
+  theme_pubr() + 
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank(), 
+        legend.position = "none", 
+        panel.background = element_rect(fill = "white"), 
+        plot.background = element_rect(fill = "white"),
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 2), 
+        axis.ticks.length = unit(0.25, "cm"), 
+        plot.margin = margin(6, 10, 4, 4)) + 
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001), labels = c("No", "Yes"))
 
-# env_var[, -c(2, 6:8)] %>%
-#   rename(distance_border_M = distance_to_border_3035, 
-#          dist_green_areas_2020 = distance_to_open_green_areas_raster_2020_10m_3035, 
-#          dist_streets_2015 = distance_to_streets_berlin_raster_10m_2015_3035, 
-#          green_cap_2010 = green_capacity_berlin_raster_10m_2010_3035, 
-#          pop_dens_2017 = human_population_density_raster_10m_2017_3035, 
-#          imperviousness_2018 = imperviousness_berlin_copernicus_raster_10m_2018_3035, 
-#          summer_temp_04_2016 = summer_temperature_berlin_04h_2016_3035, 
-#          summer_temp_14_2016 = summer_temperature_berlin_14h_2016_3035, 
-#          supply_green_2016 = supply_green_areas_berlin_raster_10m_2016_3035, 
-#          traffic_volume_2014 = traffic_volume_berlin_raster_10m_2014_3035) %>%
-#   cor(method = "pearson", use = "complete.obs") %>%
-#   corrplot(method = 'color', diag = TRUE)
-# 
-# env_var[, -c(2, 4:15)] %>%
-#   rename(distance_border_M = distance_to_border_3035, 
-#          dist_green_areas_2020 = distance_to_open_green_areas_raster_2020_10m_3035, 
-#          dist_streets_2015 = distance_to_streets_berlin_raster_10m_2015_3035, 
-#          green_cap_2010 = green_capacity_berlin_raster_10m_2010_3035, 
-#          pop_dens_2017 = human_population_density_raster_10m_2017_3035, 
-#          imperviousness_2018 = imperviousness_berlin_copernicus_raster_10m_2018_3035, 
-#          summer_temp_04_2016 = summer_temperature_berlin_04h_2016_3035, 
-#          summer_temp_14_2016 = summer_temperature_berlin_14h_2016_3035, 
-#          supply_green_2016 = supply_green_areas_berlin_raster_10m_2016_3035, 
-#          traffic_volume_2014 = traffic_volume_berlin_raster_10m_2014_3035) %>%
-#   cor(method = "pearson", use = "complete.obs") %>%
-#   corrplot(method = 'color', diag = TRUE)
+# Imperviousness
+ggplot(data = env_var, mapping = aes(x = dogs_binary, y = imperviousness_2018)) + 
+  stat_halfeye(mapping = aes(
+    color = dogs_binary, 
+    fill = dogs_binary),
+  width = 0.7, 
+  .width = 0, 
+  adjust = 0.5, 
+  justification = -.3,
+  point_color = NA) +
+  geom_boxplot(mapping = aes(
+    color = dogs_binary, 
+    color = after_scale(darken(color, .1, space = "HLS")),
+    fill = after_scale(desaturate(lighten(color, .8), .4))), 
+    width = 0.32, 
+    outlier.shape = NA) +
+  geom_point(mapping = aes(
+    fill = dogs_binary), 
+    color = "transparent", 
+    shape = 21, 
+    size = 3, 
+    stroke = .4,
+    alpha = .5,
+    position = position_jitter(seed = 1, width = 0.12)) + 
+  scale_y_continuous(
+    limits = c(0, 100),
+    breaks = seq(0, 100, by = 25),
+    expand = c(.02, .001)) +
+  labs(x = "Dog", 
+       y = "Imperviousness", 
+       title = "Dogs vs Imperviousness") + 
+  theme_pubr() + 
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank(), 
+        legend.position = "none", 
+        panel.background = element_rect(fill = "white"), 
+        plot.background = element_rect(fill = "white"),
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 2), 
+        axis.ticks.length = unit(0.25, "cm"), 
+        plot.margin = margin(6, 10, 4, 4)) + 
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001), labels = c("No", "Yes"))
+
+# Noise
+ggplot(data = env_var, mapping = aes(x = dogs_binary, y = noise_2017)) + 
+  stat_halfeye(mapping = aes(
+    color = dogs_binary, 
+    fill = dogs_binary),
+  width = 0.7, 
+  .width = 0, 
+  adjust = 0.5, 
+  justification = -.3,
+  point_color = NA) +
+  geom_boxplot(mapping = aes(
+    color = dogs_binary, 
+    color = after_scale(darken(color, .1, space = "HLS")),
+    fill = after_scale(desaturate(lighten(color, .8), .4))), 
+    width = 0.32, 
+    outlier.shape = NA) +
+  geom_point(mapping = aes(
+    fill = dogs_binary), 
+    color = "transparent", 
+    shape = 21, 
+    size = 3, 
+    stroke = .4,
+    alpha = .5,
+    position = position_jitter(seed = 1, width = 0.12)) + 
+  scale_y_continuous(
+    limits = c(0, 100),
+    breaks = seq(0, 100, by = 25),
+    expand = c(.02, .001)) +
+  labs(x = "Dog", 
+       y = "Noise", 
+       title = "Dogs vs Noise") + 
+  theme_pubr() + 
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank(), 
+        legend.position = "none", 
+        panel.background = element_rect(fill = "white"), 
+        plot.background = element_rect(fill = "white"),
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 2), 
+        axis.ticks.length = unit(0.25, "cm"), 
+        plot.margin = margin(6, 10, 4, 4)) + 
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001), labels = c("No", "Yes"))
+
+# Population density
+ggplot(data = env_var, mapping = aes(x = dogs_binary, y = pop_2019)) + 
+  stat_halfeye(mapping = aes(
+    color = dogs_binary, 
+    fill = dogs_binary),
+  width = 0.7, 
+  .width = 0, 
+  adjust = 0.5, 
+  justification = -.3,
+  point_color = NA) +
+  geom_boxplot(mapping = aes(
+    color = dogs_binary, 
+    color = after_scale(darken(color, .1, space = "HLS")),
+    fill = after_scale(desaturate(lighten(color, .8), .4))), 
+    width = 0.32, 
+    outlier.shape = NA) +
+  geom_point(mapping = aes(
+    fill = dogs_binary), 
+    color = "transparent", 
+    shape = 21, 
+    size = 3, 
+    stroke = .4,
+    alpha = .5,
+    position = position_jitter(seed = 1, width = 0.12)) + 
+  scale_y_continuous(
+    limits = c(0, 700),
+    breaks = seq(0, 700, by = 100),
+    expand = c(.02, .001)) +
+  labs(x = "Dog", 
+       y = "Population density/ha", 
+       title = "Dogs vs Population density") + 
+  theme_pubr() + 
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank(), 
+        legend.position = "none", 
+        panel.background = element_rect(fill = "white"), 
+        plot.background = element_rect(fill = "white"),
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 2), 
+        axis.ticks.length = unit(0.25, "cm"), 
+        plot.margin = margin(6, 10, 4, 4)) + 
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001), labels = c("No", "Yes"))
+
+# Tree cover density
+ggplot(data = env_var, mapping = aes(x = dogs_binary, y = tree_cover_2019)) + 
+  stat_halfeye(mapping = aes(
+    color = dogs_binary, 
+    fill = dogs_binary),
+  width = 0.7, 
+  .width = 0, 
+  adjust = 0.5, 
+  justification = -.3,
+  point_color = NA) +
+  geom_boxplot(mapping = aes(
+    color = dogs_binary, 
+    color = after_scale(darken(color, .1, space = "HLS")),
+    fill = after_scale(desaturate(lighten(color, .8), .4))), 
+    width = 0.32, 
+    outlier.shape = NA) +
+  geom_point(mapping = aes(
+    fill = dogs_binary), 
+    color = "transparent", 
+    shape = 21, 
+    size = 3, 
+    stroke = .4,
+    alpha = .5,
+    position = position_jitter(seed = 1, width = 0.12)) + 
+  scale_y_continuous(
+    limits = c(0, 100),
+    breaks = seq(0, 100, by = 25),
+    expand = c(.02, .001)) +
+  labs(x = "Dog", 
+       y = "Tree cover density", 
+       title = "Dogs vs Tree cover density") + 
+  theme_pubr() + 
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank(), 
+        legend.position = "none", 
+        panel.background = element_rect(fill = "white"), 
+        plot.background = element_rect(fill = "white"),
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 2), 
+        axis.ticks.length = unit(0.25, "cm"), 
+        plot.margin = margin(6, 10, 4, 4)) + 
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001), labels = c("No", "Yes"))
 ```
 
-### dogs
-```{r}
-env_var %>%
-  dplyr::count(garden_type, dogs_binary)
 
-# Grouped barchart
+### Garden scale
+```{r}
+# Project phase
+ggplot(data = env_var, mapping = aes(x = project_phase, fill = dogs_binary)) + #y = n, 
+  geom_bar(position = "dodge") + 
+  scale_y_continuous(
+    limits = c(0, 600),
+    breaks = seq(0, 600, by = 100),
+    expand = c(.001, .001)) + 
+  labs(title = "Dogs vs Project phase", x= "Project phase") + 
+  theme_pubr() + 
+  theme(legend.position = "none", 
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 1.5),
+        axis.ticks.length = unit(0.2, "cm"),
+        plot.margin = margin(6, 10, 4, 4)) +
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001))
+
+# Season
+ggplot(data = env_var, mapping = aes(x = Season, fill = dogs_binary)) + #y = n, 
+  geom_bar(position = "dodge") + 
+  scale_y_continuous(
+    limits = c(0, 600),
+    breaks = seq(0, 600, by = 100),
+    expand = c(.001, .001)) + 
+  labs(title = "Dogs vs Season", x= "Season") + 
+  theme_pubr() + 
+  theme(legend.position = "none", 
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 1.5),
+        axis.ticks.length = unit(0.2, "cm"),
+        plot.margin = margin(6, 10, 4, 4)) +
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001))
+
+# Lockdown
+ggplot(data = env_var, mapping = aes(x = lockdown, fill = dogs_binary)) + #y = n, 
+  geom_bar(position = "dodge") + 
+  scale_y_continuous(
+    limits = c(0, 600),
+    breaks = seq(0, 600, by = 100),
+    expand = c(.001, .001)) + 
+  labs(title = "Dogs vs Lockdown", x= "Lockdown") + 
+  theme_pubr() + 
+  theme(legend.position = "none", 
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 1.5),
+        axis.ticks.length = unit(0.2, "cm"),
+        plot.margin = margin(6, 10, 4, 4)) +
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001))
+
+
+# Garden type
 ggplot(data = env_var, mapping = aes(x = garden_type, fill = dogs_binary)) + #y = n, 
   geom_bar(position = "dodge") + 
   scale_y_continuous(
@@ -480,996 +767,255 @@ ggplot(data = env_var, mapping = aes(x = garden_type, fill = dogs_binary)) + #y 
         plot.margin = margin(6, 10, 4, 4)) +
   labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
   font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_colour_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") +
-  scale_fill_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
   scale_x_discrete(expand = c(0.2, 0.001))
 
-
-```
-
-```{r}
-ggplot(data = env_var, mapping = aes(x = garden_size, y = as.factor(dogs_binary))) + 
-  geom_boxplot() + 
-  labs(title = "Dogs vs garden size")
-
-ggplot(data = env_var, mapping = aes(x = fence_height, y = as.factor(dogs_binary))) + 
-  geom_boxplot() + 
-  labs(title = "Dogs vs fence height")
-
-ggplot(data = env_var, mapping = aes(x = compost, fill = as.factor(dogs_binary))) + 
-  geom_bar(position = "dodge") + 
-  labs(title = "Dogs vs compost")+ 
-  scale_y_continuous(
-    limits = c(0, 600),
-    breaks = seq(0, 600, by = 100),
-    expand = c(.001, .001)) 
-
-
-# ggplot(data = env_var, mapping = aes(x = cats_binary, y = as.factor(dogs_binary))) + 
-#   geom_boxplot() + 
-#   labs(title = "Dogs vs cats")
-
-ggplot(data = env_var, mapping = aes(x = as.factor(cats_binary), fill = as.factor(dogs_binary))) + 
-  geom_bar(position = "dodge") + 
-  labs(title = "Dogs vs cats")+ 
-  scale_y_continuous(
-    limits = c(0, 600),
-    breaks = seq(0, 600, by = 100),
-    expand = c(.001, .001)) 
-
-
-# ggplot(data = env_var, mapping = aes(x = trees_of_interest, y = as.factor(dogs_binary))) + 
-#   geom_boxplot() + 
-#   labs(title = "Dogs vs trees of interest")
-
-ggplot(data = env_var, mapping = aes(x = as.factor(trees_of_interest), fill = as.factor(dogs_binary))) + 
-  geom_bar(position = "dodge") + 
-  labs(title = "Dogs vs trees of interest")+ 
-  scale_y_continuous(
-    limits = c(0, 600),
-    breaks = seq(0, 600, by = 100),
-    expand = c(.001, .001)) 
-
-table(env_var$dogs_binary, env_var$trees_of_interest)
-```
-
-
-### cats
-```{r}
-env_var %>%
-  dplyr::count(garden_type, cats_binary)
-
-# Grouped barchart
-env_var %>%
-  ggplot(mapping = aes(x = garden_type, fill = as.factor(cats_binary))) + #y = n, 
-  geom_bar(position = "dodge") + 
-  scale_y_continuous(
-    limits = c(0, 600),
-    breaks = seq(0, 600, by = 100),
-    expand = c(.001, .001)) + 
-  labs(title = "cats vs garden type")
-
-# percent stacked barchart
-env_var %>%
-  ggplot(mapping = aes(x = garden_type, fill = as.factor(cats_binary))) + #y = n, 
-  geom_bar(position = "fill")+ 
-  labs(title = "cats vs garden type")
-
-ggplot(data = env_var, mapping = aes(x = garden_size, y = as.factor(cats_binary))) + 
-  geom_boxplot() + 
-  labs(title = "cats vs garden size")
-
-ggplot(data = env_var, mapping = aes(x = fence_height, y = as.factor(cats_binary))) + 
-  geom_boxplot() + 
-  labs(title = "cats vs fence height")
-
-ggplot(data = env_var, mapping = aes(x = compost, fill = as.factor(cats_binary))) + 
-  geom_bar(position = "dodge") + 
-  labs(title = "cats vs compost")+ 
-  scale_y_continuous(
-    limits = c(0, 600),
-    breaks = seq(0, 600, by = 100),
-    expand = c(.001, .001)) 
-
-
-# ggplot(data = env_var, mapping = aes(x = cats_binary, y = as.factor(cats_binary))) + 
-#   geom_boxplot() + 
-#   labs(title = "cats vs cats")
-
-ggplot(data = env_var, mapping = aes(x = as.factor(dogs_binary), fill = as.factor(cats_binary))) + 
-  geom_bar(position = "dodge") + 
-  labs(title = "cats vs dogs")+ 
-  scale_y_continuous(
-    limits = c(0, 600),
-    breaks = seq(0, 600, by = 100),
-    expand = c(.001, .001)) 
-
-
-# ggplot(data = env_var, mapping = aes(x = trees_of_interest, y = as.factor(cats_binary))) + 
-#   geom_boxplot() + 
-#   labs(title = "cats vs trees of interest")
-
-ggplot(data = env_var, mapping = aes(x = as.factor(trees_of_interest), fill = as.factor(cats_binary))) + 
-  geom_bar(position = "dodge") + 
-  labs(title = "cats vs trees of interest")+ 
-  scale_y_continuous(
-    limits = c(0, 600),
-    breaks = seq(0, 600, by = 100),
-    expand = c(.001, .001)) 
-
-table(env_var$cats_binary, env_var$trees_of_interest)
-```
-
-
-### trees of interest
-```{r}
-env_var %>%
-  dplyr::count(garden_type, trees_of_interest)
-
-# Grouped barchart
-env_var %>%
-  ggplot(mapping = aes(x = garden_type, fill = as.factor(trees_of_interest))) + #y = n, 
-  geom_bar(position = "dodge") + 
-  scale_y_continuous(
-    limits = c(0, 600),
-    breaks = seq(0, 600, by = 100),
-    expand = c(.001, .001)) + 
-  labs(title = "trees vs garden type")
-
-# percent stacked barchart
-env_var %>%
-  ggplot(mapping = aes(x = garden_type, fill = as.factor(trees_of_interest))) + #y = n, 
-  geom_bar(position = "fill")+ 
-  labs(title = "trees vs garden type")
-
-ggplot(data = env_var, mapping = aes(x = garden_size, y = as.factor(trees_of_interest))) + 
-  geom_boxplot() + 
-  labs(title = "trees vs garden size")
-
-ggplot(data = env_var, mapping = aes(x = fence_height, y = as.factor(trees_of_interest))) + 
-  geom_boxplot() + 
-  labs(title = "trees vs fence height")
-
-ggplot(data = env_var, mapping = aes(x = compost, fill = as.factor(trees_of_interest))) + 
-  geom_bar(position = "dodge") + 
-  labs(title = "trees vs compost")+ 
-  scale_y_continuous(
-    limits = c(0, 600),
-    breaks = seq(0, 600, by = 100),
-    expand = c(.001, .001)) 
-
-ggplot(data = env_var, mapping = aes(x = as.factor(dogs_binary), fill = as.factor(trees_of_interest))) + 
-  geom_bar(position = "dodge") + 
-  labs(title = "trees vs dogs")+ 
-  scale_y_continuous(
-    limits = c(0, 600),
-    breaks = seq(0, 600, by = 100),
-    expand = c(.001, .001)) 
-
-ggplot(data = env_var, mapping = aes(x = as.factor(cats_binary), fill = as.factor(trees_of_interest))) + 
-  geom_bar(position = "dodge") + 
-  labs(title = "trees vs cats")+ 
-  scale_y_continuous(
-    limits = c(0, 600),
-    breaks = seq(0, 600, by = 100),
-    expand = c(.001, .001)) 
-```
-
-
-# Relationship between the number of photos per station and environmental variables - MOVE???????
-We create a table of the number of squirrel pictures per station and of the predator pictures per station
-```{r}
-# Filter for species of interest
-CT_species_interest <- CT_act_date_proc %>%
-  filter(Species == "Squirrel" | 
-           Species == "Cat" | 
-           Species == "Marten" | 
-           Species == "Raccoon" | 
-           Species == "Red Fox")
-
-# Count the number of pictures per species per station per weekdays and weekends
-# 0 for weekends, 1 for weekdays
-CT_per_station_days <- CT_species_interest %>% 
-  dplyr::count(Species, Station, weekdays_binary) 
-
-# Overview
-head(CT_per_station_days)
-sum(CT_per_station_days$n) # 55718 = same as number of rows in CT_species_interest
-
-# Count the number of pictures per species per station 
-CT_per_station <- CT_species_interest %>% 
-  dplyr::count(Species, project_phase, Station) 
-
-# Overview
-head(CT_per_station)
-sum(CT_per_station$n) # 55718 = same as number of rows in CT_species_interest
-```
-
-Then we combine this table with the table of the environmental covariates
-```{r}
-CT_per_station <- CT_per_station %>%
-  left_join(y = env_var, by = "Station")
-
-# data for 3 stations is missing: 1091, 1394, 1816
-
-CT_squirrels <- CT_per_station %>% 
-  filter(Species == "Squirrel")
-```
-
-Then we make some plots to explore the relationship between the number of pictures and the environmental covariates
-```{r}
-ggplot(data = CT_per_station, mapping = aes(x = n, y = project_phase)) + 
-  geom_point() + 
-  labs(title = "Number of pictures per station per project phase", 
-       x = "Number of pictures per station", 
-       y = "Project phase")
-
-ggplot(data = CT_squirrels, mapping = aes(x = n, y = project_phase)) + 
-  geom_point() + 
-  labs(title = "Number of squirrel pictures per station per project phase", 
-       x = "Number of squirrel pictures per station", 
-       y = "Project phase")
-```
-
-## Garden variables
-### Garden type
-```{r fig.height=4, fig.width= 5}
-#pal <- scico(2, palette = "lajolla", begin = 0.6, end = 0.85)
-ggplot(data = CT_squirrels, mapping = aes(x = garden_type, y = n)) + 
-  stat_halfeye(mapping = aes(
-    color = garden_type, 
-    fill = after_scale(lighten(color, .5))),
-    width = 0.75, 
-    .width = 0, 
-    adjust = 0.5, 
-    justification = -.3,
-    point_color = NA) +
-  geom_boxplot(mapping = aes(
-    color = garden_type, 
-    color = after_scale(darken(color, .1, space = "HLS")),
-    fill = after_scale(desaturate(lighten(color, .8), .4))), 
-    width = 0.32, 
-    outlier.shape = NA) +
-  # geom_point(mapping = aes(
-  #   color = garden_type, 
-  #   color = after_scale(darken(color, .1, space = "HLS"))), 
-  #   fill = "white", 
-  #   shape = 21, 
-  #   size = 2, 
-  #   stroke = .4,
-  #   position = position_jitter(seed = 1, width = 0.12)) +
-  geom_point(mapping = aes(
-    fill = garden_type), 
-    color = "transparent", 
-    shape = 21, 
-    size = 3, 
-    stroke = .4,
-    alpha = .5,
-    position = position_jitter(seed = 1, width = 0.12)) + 
-  stat_summary(
-    geom = "text",
-    fun = "median",
-    aes(label = round(..y.., 2),
-        color = garden_type,
-        color = after_scale(darken(color, .1, space = "HLS"))),
-    family = "Roboto",
-    fontface = "bold",
-    size = 5,
-    vjust = -3.5) + 
-  annotate(geom="text", family = "Roboto", 
-           x=2.4, y=30, 
-           label="n = 185",
-           color=after_scale(darken("#572F22", .1, space = "HLS")), size = 4) + 
-  annotate(geom="text", family = "Roboto", 
-           x=1.4, y=30, 
-           label="n = 44",
-           color=after_scale(darken("#CD524C", .1, space = "HLS")), size = 4) + 
-  coord_flip(clip = "off") + 
-  scale_y_continuous(
-    limits = c(-5, 200),
-    breaks = seq(0, 200, by = 50),
-    expand = c(.001, .001)) + 
-  labs(x = "Garden type", 
-       y = "Number of pictures") + 
-  theme_pubr() + 
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(), 
-        legend.position = "none", 
-        panel.background = element_rect(fill = "white"), 
-        plot.background = element_rect(fill = "white"),
-        panel.border = element_rect(colour = "black", fill=NA, size=2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2), 
-        axis.ticks.length = unit(0.25, "cm"), 
-        plot.margin = margin(6, 10, 4, 4)) + 
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_colour_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") +
-  scale_fill_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") + 
-  scale_x_discrete(expand = c(0.2, 0.001))
-
-# ggsave(filename = here::here("plots","02_general_patterns", "pics_per_garden_type.png"),
-#        dpi = 300)
-
-```
-
-
-### compost
-```{r fig.height=4, fig.width= 5}
-#pal <- scico(2, palette = "lajolla", begin = 0.6, end = 0.85)
-ggplot(data = CT_squirrels, mapping = aes(x = compost, y = n)) + 
-  stat_halfeye(mapping = aes(
-    color = compost, 
-    fill = after_scale(lighten(color, .5))),
-    width = 0.75, 
-    .width = 0, 
-    adjust = 0.5, 
-    justification = -.3,
-    point_color = NA) +
-  geom_boxplot(mapping = aes(
-    color = compost, 
-    color = after_scale(darken(color, .1, space = "HLS")),
-    fill = after_scale(desaturate(lighten(color, .8), .4))), 
-    width = 0.32, 
-    outlier.shape = NA) +
-  # geom_point(mapping = aes(
-  #   color = compost, 
-  #   color = after_scale(darken(color, .1, space = "HLS"))), 
-  #   fill = "white", 
-  #   shape = 21, 
-  #   size = 2, 
-  #   stroke = .4,
-  #   position = position_jitter(seed = 1, width = 0.12)) +
-  geom_point(mapping = aes(
-    fill = compost), 
-    color = "transparent", 
-    shape = 21, 
-    size = 3, 
-    stroke = .4,
-    alpha = .5,
-    position = position_jitter(seed = 1, width = 0.12)) + 
-  stat_summary(
-    geom = "text",
-    fun = "median",
-    aes(label = round(..y.., 2),
-        color = compost,
-        color = after_scale(darken(color, .1, space = "HLS"))),
-    family = "Roboto",
-    fontface = "bold",
-    size = 5,
-    vjust = -3.5) + 
-  annotate(geom="text", family = "Roboto", 
-           x=1.4, y=30, 
-           label="n = 185",
-           color=after_scale(darken("#E79652", .1, space = "HLS")), size = 4) + 
-  annotate(geom="text", family = "Roboto", 
-           x=2.4, y=30, 
-           label="n = 44",
-           color=after_scale(darken("#C34C4A", .1, space = "HLS")), size = 4) + 
-  annotate(geom="text", family = "Roboto", 
-           x=3.4, y=30, 
-           label="n = 185",
-           color=after_scale(darken("#572F22", .1, space = "HLS")), size = 4) + 
-  coord_flip(clip = "off") + 
-  scale_y_continuous(
-    limits = c(-5, 200),
-    breaks = seq(0, 200, by = 50),
-    expand = c(.001, .001)) + 
-  labs(x = "Compost type", 
-       y = "Number of pictures") + 
-  theme_pubr() + 
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(), 
-        legend.position = "none", 
-        panel.background = element_rect(fill = "white"), 
-        plot.background = element_rect(fill = "white"),
-        panel.border = element_rect(colour = "black", fill=NA, size=2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2), 
-        axis.ticks.length = unit(0.25, "cm"), 
-        plot.margin = margin(6, 10, 4, 4)) + 
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_colour_manual(values = scico(3, palette = "lajolla", begin = 0.4, end = 0.85), guide = "none") +
-  scale_fill_manual(values = scico(3, palette = "lajolla", begin = 0.4, end = 0.85), guide = "none") + 
-  scale_x_discrete(expand = c(0.2, 0.001))
-
-# ggsave(filename = here::here("plots","02_general_patterns", "pics_per_compost.png"),
-#        dpi = 300)
-
-```
-
-### Fence height
-```{r fig.height=4, fig.width= 5}
-ggplot(data = CT_squirrels, mapping = aes(x = n, y = fence_height)) + 
-  geom_point() + 
-  labs(title = "Nr of pictures per station per fence height", 
-       x = "Number of pictures", 
-       y = "Fence height") + 
-  scale_x_continuous(
-    limits = c(-5, 200),
-    breaks = seq(0, 200, by = 50),
-    expand = c(.001, .001)) + 
-  theme_pubr() + 
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(), 
-        legend.position = "none", 
-        panel.background = element_rect(fill = "white"), 
-        plot.background = element_rect(fill = "white"),
-        panel.border = element_rect(colour = "black", fill=NA, size=2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2), 
-        axis.ticks.length = unit(0.25, "cm"), 
-        plot.margin = margin(6, 10, 4, 4)) + 
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) +
-  font(object = "xy.text", family = "Roboto", size = 11)
-```
-
-### Garden size
-```{r fig.height=4, fig.width= 5}
-ggplot(data = CT_squirrels, mapping = aes(x = n, y = garden_size)) + 
-  geom_point() + 
-  labs(title = "Nr of pictures per station per garden size", 
-       x = "Number of pictures", 
-       y = bquote("Garden size in "* m^2)) + 
-  scale_x_continuous(
-    limits = c(-5, 200),
-    breaks = seq(0, 200, by = 50),
-    expand = c(.001, .001)) + 
-  scale_y_continuous(
-    limits = c(-5, 4000),
-    breaks = seq(0, 4000, by = 500),
-    expand = c(.001, .001)) + 
-  theme_pubr() + 
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(), 
-        legend.position = "none", 
-        panel.background = element_rect(fill = "white"), 
-        plot.background = element_rect(fill = "white"),
-        panel.border = element_rect(colour = "black", fill=NA, size=2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2), 
-        axis.ticks.length = unit(0.25, "cm"), 
-        plot.margin = margin(6, 10, 4, 4)) + 
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11)
-```
-
-
-### Dogs
-```{r}
-Dog_map <- 
-base_map_imp(color_intensity = 0.6, 
-             legend_x = 0.9, 
-             legend_y = 0.85) + 
-  geom_sf(data = ct_spatial, 
-          mapping = aes(colour = as.factor(dogs_binary))) + 
-  scale_color_manual(values = c( "1" = "red", "0" = "black"), 
-                     name = "Dog", labels = c("No", "Yes"))
-Dog_map
-```
-
-
-```{r fig.height=4, fig.width= 5}
-ggplot(data = CT_squirrels, mapping = aes(x = as.factor(dogs_binary), y = n)) + 
-  stat_halfeye(mapping = aes(
-    color = as.factor(dogs_binary), 
-    fill = after_scale(lighten(color, .5))),
-    width = 0.7, 
-    .width = 0, 
-    adjust = 0.5, 
-    justification = -.3,
-    point_color = NA) +
-  geom_boxplot(mapping = aes(
-    color = as.factor(dogs_binary), 
-    color = after_scale(darken(color, .1, space = "HLS")),
-    fill = after_scale(desaturate(lighten(color, .8), .4))), 
-    width = 0.32, 
-    outlier.shape = NA) +
-  # geom_point(mapping = aes(
-  #   color = as.factor(dogs_binary), 
-  #   color = after_scale(darken(color, .1, space = "HLS"))), 
-  #   fill = "white", 
-  #   shape = 21, 
-  #   size = 2, 
-  #   stroke = .4,
-  #   position = position_jitter(seed = 1, width = 0.12)) +
-  geom_point(mapping = aes(
-    fill = as.factor(dogs_binary)), 
-    color = "transparent", 
-    shape = 21, 
-    size = 3, 
-    stroke = .4,
-    alpha = .5,
-    position = position_jitter(seed = 1, width = 0.12)) + 
-  stat_summary(
-    geom = "text",
-    fun = "median",
-    aes(label = round(..y.., 2),
-        color = as.factor(dogs_binary),
-        color = after_scale(darken(color, .1, space = "HLS"))),
-    family = "Roboto",
-    fontface = "bold",
-    size = 5,
-    vjust = -3.5) + 
-  annotate(geom="text", family = "Roboto", 
-           x=2.4, y=30, 
-           label="n = 23",
-           color=after_scale(darken("#572F22", .1, space = "HLS")), size = 4) + 
-  annotate(geom="text", family = "Roboto", 
-           x=1.4, y=30, 
-           label="n = 206",
-           color=after_scale(darken("#CD524C", .1, space = "HLS")), size = 4) + 
-  coord_flip(clip = "off") + 
-  scale_y_continuous(
-    limits = c(-5, 200),
-    breaks = seq(0, 200, by = 50),
-    expand = c(.001, .001)) + 
-  labs(x = "Dog", 
-       y = "Number of pictures") + 
-  theme_pubr() + 
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(), 
-        legend.position = "none", 
-        panel.background = element_rect(fill = "white"), 
-        plot.background = element_rect(fill = "white"),
-        panel.border = element_rect(colour = "black", fill=NA, size=2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2), 
-        axis.ticks.length = unit(0.25, "cm"), 
-        plot.margin = margin(6, 10, 4, 4)) + 
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_colour_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") +
-  scale_fill_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") + 
-  scale_x_discrete(expand = c(0.2, 0.001), labels = c("No", "Yes"))
-```
-
-
-#### Garden type
-```{r fig.height=5, fig.width= 5.5}
-CT_squirrels %>%
-  mutate(dog_gardentype = as.factor(paste(garden_type, dogs_binary, sep = ""))) %>%
-ggplot(mapping = aes(x = dog_gardentype, y = n, fill = dog_gardentype)) + 
-  stat_halfeye(mapping = aes(
-    color = dog_gardentype,
-    fill = after_scale(lighten(color, .5))),
-    width = 0.7,
-    .width = 0,
-    adjust = 0.5,
-   # position = position_dodge(width = 1), 
-    justification = -.3,
-    point_color = NA) +
-  geom_boxplot(mapping = aes(
-    color = dog_gardentype,
-    color = after_scale(darken(color, .1, space = "HLS")),
-    fill = after_scale(desaturate(lighten(color, .8), .4))),
-    width = 0.3,
-    #position = position_dodge(width = 1, preserve = "single"),
-    outlier.shape = NA) +
-  geom_point(mapping = aes(
-    fill = dog_gardentype),
-    color = "transparent",
-    shape = 21,
-    size = 3,
-    stroke = .4,
-    alpha = .5,
-    position = position_jitter(seed = 1, width = 0.12)) + 
-   #position_jitterdodge(seed = 1, jitter.width = 0.12, dodge.width = 1)) +
-  stat_summary(
-    geom = "text",
-    fun = "median",
-    aes(label = round(..y.., 2),
-        color = dog_gardentype,
-        color = after_scale(darken(color, .1, space = "HLS"))),
-    family = "Roboto",
-    fontface = "bold",
-    #position = position_dodge(width = 1), 
-    size = 5,
-    vjust = -2.5) +
-  coord_flip(clip = "off") + 
-  scale_y_continuous(
-    limits = c(-5, 200),
-    breaks = seq(0, 200, by = 50),
-    expand = c(.001, .001)) +
-  labs(x = "Garden type",
-       y = "Number of pictures") +
-  theme_pubr() + 
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(), 
-        #legend.position = "none", 
-        panel.background = element_rect(fill = "white"), #e9e5db
-        plot.background = element_rect(fill = "white"),
-        panel.border = element_rect(colour = "black", fill=NA, size=2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2), 
-        axis.ticks.length = unit(0.25, "cm"), 
-        plot.margin = margin(6, 10, 4, 4)) + 
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_colour_manual(values = c("#CD524C", "#CD524C", "#572F22")) +
-  scale_fill_manual(values = c("#CD524C", "#CD524C", "#572F22"), guide = "none") +
-  # scale_colour_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") +
-  # scale_fill_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") +
-  scale_x_discrete(expand = c(0.2, 0.001))
-```
-
-
-#### garden size
-```{r fig.height=5, fig.width= 5.5}
-ggplot(data = CT_squirrels, mapping = aes(x = garden_size, y = n, fill = as.factor(dogs_binary))) + 
-  stat_halfeye(mapping = aes(
-    color = as.factor(dogs_binary),
-    fill = after_scale(lighten(color, .5))),
-    width = 0.7,
-    .width = 0,
-    adjust = 0.5,
-   # position = position_dodge(width = 1), 
-    justification = -.3,
-    point_color = NA) +
-  geom_boxplot(mapping = aes(
-    color = as.factor(dogs_binary),
-    color = after_scale(darken(color, .1, space = "HLS")),
-    fill = after_scale(desaturate(lighten(color, .8), .4))),
-    width = 0.3,
-    #position = position_dodge(width = 1, preserve = "single"),
-    outlier.shape = NA) +
-  geom_point(mapping = aes(
-    fill = as.factor(dogs_binary)),
-    color = "transparent",
-    shape = 21,
-    size = 3,
-    stroke = .4,
-    alpha = .5,
-    position = position_jitter(seed = 1, width = 0.12)) + 
-   #position_jitterdodge(seed = 1, jitter.width = 0.12, dodge.width = 1)) +
-  # stat_summary(
-  #   geom = "text",
-  #   fun = "median",
-  #   aes(label = round(..y.., 2),
-  #       color = as.factor(dogs_binary),
-  #       color = after_scale(darken(color, .1, space = "HLS"))),
-  #   family = "Roboto",
-  #   fontface = "bold",
-  #   #position = position_dodge(width = 1), 
-  #   size = 5,
-  #   vjust = -2.5) +
-  coord_flip(clip = "off") + 
-  scale_y_continuous(
-    limits = c(-5, 200),
-    breaks = seq(0, 200, by = 50),
-    expand = c(.001, .001)) +
-  labs(x = bquote("Garden size in "* m^2),
-       y = "Number of pictures") +
-  theme_pubr() + 
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(), 
-        #legend.position = "none", 
-        panel.background = element_rect(fill = "white"), #e9e5db
-        plot.background = element_rect(fill = "white"),
-        panel.border = element_rect(colour = "black", fill=NA, size=2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2), 
-        axis.ticks.length = unit(0.25, "cm"), 
-        plot.margin = margin(6, 10, 4, 4)) + 
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11) + 
-  #scale_colour_manual(values = c("#CD524C", "#CD524C", "#572F22")) +
-  #scale_fill_manual(values = c("#CD524C", "#CD524C", "#572F22"), guide = "none") +
-  scale_colour_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") +
-  scale_fill_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") +
-  scale_x_discrete(expand = c(0.2, 0.001))
-```
-
-#### Compost
-```{r fig.height=5.5, fig.width= 5.5}
-ggplot(data = CT_squirrels, mapping = aes(x = as.factor(compost), y = n, fill = as.factor(dogs_binary))) + 
-  stat_halfeye(mapping = aes(
-    color = as.factor(dogs_binary),
-    fill = after_scale(lighten(color, .5))),
-    width = 0.7,
-    .width = 0,
-    adjust = 0.5,
-    position = position_dodge(width = 1), 
-    justification = -.3,
-    point_color = NA) +
-  geom_boxplot(mapping = aes(
-    color = as.factor(dogs_binary),
-    color = after_scale(darken(color, .1, space = "HLS")),
-    fill = after_scale(desaturate(lighten(color, .8), .4))),
-    width = 0.3,
-    position = position_dodge(width = 1),
-    outlier.shape = NA) +
-  geom_point(mapping = aes(
-    fill = as.factor(dogs_binary)),
-    color = "transparent",
-    shape = 21,
-    size = 3,
-    stroke = .4,
-    alpha = .5,
-    #position = position_jitter(seed = 1, width = 0.12)) + 
-    position = position_jitterdodge(seed = 1, jitter.width = 0.12, dodge.width = 1)) +
-  stat_summary(
-    geom = "text",
-    fun = "median",
-    aes(label = round(..y.., 2),
-        color = as.factor(dogs_binary),
-        color = after_scale(darken(color, .1, space = "HLS"))),
-    family = "Roboto",
-    fontface = "bold",
-    position = position_dodge(width = 1),
-    size = 5,
-    vjust = -2.5) +
-  coord_flip(clip = "off") + 
-  scale_y_continuous(
-    limits = c(-5, 200),
-    breaks = seq(0, 200, by = 50),
-    expand = c(.001, .001)) +
-  labs(x = "Compost type",
-       y = "Number of pictures") +
-  theme_pubr() + 
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(), 
-        #legend.position = "none", 
-        panel.background = element_rect(fill = "white"), #e9e5db
-        plot.background = element_rect(fill = "white"),
-        panel.border = element_rect(colour = "black", fill=NA, size=2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2), 
-        axis.ticks.length = unit(0.25, "cm"), 
-        plot.margin = margin(6, 10, 4, 4)) + 
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_colour_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") +
-  scale_fill_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85)) +
-  scale_x_discrete(expand = c(0.3, 0.001))
-```
-
-
-#### cats binary
-```{r fig.height=5.5, fig.width= 5.5}
-ggplot(data = CT_squirrels, mapping = aes(x = as.factor(cats_binary), y = n, fill = as.factor(dogs_binary))) + 
-  stat_halfeye(mapping = aes(
-    color = as.factor(dogs_binary),
-    fill = after_scale(lighten(color, .5))),
-    width = 0.7,
-    .width = 0,
-    adjust = 0.5,
-    position = position_dodge(width = 1), 
-    justification = -.3,
-    point_color = NA) +
-  geom_boxplot(mapping = aes(
-    color = as.factor(dogs_binary),
-    color = after_scale(darken(color, .1, space = "HLS")),
-    fill = after_scale(desaturate(lighten(color, .8), .4))),
-    width = 0.3,
-    position = position_dodge(width = 1),
-    outlier.shape = NA) +
-  geom_point(mapping = aes(
-    fill = as.factor(dogs_binary)),
-    color = "transparent",
-    shape = 21,
-    size = 3,
-    stroke = .4,
-    alpha = .5,
-    #position = position_jitter(seed = 1, width = 0.12)) + 
-    position = position_jitterdodge(seed = 1, jitter.width = 0.12, dodge.width = 1)) +
-  stat_summary(
-    geom = "text",
-    fun = "median",
-    aes(label = round(..y.., 2),
-        color = as.factor(dogs_binary),
-        color = after_scale(darken(color, .1, space = "HLS"))),
-    family = "Roboto",
-    fontface = "bold",
-    position = position_dodge(width = 1),
-    size = 5,
-    vjust = -2.5) +
-  coord_flip(clip = "off") + 
-  scale_y_continuous(
-    limits = c(-5, 200),
-    breaks = seq(0, 200, by = 50),
-    expand = c(.001, .001)) +
-  labs(x = "Cats",
-       y = "Number of pictures") +
-  theme_pubr() + 
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(), 
-        #legend.position = "none", 
-        panel.background = element_rect(fill = "white"), #e9e5db
-        plot.background = element_rect(fill = "white"),
-        panel.border = element_rect(colour = "black", fill=NA, size=2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2), 
-        axis.ticks.length = unit(0.25, "cm"), 
-        plot.margin = margin(6, 10, 4, 4)) + 
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_colour_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") +
-  scale_fill_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85)) +
-  scale_x_discrete(expand = c(0.3, 0.001), labels = c("No", "Yes"))
-```
-
-
-#### Trees of interest
-```{r fig.height=5.5, fig.width= 5.5}
-ggplot(data = CT_squirrels, mapping = aes(x = as.factor(trees_of_interest), y = n, fill = as.factor(dogs_binary))) + 
-  stat_halfeye(mapping = aes(
-    color = as.factor(dogs_binary),
-    fill = after_scale(lighten(color, .5))),
-    width = 0.7,
-    .width = 0,
-    adjust = 0.5,
-    position = position_dodge(width = 1), 
-    justification = -.3,
-    point_color = NA) +
-  geom_boxplot(mapping = aes(
-    color = as.factor(dogs_binary),
-    color = after_scale(darken(color, .1, space = "HLS")),
-    fill = after_scale(desaturate(lighten(color, .8), .4))),
-    width = 0.3,
-    position = position_dodge(width = 1),
-    outlier.shape = NA) +
-  geom_point(mapping = aes(
-    fill = as.factor(dogs_binary)),
-    color = "transparent",
-    shape = 21,
-    size = 3,
-    stroke = .4,
-    alpha = .5,
-    #position = position_jitter(seed = 1, width = 0.12)) + 
-    position = position_jitterdodge(seed = 1, jitter.width = 0.12, dodge.width = 1)) +
-  stat_summary(
-    geom = "text",
-    fun = "median",
-    aes(label = round(..y.., 2),
-        color = as.factor(dogs_binary),
-        color = after_scale(darken(color, .1, space = "HLS"))),
-    family = "Roboto",
-    fontface = "bold",
-    position = position_dodge(width = 1),
-    size = 5,
-    vjust = -2.5) +
-  coord_flip(clip = "off") + 
-  scale_y_continuous(
-    limits = c(-5, 200),
-    breaks = seq(0, 200, by = 50),
-    expand = c(.001, .001)) +
-  labs(x = "Trees of interest",
-       y = "Number of pictures") +
-  theme_pubr() + 
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(), 
-        #legend.position = "none", 
-        panel.background = element_rect(fill = "white"), #e9e5db
-        plot.background = element_rect(fill = "white"),
-        panel.border = element_rect(colour = "black", fill=NA, size=2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2), 
-        axis.ticks.length = unit(0.25, "cm"), 
-        plot.margin = margin(6, 10, 4, 4)) + 
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_colour_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") +
-  scale_fill_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85)) +
-  scale_x_discrete(expand = c(0.3, 0.001), labels = c("No", "Yes"))
-```
-
-
-
-#### Other
-```{r}
-### Urban
-ggplot(data = CT_squirrels, mapping = aes(x = distance_border, y = n, fill = as.factor(dogs_binary))) + 
-  geom_boxplot()
-
-ggplot(data = CT_squirrels, mapping = aes(x = imperv_100, y = n, fill = as.factor(dogs_binary))) + 
-  geom_boxplot()
-
-ggplot(data = CT_squirrels, mapping = aes(x = pop_100, y = n, fill = as.factor(dogs_binary))) + 
-  geom_boxplot()
-```
-
-```{r}
 # Garden size
-CT_squirrels %>%
-  group_by(dogs_binary) %>%
-  summarise_at(vars(garden_size), funs(mean(., na.rm=TRUE)))
+ggplot(data = env_var, mapping = aes(x = dogs_binary, y = garden_size)) + 
+  stat_halfeye(mapping = aes(
+    color = dogs_binary, 
+    fill = dogs_binary),
+  width = 0.7, 
+  .width = 0, 
+  adjust = 0.5, 
+  justification = -.3,
+  point_color = NA) +
+  geom_boxplot(mapping = aes(
+    color = dogs_binary, 
+    color = after_scale(darken(color, .1, space = "HLS")),
+    fill = after_scale(desaturate(lighten(color, .8), .4))), 
+    width = 0.32, 
+    outlier.shape = NA) +
+  geom_point(mapping = aes(
+    fill = dogs_binary), 
+    color = "transparent", 
+    shape = 21, 
+    size = 3, 
+    stroke = .4,
+    alpha = .5,
+    position = position_jitter(seed = 1, width = 0.12)) + 
+  scale_y_continuous(
+    limits = c(0, 8000),
+    breaks = seq(0, 8000, by = 1000),
+    expand = c(.02, .001)) +
+  labs(x = "Dog", 
+       y = "Garden size", 
+       title = "Dogs vs garden size") + 
+  theme_pubr() + 
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank(), 
+        legend.position = "none", 
+        panel.background = element_rect(fill = "white"), 
+        plot.background = element_rect(fill = "white"),
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 2), 
+        axis.ticks.length = unit(0.25, "cm"), 
+        plot.margin = margin(6, 10, 4, 4)) + 
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001), labels = c("No", "Yes"))
 
-CT_squirrels %>%
-  group_by(dogs_binary) %>%
-  summarise_at(vars(garden_size), funs(range(., na.rm=TRUE)))
+# Cats
+ggplot(data = env_var, mapping = aes(x = cats_binary, fill = dogs_binary)) + 
+  geom_bar(position = "dodge") + 
+  scale_y_continuous(
+    limits = c(0, 600),
+    breaks = seq(0, 600, by = 100),
+    expand = c(.001, .001)) + 
+  labs(title = "Dogs vs cats", x= "Cat") + 
+  theme_pubr() + 
+  theme(legend.position = "none", 
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 1.5),
+        axis.ticks.length = unit(0.2, "cm"),
+        plot.margin = margin(6, 10, 4, 4)) +
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001), labels = c("no", "yes"))
+
+# Trees of interest
+ggplot(data = env_var, mapping = aes(x = trees_of_interest, fill = dogs_binary)) + 
+  geom_bar(position = "dodge") + 
+  labs(title = "")+ 
+  scale_y_continuous(
+    limits = c(0, 600),
+    breaks = seq(0, 600, by = 100),
+    expand = c(.008, .001)) + 
+  labs(title = "Dogs vs trees of interest", x= "Trees of interest") + 
+  theme_pubr() + 
+  theme(legend.position = "none", 
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 1.5),
+        axis.ticks.length = unit(0.2, "cm"),
+        plot.margin = margin(6, 10, 4, 4)) +
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001), labels = c("no", "yes"))
+
+# Fence height
+ggplot(data = env_var, mapping = aes(x = dogs_binary, y = fence_height)) + 
+  stat_halfeye(mapping = aes(
+    color = dogs_binary, 
+    fill = dogs_binary),
+  width = 0.7, 
+  .width = 0, 
+  adjust = 0.5, 
+  justification = -.3,
+  point_color = NA) +
+  geom_boxplot(mapping = aes(
+    color = dogs_binary, 
+    color = after_scale(darken(color, .1, space = "HLS")),
+    fill = after_scale(desaturate(lighten(color, .8), .4))), 
+    width = 0.32, 
+    outlier.shape = NA) +
+  geom_point(mapping = aes(
+    fill = dogs_binary), 
+    color = "transparent", 
+    shape = 21, 
+    size = 3, 
+    stroke = .4,
+    alpha = .5,
+    position = position_jitter(seed = 1, width = 0.12)) + 
+  scale_y_continuous(
+    limits = c(0, 300),
+    breaks = seq(0, 300, by = 50),
+    expand = c(.02, .001)) +
+  labs(x = "Dog", 
+       y = "Fence height", 
+       title = "Dogs vs fence height") + 
+  theme_pubr() + 
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank(), 
+        legend.position = "none", 
+        panel.background = element_rect(fill = "white"), 
+        plot.background = element_rect(fill = "white"),
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 2), 
+        axis.ticks.length = unit(0.25, "cm"), 
+        plot.margin = margin(6, 10, 4, 4)) + 
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001), labels = c("No", "Yes"))
+
+# Compost type
+ggplot(data = env_var, mapping = aes(x = compost, fill = dogs_binary)) + 
+  geom_bar(position = "dodge") + 
+  scale_y_continuous(
+    limits = c(0, 600),
+    breaks = seq(0, 600, by = 100),
+    expand = c(.001, .001)) + 
+  labs(title = "Dogs vs compost", x= "Compost type") + 
+  theme_pubr() + 
+  theme(legend.position = "none", 
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 1.5),
+        axis.ticks.length = unit(0.2, "cm"),
+        plot.margin = margin(6, 10, 4, 4)) +
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001))
+```
+
+
+```{r}
+env_var %>%
+  dplyr::count(garden_type, dogs_binary)
+
+```
+
+
+## cats
+### Urban scale
+```{r}
+# Distance to border
+ggplot(data = env_var, mapping = aes(x = cats_binary, y = distance_to_border)) + 
+  stat_halfeye(mapping = aes(
+    color = cats_binary, 
+    fill = cats_binary),
+  width = 0.7, 
+  .width = 0, 
+  adjust = 0.5, 
+  justification = -.3,
+  point_color = NA) +
+  geom_boxplot(mapping = aes(
+    color = cats_binary, 
+    color = after_scale(darken(color, .1, space = "HLS")),
+    fill = after_scale(desaturate(lighten(color, .8), .4))), 
+    width = 0.32, 
+    outlier.shape = NA) +
+  geom_point(mapping = aes(
+    fill = cats_binary), 
+    color = "transparent", 
+    shape = 21, 
+    size = 3, 
+    stroke = .4,
+    alpha = .5,
+    position = position_jitter(seed = 1, width = 0.12)) + 
+  scale_y_continuous(
+    limits = c(0, 12000),
+    breaks = seq(0, 12000, by = 1000),
+    expand = c(.02, .001)) +
+  labs(x = "Cat", 
+       y = "Distance to border", 
+       title = "Cts vs Distance to border") + 
+  theme_pubr() + 
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank(), 
+        legend.position = "none", 
+        panel.background = element_rect(fill = "white"), 
+        plot.background = element_rect(fill = "white"),
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 2), 
+        axis.ticks.length = unit(0.25, "cm"), 
+        plot.margin = margin(6, 10, 4, 4)) + 
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001), labels = c("No", "Yes"))
 
 # Imperviousness
-CT_squirrels %>%
-  group_by(dogs_binary) %>%
-  summarise_at(vars(imperv_100), funs(mean(., na.rm=TRUE)))
-
-CT_squirrels %>%
-  group_by(dogs_binary) %>%
-  summarise_at(vars(imperv_100), funs(range(., na.rm=TRUE)))
-
-# Population density
-CT_squirrels %>%
-  group_by(dogs_binary) %>%
-  summarise_at(vars(pop_100), funs(mean(., na.rm=TRUE)))
-
-CT_squirrels %>%
-  group_by(dogs_binary) %>%
-  summarise_at(vars(pop_100), funs(range(., na.rm=TRUE)))
-
-# distance to border
-CT_squirrels %>%
-  group_by(dogs_binary) %>%
-  summarise_at(vars(distance_border), funs(mean(., na.rm=TRUE)))
-
-CT_squirrels %>%
-  group_by(dogs_binary) %>%
-  summarise_at(vars(distance_border), funs(range(., na.rm=TRUE)))
-```
-
-
-### Cats
-```{r}
-Cat_map <- 
-base_map_imp(color_intensity = 0.6, 
-             legend_x = 0.9, 
-             legend_y = 0.85) + 
-  geom_sf(data = ct_spatial, 
-          mapping = aes(colour = as.factor(cats_binary))) + 
-  scale_color_manual(values = c( "1" = "red", "0" = "black"), 
-                     name = "Cat", labels = c("No", "Yes"))
-Cat_map
-```
-
-
-```{r fig.height=4, fig.width= 5}
-ggplot(data = CT_squirrels, mapping = aes(x = as.factor(cats_binary), y = n)) + 
+ggplot(data = env_var, mapping = aes(x = cats_binary, y = imperviousness_2018)) + 
   stat_halfeye(mapping = aes(
-    color = as.factor(cats_binary), 
-    fill = after_scale(lighten(color, .5))),
-    width = 0.7, 
-    .width = 0, 
-    adjust = 0.5, 
-    justification = -.3,
-    point_color = NA) +
+    color = cats_binary, 
+    fill = cats_binary),
+  width = 0.7, 
+  .width = 0, 
+  adjust = 0.5, 
+  justification = -.3,
+  point_color = NA) +
   geom_boxplot(mapping = aes(
-    color = as.factor(cats_binary), 
+    color = cats_binary, 
     color = after_scale(darken(color, .1, space = "HLS")),
     fill = after_scale(desaturate(lighten(color, .8), .4))), 
     width = 0.32, 
     outlier.shape = NA) +
-  # geom_point(mapping = aes(
-  #   color = as.factor(cats_binary), 
-  #   color = after_scale(darken(color, .1, space = "HLS"))), 
-  #   fill = "white", 
-  #   shape = 21, 
-  #   size = 2, 
-  #   stroke = .4,
-  #   position = position_jitter(seed = 1, width = 0.12)) +
   geom_point(mapping = aes(
-    fill = as.factor(cats_binary)), 
+    fill = cats_binary), 
     color = "transparent", 
     shape = 21, 
     size = 3, 
     stroke = .4,
     alpha = .5,
     position = position_jitter(seed = 1, width = 0.12)) + 
-  stat_summary(
-    geom = "text",
-    fun = "median",
-    aes(label = round(..y.., 2),
-        color = as.factor(cats_binary),
-        color = after_scale(darken(color, .1, space = "HLS"))),
-    family = "Roboto",
-    fontface = "bold",
-    size = 5,
-    vjust = -3.5) + 
-  annotate(geom="text", family = "Roboto", 
-           x=2.4, y=30, 
-           label="n = 23",
-           color=after_scale(darken("#572F22", .1, space = "HLS")), size = 4) + 
-  annotate(geom="text", family = "Roboto", 
-           x=1.4, y=30, 
-           label="n = 206",
-           color=after_scale(darken("#CD524C", .1, space = "HLS")), size = 4) + 
-  coord_flip(clip = "off") + 
   scale_y_continuous(
-    limits = c(-5, 200),
-    breaks = seq(0, 200, by = 50),
-    expand = c(.001, .001)) + 
+    limits = c(0, 100),
+    breaks = seq(0, 100, by = 25),
+    expand = c(.02, .001)) +
   labs(x = "Cat", 
-       y = "Number of pictures") + 
+       y = "Imperviousness", 
+       title = "Cats vs Imperviousness") + 
   theme_pubr() + 
   theme(panel.grid.minor = element_blank(),
         panel.grid.major.y = element_blank(), 
@@ -1482,127 +1028,272 @@ ggplot(data = CT_squirrels, mapping = aes(x = as.factor(cats_binary), y = n)) +
         plot.margin = margin(6, 10, 4, 4)) + 
   labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
   font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_colour_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") +
-  scale_fill_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001), labels = c("No", "Yes"))
+
+# Noise
+ggplot(data = env_var, mapping = aes(x = cats_binary, y = noise_2017)) + 
+  stat_halfeye(mapping = aes(
+    color = cats_binary, 
+    fill = cats_binary),
+  width = 0.7, 
+  .width = 0, 
+  adjust = 0.5, 
+  justification = -.3,
+  point_color = NA) +
+  geom_boxplot(mapping = aes(
+    color = cats_binary, 
+    color = after_scale(darken(color, .1, space = "HLS")),
+    fill = after_scale(desaturate(lighten(color, .8), .4))), 
+    width = 0.32, 
+    outlier.shape = NA) +
+  geom_point(mapping = aes(
+    fill = cats_binary), 
+    color = "transparent", 
+    shape = 21, 
+    size = 3, 
+    stroke = .4,
+    alpha = .5,
+    position = position_jitter(seed = 1, width = 0.12)) + 
+  scale_y_continuous(
+    limits = c(0, 100),
+    breaks = seq(0, 100, by = 25),
+    expand = c(.02, .001)) +
+  labs(x = "Cat", 
+       y = "Noise", 
+       title = "Cats vs Noise") + 
+  theme_pubr() + 
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank(), 
+        legend.position = "none", 
+        panel.background = element_rect(fill = "white"), 
+        plot.background = element_rect(fill = "white"),
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 2), 
+        axis.ticks.length = unit(0.25, "cm"), 
+        plot.margin = margin(6, 10, 4, 4)) + 
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001), labels = c("No", "Yes"))
+
+# Population density
+ggplot(data = env_var, mapping = aes(x = cats_binary, y = pop_2019)) + 
+  stat_halfeye(mapping = aes(
+    color = cats_binary, 
+    fill = cats_binary),
+  width = 0.7, 
+  .width = 0, 
+  adjust = 0.5, 
+  justification = -.3,
+  point_color = NA) +
+  geom_boxplot(mapping = aes(
+    color = cats_binary, 
+    color = after_scale(darken(color, .1, space = "HLS")),
+    fill = after_scale(desaturate(lighten(color, .8), .4))), 
+    width = 0.32, 
+    outlier.shape = NA) +
+  geom_point(mapping = aes(
+    fill = cats_binary), 
+    color = "transparent", 
+    shape = 21, 
+    size = 3, 
+    stroke = .4,
+    alpha = .5,
+    position = position_jitter(seed = 1, width = 0.12)) + 
+  scale_y_continuous(
+    limits = c(0, 700),
+    breaks = seq(0, 700, by = 100),
+    expand = c(.02, .001)) +
+  labs(x = "Cat", 
+       y = "Population density/ha", 
+       title = "Cats vs Population density") + 
+  theme_pubr() + 
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank(), 
+        legend.position = "none", 
+        panel.background = element_rect(fill = "white"), 
+        plot.background = element_rect(fill = "white"),
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 2), 
+        axis.ticks.length = unit(0.25, "cm"), 
+        plot.margin = margin(6, 10, 4, 4)) + 
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001), labels = c("No", "Yes"))
+
+# Tree cover density
+ggplot(data = env_var, mapping = aes(x = cats_binary, y = tree_cover_2019)) + 
+  stat_halfeye(mapping = aes(
+    color = cats_binary, 
+    fill = cats_binary),
+  width = 0.7, 
+  .width = 0, 
+  adjust = 0.5, 
+  justification = -.3,
+  point_color = NA) +
+  geom_boxplot(mapping = aes(
+    color = cats_binary, 
+    color = after_scale(darken(color, .1, space = "HLS")),
+    fill = after_scale(desaturate(lighten(color, .8), .4))), 
+    width = 0.32, 
+    outlier.shape = NA) +
+  geom_point(mapping = aes(
+    fill = cats_binary), 
+    color = "transparent", 
+    shape = 21, 
+    size = 3, 
+    stroke = .4,
+    alpha = .5,
+    position = position_jitter(seed = 1, width = 0.12)) + 
+  scale_y_continuous(
+    limits = c(0, 100),
+    breaks = seq(0, 100, by = 25),
+    expand = c(.02, .001)) +
+  labs(x = "Cat", 
+       y = "Tree cover density", 
+       title = "Cats vs Tree cover density") + 
+  theme_pubr() + 
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank(), 
+        legend.position = "none", 
+        panel.background = element_rect(fill = "white"), 
+        plot.background = element_rect(fill = "white"),
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 2), 
+        axis.ticks.length = unit(0.25, "cm"), 
+        plot.margin = margin(6, 10, 4, 4)) + 
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
   scale_x_discrete(expand = c(0.2, 0.001), labels = c("No", "Yes"))
 ```
 
 
-#### Garden type
-```{r  fig.height=5, fig.width= 5.5}
-ggplot(data = CT_squirrels, mapping = aes(x = as.factor(garden_type), y = n, fill = as.factor(cats_binary))) + 
-  stat_halfeye(mapping = aes(
-    color = as.factor(cats_binary),
-    fill = after_scale(lighten(color, .5))),
-    width = 0.7,
-    .width = 0,
-    adjust = 0.5,
-    position = position_dodge(width = 1), 
-    justification = -.3,
-    point_color = NA) +
-  geom_boxplot(mapping = aes(
-    color = as.factor(cats_binary),
-    color = after_scale(darken(color, .1, space = "HLS")),
-    fill = after_scale(desaturate(lighten(color, .8), .4))),
-    width = 0.3,
-    position = position_dodge(width = 1),
-    outlier.shape = NA) +
-  geom_point(mapping = aes(
-    fill = as.factor(cats_binary)),
-    color = "transparent",
-    shape = 21,
-    size = 3,
-    stroke = .4,
-    alpha = .5,
-    #position = position_jitter(seed = 1, width = 0.12)) + 
-    position = position_jitterdodge(seed = 1, jitter.width = 0.12, dodge.width = 1)) +
-  stat_summary(
-    geom = "text",
-    fun = "median",
-    aes(label = round(..y.., 2),
-        color = as.factor(cats_binary),
-        color = after_scale(darken(color, .1, space = "HLS"))),
-    family = "Roboto",
-    fontface = "bold",
-    position = position_dodge(width = 1),
-    size = 5,
-    vjust = -2.5) +
-  coord_flip(clip = "off") + 
+### Garden scale
+```{r}
+# Project phase
+ggplot(data = env_var, mapping = aes(x = project_phase, fill = cats_binary)) + #y = n, 
+  geom_bar(position = "dodge") + 
   scale_y_continuous(
-    limits = c(-5, 200),
-    breaks = seq(0, 200, by = 50),
-    expand = c(.001, .001)) +
-  labs(x = "Compost type",
-       y = "Number of pictures") +
+    limits = c(0, 600),
+    breaks = seq(0, 600, by = 100),
+    expand = c(.001, .001)) + 
+  labs(title = "Cats vs Project phase", x= "Project phase") + 
   theme_pubr() + 
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(), 
-        #legend.position = "none", 
-        panel.background = element_rect(fill = "white"), #e9e5db
-        plot.background = element_rect(fill = "white"),
+  theme(legend.position = "none", 
         panel.border = element_rect(colour = "black", fill=NA, size=2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2), 
-        axis.ticks.length = unit(0.25, "cm"), 
-        plot.margin = margin(6, 10, 4, 4)) + 
+        axis.ticks = element_line(colour = "black", linewidth = 1.5),
+        axis.ticks.length = unit(0.2, "cm"),
+        plot.margin = margin(6, 10, 4, 4)) +
   labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
   font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_colour_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") +
-  scale_fill_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85)) +
-  scale_x_discrete(expand = c(0.7, 0.001))
-```
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001))
+
+# Season
+ggplot(data = env_var, mapping = aes(x = Season, fill = cats_binary)) + #y = n, 
+  geom_bar(position = "dodge") + 
+  scale_y_continuous(
+    limits = c(0, 600),
+    breaks = seq(0, 600, by = 100),
+    expand = c(.001, .001)) + 
+  labs(title = "Cats vs Season", x= "Season") + 
+  theme_pubr() + 
+  theme(legend.position = "none", 
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 1.5),
+        axis.ticks.length = unit(0.2, "cm"),
+        plot.margin = margin(6, 10, 4, 4)) +
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001))
+
+# Lockdown
+ggplot(data = env_var, mapping = aes(x = lockdown, fill = cats_binary)) + #y = n, 
+  geom_bar(position = "dodge") + 
+  scale_y_continuous(
+    limits = c(0, 600),
+    breaks = seq(0, 600, by = 100),
+    expand = c(.001, .001)) + 
+  labs(title = "Cats vs Lockdown", x= "Lockdown") + 
+  theme_pubr() + 
+  theme(legend.position = "none", 
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 1.5),
+        axis.ticks.length = unit(0.2, "cm"),
+        plot.margin = margin(6, 10, 4, 4)) +
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001))
 
 
-#### garden size
-```{r fig.height=5, fig.width= 5.5}
-ggplot(data = CT_squirrels, mapping = aes(x = garden_size, y = n, fill = as.factor(cats_binary))) + 
+# Garden type
+ggplot(data = env_var, mapping = aes(x = garden_type, fill = cats_binary)) + #y = n, 
+  geom_bar(position = "dodge") + 
+  scale_y_continuous(
+    limits = c(0, 600),
+    breaks = seq(0, 600, by = 100),
+    expand = c(.001, .001)) + 
+  labs(title = "Cats vs Garden type", x= "Garden type") + 
+  theme_pubr() + 
+  theme(legend.position = "none", 
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 1.5),
+        axis.ticks.length = unit(0.2, "cm"),
+        plot.margin = margin(6, 10, 4, 4)) +
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001))
+
+# Garden size
+ggplot(data = env_var, mapping = aes(x = cats_binary, y = garden_size)) + 
   stat_halfeye(mapping = aes(
-    color = as.factor(cats_binary),
-    fill = after_scale(lighten(color, .5))),
-    width = 0.7,
-    .width = 0,
-    adjust = 0.5,
-   # position = position_dodge(width = 1), 
-    justification = -.3,
-    point_color = NA) +
+    color = cats_binary, 
+    fill = cats_binary),
+  width = 0.7, 
+  .width = 0, 
+  adjust = 0.5, 
+  justification = -.3,
+  point_color = NA) +
   geom_boxplot(mapping = aes(
-    color = as.factor(cats_binary),
+    color = cats_binary, 
     color = after_scale(darken(color, .1, space = "HLS")),
-    fill = after_scale(desaturate(lighten(color, .8), .4))),
-    width = 0.3,
-    #position = position_dodge(width = 1, preserve = "single"),
+    fill = after_scale(desaturate(lighten(color, .8), .4))), 
+    width = 0.32, 
     outlier.shape = NA) +
   geom_point(mapping = aes(
-    fill = as.factor(cats_binary)),
-    color = "transparent",
-    shape = 21,
-    size = 3,
+    fill = cats_binary), 
+    color = "transparent", 
+    shape = 21, 
+    size = 3, 
     stroke = .4,
     alpha = .5,
     position = position_jitter(seed = 1, width = 0.12)) + 
-   #position_jitterdodge(seed = 1, jitter.width = 0.12, dodge.width = 1)) +
-  # stat_summary(
-  #   geom = "text",
-  #   fun = "median",
-  #   aes(label = round(..y.., 2),
-  #       color = as.factor(cats_binary),
-  #       color = after_scale(darken(color, .1, space = "HLS"))),
-  #   family = "Roboto",
-  #   fontface = "bold",
-  #   #position = position_dodge(width = 1), 
-  #   size = 5,
-  #   vjust = -2.5) +
-  coord_flip(clip = "off") + 
   scale_y_continuous(
-    limits = c(-5, 200),
-    breaks = seq(0, 200, by = 50),
-    expand = c(.001, .001)) +
-  labs(x = bquote("Garden size in "* m^2),
-       y = "Number of pictures") +
+    limits = c(0, 8000),
+    breaks = seq(0, 8000, by = 1000),
+    expand = c(.02, .001)) +
+  labs(x = "Cat", 
+       y = "Garden size", 
+       title = "Cats vs garden size") + 
   theme_pubr() + 
   theme(panel.grid.minor = element_blank(),
         panel.grid.major.y = element_blank(), 
-        #legend.position = "none", 
-        panel.background = element_rect(fill = "white"), #e9e5db
+        legend.position = "none", 
+        panel.background = element_rect(fill = "white"), 
         plot.background = element_rect(fill = "white"),
         panel.border = element_rect(colour = "black", fill=NA, size=2), 
         axis.ticks = element_line(colour = "black", linewidth = 2), 
@@ -1610,64 +1301,159 @@ ggplot(data = CT_squirrels, mapping = aes(x = garden_size, y = n, fill = as.fact
         plot.margin = margin(6, 10, 4, 4)) + 
   labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
   font(object = "xy.text", family = "Roboto", size = 11) + 
-  #scale_colour_manual(values = c("#CD524C", "#CD524C", "#572F22")) +
-  #scale_fill_manual(values = c("#CD524C", "#CD524C", "#572F22"), guide = "none") +
-  scale_colour_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85)) +
-  scale_fill_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") +
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001), labels = c("No", "Yes"))
+
+# Dogs
+ggplot(data = env_var, mapping = aes(x = dogs_binary, fill = cats_binary)) + 
+  geom_bar(position = "dodge") + 
+  scale_y_continuous(
+    limits = c(0, 600),
+    breaks = seq(0, 600, by = 100),
+    expand = c(.001, .001)) + 
+  labs(title = "Cats vs dogs", x= "Dog") + 
+  theme_pubr() + 
+  theme(legend.position = "none", 
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 1.5),
+        axis.ticks.length = unit(0.2, "cm"),
+        plot.margin = margin(6, 10, 4, 4)) +
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001), labels = c("no", "yes"))
+
+# Trees of interest
+ggplot(data = env_var, mapping = aes(x = trees_of_interest, fill = cats_binary)) + 
+  geom_bar(position = "dodge") + 
+  labs(title = "")+ 
+  scale_y_continuous(
+    limits = c(0, 600),
+    breaks = seq(0, 600, by = 100),
+    expand = c(.008, .001)) + 
+  labs(title = "Cats vs trees of interest", x= "Trees of interest") + 
+  theme_pubr() + 
+  theme(legend.position = "none", 
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 1.5),
+        axis.ticks.length = unit(0.2, "cm"),
+        plot.margin = margin(6, 10, 4, 4)) +
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001), labels = c("no", "yes"))
+
+# Fence height
+ggplot(data = env_var, mapping = aes(x = cats_binary, y = fence_height)) + 
+  stat_halfeye(mapping = aes(
+    color = cats_binary, 
+    fill = cats_binary),
+  width = 0.7, 
+  .width = 0, 
+  adjust = 0.5, 
+  justification = -.3,
+  point_color = NA) +
+  geom_boxplot(mapping = aes(
+    color = cats_binary, 
+    color = after_scale(darken(color, .1, space = "HLS")),
+    fill = after_scale(desaturate(lighten(color, .8), .4))), 
+    width = 0.32, 
+    outlier.shape = NA) +
+  geom_point(mapping = aes(
+    fill = cats_binary), 
+    color = "transparent", 
+    shape = 21, 
+    size = 3, 
+    stroke = .4,
+    alpha = .5,
+    position = position_jitter(seed = 1, width = 0.12)) + 
+  scale_y_continuous(
+    limits = c(0, 300),
+    breaks = seq(0, 300, by = 50),
+    expand = c(.02, .001)) +
+  labs(x = "Cat", 
+       y = "Fence height", 
+       title = "Cats vs fence height") + 
+  theme_pubr() + 
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank(), 
+        legend.position = "none", 
+        panel.background = element_rect(fill = "white"), 
+        plot.background = element_rect(fill = "white"),
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 2), 
+        axis.ticks.length = unit(0.25, "cm"), 
+        plot.margin = margin(6, 10, 4, 4)) + 
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001), labels = c("No", "Yes"))
+
+# Compost type
+ggplot(data = env_var, mapping = aes(x = compost, fill = cats_binary)) + 
+  geom_bar(position = "dodge") + 
+  scale_y_continuous(
+    limits = c(0, 600),
+    breaks = seq(0, 600, by = 100),
+    expand = c(.001, .001)) + 
+  labs(title = "Cats vs compost", x= "Compost type") + 
+  theme_pubr() + 
+  theme(legend.position = "none", 
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 1.5),
+        axis.ticks.length = unit(0.2, "cm"),
+        plot.margin = margin(6, 10, 4, 4)) +
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
   scale_x_discrete(expand = c(0.2, 0.001))
 ```
 
-#### Compost
-```{r fig.height=5.5, fig.width= 5.5}
-ggplot(data = CT_squirrels, mapping = aes(x = as.factor(compost), y = n, fill = as.factor(cats_binary))) + 
+
+## trees of interest
+### Urban scale
+```{r}
+# Distance to border
+ggplot(data = env_var, mapping = aes(x = trees_of_interest, y = distance_to_border)) + 
   stat_halfeye(mapping = aes(
-    color = as.factor(cats_binary),
-    fill = after_scale(lighten(color, .5))),
-    width = 0.7,
-    .width = 0,
-    adjust = 0.5,
-    position = position_dodge(width = 1), 
-    justification = -.3,
-    point_color = NA) +
+    color = trees_of_interest, 
+    fill = trees_of_interest),
+  width = 0.7, 
+  .width = 0, 
+  adjust = 0.5, 
+  justification = -.3,
+  point_color = NA) +
   geom_boxplot(mapping = aes(
-    color = as.factor(cats_binary),
+    color = trees_of_interest, 
     color = after_scale(darken(color, .1, space = "HLS")),
-    fill = after_scale(desaturate(lighten(color, .8), .4))),
-    width = 0.3,
-    position = position_dodge(width = 1),
+    fill = after_scale(desaturate(lighten(color, .8), .4))), 
+    width = 0.32, 
     outlier.shape = NA) +
   geom_point(mapping = aes(
-    fill = as.factor(cats_binary)),
-    color = "transparent",
-    shape = 21,
-    size = 3,
+    fill = trees_of_interest), 
+    color = "transparent", 
+    shape = 21, 
+    size = 3, 
     stroke = .4,
     alpha = .5,
-    #position = position_jitter(seed = 1, width = 0.12)) + 
-    position = position_jitterdodge(seed = 1, jitter.width = 0.12, dodge.width = 1)) +
-  stat_summary(
-    geom = "text",
-    fun = "median",
-    aes(label = round(..y.., 2),
-        color = as.factor(cats_binary),
-        color = after_scale(darken(color, .1, space = "HLS"))),
-    family = "Roboto",
-    fontface = "bold",
-    position = position_dodge(width = 1),
-    size = 5,
-    vjust = -2.5) +
-  coord_flip(clip = "off") + 
+    position = position_jitter(seed = 1, width = 0.12)) + 
   scale_y_continuous(
-    limits = c(-5, 200),
-    breaks = seq(0, 200, by = 50),
-    expand = c(.001, .001)) +
-  labs(x = "Compost type",
-       y = "Number of pictures") +
+    limits = c(0, 12000),
+    breaks = seq(0, 12000, by = 1000),
+    expand = c(.02, .001)) +
+  labs(x = "Trees of interest", 
+       y = "Distance to border", 
+       title = "Trees of interest vs Distance to border") + 
   theme_pubr() + 
   theme(panel.grid.minor = element_blank(),
         panel.grid.major.y = element_blank(), 
-        #legend.position = "none", 
-        panel.background = element_rect(fill = "white"), #e9e5db
+        legend.position = "none", 
+        panel.background = element_rect(fill = "white"), 
         plot.background = element_rect(fill = "white"),
         panel.border = element_rect(colour = "black", fill=NA, size=2), 
         axis.ticks = element_line(colour = "black", linewidth = 2), 
@@ -1675,63 +1461,46 @@ ggplot(data = CT_squirrels, mapping = aes(x = as.factor(compost), y = n, fill = 
         plot.margin = margin(6, 10, 4, 4)) + 
   labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
   font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_colour_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") +
-  scale_fill_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85)) +
-  scale_x_discrete(expand = c(0.5, 0.001))
-```
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001), labels = c("No", "Yes"))
 
-
-#### dogs binary
-```{r fig.height=5.5, fig.width= 5.5}
-ggplot(data = CT_squirrels, mapping = aes(x = as.factor(dogs_binary), y = n, fill = as.factor(cats_binary))) + 
+# Imperviousness
+ggplot(data = env_var, mapping = aes(x = trees_of_interest, y = imperviousness_2018)) + 
   stat_halfeye(mapping = aes(
-    color = as.factor(cats_binary),
-    fill = after_scale(lighten(color, .5))),
-    width = 0.7,
-    .width = 0,
-    adjust = 0.5,
-    position = position_dodge(width = 1), 
-    justification = -.3,
-    point_color = NA) +
+    color = trees_of_interest, 
+    fill = trees_of_interest),
+  width = 0.7, 
+  .width = 0, 
+  adjust = 0.5, 
+  justification = -.3,
+  point_color = NA) +
   geom_boxplot(mapping = aes(
-    color = as.factor(cats_binary),
+    color = trees_of_interest, 
     color = after_scale(darken(color, .1, space = "HLS")),
-    fill = after_scale(desaturate(lighten(color, .8), .4))),
-    width = 0.3,
-    position = position_dodge(width = 1),
+    fill = after_scale(desaturate(lighten(color, .8), .4))), 
+    width = 0.32, 
     outlier.shape = NA) +
   geom_point(mapping = aes(
-    fill = as.factor(cats_binary)),
-    color = "transparent",
-    shape = 21,
-    size = 3,
+    fill = trees_of_interest), 
+    color = "transparent", 
+    shape = 21, 
+    size = 3, 
     stroke = .4,
     alpha = .5,
-    #position = position_jitter(seed = 1, width = 0.12)) + 
-    position = position_jitterdodge(seed = 1, jitter.width = 0.12, dodge.width = 1)) +
-  stat_summary(
-    geom = "text",
-    fun = "median",
-    aes(label = round(..y.., 2),
-        color = as.factor(cats_binary),
-        color = after_scale(darken(color, .1, space = "HLS"))),
-    family = "Roboto",
-    fontface = "bold",
-    position = position_dodge(width = 1),
-    size = 5,
-    vjust = -2.5) +
-  coord_flip(clip = "off") + 
+    position = position_jitter(seed = 1, width = 0.12)) + 
   scale_y_continuous(
-    limits = c(-5, 200),
-    breaks = seq(0, 200, by = 50),
-    expand = c(.001, .001)) +
-  labs(x = "Dogs",
-       y = "Number of pictures") +
+    limits = c(0, 100),
+    breaks = seq(0, 100, by = 25),
+    expand = c(.02, .001)) +
+  labs(x = "Trees of interest", 
+       y = "Imperviousness", 
+       title = "Trees of interest vs Imperviousness") + 
   theme_pubr() + 
   theme(panel.grid.minor = element_blank(),
         panel.grid.major.y = element_blank(), 
-        #legend.position = "none", 
-        panel.background = element_rect(fill = "white"), #e9e5db
+        legend.position = "none", 
+        panel.background = element_rect(fill = "white"), 
         plot.background = element_rect(fill = "white"),
         panel.border = element_rect(colour = "black", fill=NA, size=2), 
         axis.ticks = element_line(colour = "black", linewidth = 2), 
@@ -1739,63 +1508,46 @@ ggplot(data = CT_squirrels, mapping = aes(x = as.factor(dogs_binary), y = n, fil
         plot.margin = margin(6, 10, 4, 4)) + 
   labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
   font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_colour_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") +
-  scale_fill_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85)) +
-  scale_x_discrete(expand = c(0.3, 0.001), labels = c("No", "Yes"))
-```
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001), labels = c("No", "Yes"))
 
-
-#### Trees of interest
-```{r fig.height=5.5, fig.width= 5.5}
-ggplot(data = CT_squirrels, mapping = aes(x = as.factor(trees_of_interest), y = n, fill = as.factor(cats_binary))) + 
+# Noise
+ggplot(data = env_var, mapping = aes(x = trees_of_interest, y = noise_2017)) + 
   stat_halfeye(mapping = aes(
-    color = as.factor(cats_binary),
-    fill = after_scale(lighten(color, .5))),
-    width = 0.7,
-    .width = 0,
-    adjust = 0.5,
-    position = position_dodge(width = 1), 
-    justification = -.3,
-    point_color = NA) +
+    color = trees_of_interest, 
+    fill = trees_of_interest),
+  width = 0.7, 
+  .width = 0, 
+  adjust = 0.5, 
+  justification = -.3,
+  point_color = NA) +
   geom_boxplot(mapping = aes(
-    color = as.factor(cats_binary),
+    color = trees_of_interest, 
     color = after_scale(darken(color, .1, space = "HLS")),
-    fill = after_scale(desaturate(lighten(color, .8), .4))),
-    width = 0.3,
-    position = position_dodge(width = 1),
+    fill = after_scale(desaturate(lighten(color, .8), .4))), 
+    width = 0.32, 
     outlier.shape = NA) +
   geom_point(mapping = aes(
-    fill = as.factor(cats_binary)),
-    color = "transparent",
-    shape = 21,
-    size = 3,
+    fill = trees_of_interest), 
+    color = "transparent", 
+    shape = 21, 
+    size = 3, 
     stroke = .4,
     alpha = .5,
-    #position = position_jitter(seed = 1, width = 0.12)) + 
-    position = position_jitterdodge(seed = 1, jitter.width = 0.12, dodge.width = 1)) +
-  stat_summary(
-    geom = "text",
-    fun = "median",
-    aes(label = round(..y.., 2),
-        color = as.factor(cats_binary),
-        color = after_scale(darken(color, .1, space = "HLS"))),
-    family = "Roboto",
-    fontface = "bold",
-    position = position_dodge(width = 1),
-    size = 5,
-    vjust = -2.5) +
-  coord_flip(clip = "off") + 
+    position = position_jitter(seed = 1, width = 0.12)) + 
   scale_y_continuous(
-    limits = c(-5, 200),
-    breaks = seq(0, 200, by = 50),
-    expand = c(.001, .001)) +
-  labs(x = "Trees of interest",
-       y = "Number of pictures") +
+    limits = c(0, 100),
+    breaks = seq(0, 100, by = 25),
+    expand = c(.02, .001)) +
+  labs(x = "Trees of interest", 
+       y = "Noise", 
+       title = "Trees of interest vs Noise") + 
   theme_pubr() + 
   theme(panel.grid.minor = element_blank(),
         panel.grid.major.y = element_blank(), 
-        #legend.position = "none", 
-        panel.background = element_rect(fill = "white"), #e9e5db
+        legend.position = "none", 
+        panel.background = element_rect(fill = "white"), 
         plot.background = element_rect(fill = "white"),
         panel.border = element_rect(colour = "black", fill=NA, size=2), 
         axis.ticks = element_line(colour = "black", linewidth = 2), 
@@ -1803,139 +1555,347 @@ ggplot(data = CT_squirrels, mapping = aes(x = as.factor(trees_of_interest), y = 
         plot.margin = margin(6, 10, 4, 4)) + 
   labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
   font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_colour_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85), guide = "none") +
-  scale_fill_manual(values = scico(2, palette = "lajolla", begin = 0.6, end = 0.85)) +
-  scale_x_discrete(expand = c(0.3, 0.001), labels = c("No", "Yes"))
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001), labels = c("No", "Yes"))
+
+# Population density
+ggplot(data = env_var, mapping = aes(x = trees_of_interest, y = pop_2019)) + 
+  stat_halfeye(mapping = aes(
+    color = trees_of_interest, 
+    fill = trees_of_interest),
+  width = 0.7, 
+  .width = 0, 
+  adjust = 0.5, 
+  justification = -.3,
+  point_color = NA) +
+  geom_boxplot(mapping = aes(
+    color = trees_of_interest, 
+    color = after_scale(darken(color, .1, space = "HLS")),
+    fill = after_scale(desaturate(lighten(color, .8), .4))), 
+    width = 0.32, 
+    outlier.shape = NA) +
+  geom_point(mapping = aes(
+    fill = trees_of_interest), 
+    color = "transparent", 
+    shape = 21, 
+    size = 3, 
+    stroke = .4,
+    alpha = .5,
+    position = position_jitter(seed = 1, width = 0.12)) + 
+  scale_y_continuous(
+    limits = c(0, 700),
+    breaks = seq(0, 700, by = 100),
+    expand = c(.02, .001)) +
+  labs(x = "Trees of interest", 
+       y = "Population density/ha", 
+       title = "Trees of interest vs Population density") + 
+  theme_pubr() + 
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank(), 
+        legend.position = "none", 
+        panel.background = element_rect(fill = "white"), 
+        plot.background = element_rect(fill = "white"),
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 2), 
+        axis.ticks.length = unit(0.25, "cm"), 
+        plot.margin = margin(6, 10, 4, 4)) + 
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001), labels = c("No", "Yes"))
+
+# Tree cover density
+ggplot(data = env_var, mapping = aes(x = trees_of_interest, y = tree_cover_2019)) + 
+  stat_halfeye(mapping = aes(
+    color = trees_of_interest, 
+    fill = trees_of_interest),
+  width = 0.7, 
+  .width = 0, 
+  adjust = 0.5, 
+  justification = -.3,
+  point_color = NA) +
+  geom_boxplot(mapping = aes(
+    color = trees_of_interest, 
+    color = after_scale(darken(color, .1, space = "HLS")),
+    fill = after_scale(desaturate(lighten(color, .8), .4))), 
+    width = 0.32, 
+    outlier.shape = NA) +
+  geom_point(mapping = aes(
+    fill = trees_of_interest), 
+    color = "transparent", 
+    shape = 21, 
+    size = 3, 
+    stroke = .4,
+    alpha = .5,
+    position = position_jitter(seed = 1, width = 0.12)) + 
+  scale_y_continuous(
+    limits = c(0, 100),
+    breaks = seq(0, 100, by = 25),
+    expand = c(.02, .001)) +
+  labs(x = "Trees of interest", 
+       y = "Tree cover density", 
+       title = "Trees of interest vs Tree cover density") + 
+  theme_pubr() + 
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank(), 
+        legend.position = "none", 
+        panel.background = element_rect(fill = "white"), 
+        plot.background = element_rect(fill = "white"),
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 2), 
+        axis.ticks.length = unit(0.25, "cm"), 
+        plot.margin = margin(6, 10, 4, 4)) + 
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001), labels = c("No", "Yes"))
 ```
 
 
-
-
-
-### Trees of interest
+### Garden scale
 ```{r}
-ggplot(data = CT_squirrels, mapping = aes(x = n, y = trees_of_interest)) + 
-  geom_point() + 
-  labs(title = "Number of pictures per station with or without trees of interest")
+# Project phase
+ggplot(data = env_var, mapping = aes(x = project_phase, fill = trees_of_interest)) + #y = n, 
+  geom_bar(position = "dodge") + 
+  scale_y_continuous(
+    limits = c(0, 600),
+    breaks = seq(0, 600, by = 100),
+    expand = c(.008, .001)) + 
+  labs(title = "Trees of interest vs Project phase", x= "Project phase") + 
+  theme_pubr() + 
+  theme(legend.position = "none", 
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 1.5),
+        axis.ticks.length = unit(0.2, "cm"),
+        plot.margin = margin(6, 10, 4, 4)) +
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001))
 
-ggplot(data = CT_squirrels, mapping = aes(x = garden_type, y = n, fill = as.factor(trees_of_interest))) + 
-  geom_boxplot() 
+# Season
+ggplot(data = env_var, mapping = aes(x = Season, fill = trees_of_interest)) + #y = n, 
+  geom_bar(position = "dodge") + 
+  scale_y_continuous(
+    limits = c(0, 600),
+    breaks = seq(0, 600, by = 100),
+    expand = c(.008, .001)) + 
+  labs(title = "Trees of interest vs Season", x= "Season") + 
+  theme_pubr() + 
+  theme(legend.position = "none", 
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 1.5),
+        axis.ticks.length = unit(0.2, "cm"),
+        plot.margin = margin(6, 10, 4, 4)) +
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001))
 
-ggplot(data = CT_squirrels, mapping = aes(x = garden_size, y = n, fill = as.factor(trees_of_interest))) + 
-  geom_boxplot() 
+# Lockdown
+ggplot(data = env_var, mapping = aes(x = lockdown, fill = trees_of_interest)) + #y = n, 
+  geom_bar(position = "dodge") + 
+  scale_y_continuous(
+    limits = c(0, 600),
+    breaks = seq(0, 600, by = 100),
+    expand = c(.008, .001)) + 
+  labs(title = "Trees of interest vs Lockdown", x= "Lockdown") + 
+  theme_pubr() + 
+  theme(legend.position = "none", 
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 1.5),
+        axis.ticks.length = unit(0.2, "cm"),
+        plot.margin = margin(6, 10, 4, 4)) +
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001))
 
-ggplot(data = CT_squirrels, mapping = aes(x = as.factor(compost), y = n, fill = as.factor(trees_of_interest))) + 
-  geom_boxplot() 
 
-ggplot(data = CT_squirrels, mapping = aes(x = as.factor(cats_binary), y = n, fill = as.factor(trees_of_interest))) + 
-  geom_boxplot() 
+# Garden type
+ggplot(data = env_var, mapping = aes(x = garden_type, fill = trees_of_interest)) + #y = n, 
+  geom_bar(position = "dodge") + 
+  scale_y_continuous(
+    limits = c(0, 600),
+    breaks = seq(0, 600, by = 100),
+    expand = c(.008, .001)) + 
+  labs(title = "Trees of interest vs garden type", x= "Garden type") + 
+  theme_pubr() + 
+  theme(legend.position = "none", 
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 1.5),
+        axis.ticks.length = unit(0.2, "cm"),
+        plot.margin = margin(6, 10, 4, 4)) +
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001))
 
-ggplot(data = CT_squirrels, mapping = aes(x = as.factor(dogs_binary), y = n, fill = as.factor(trees_of_interest))) + 
-  geom_boxplot() 
+# Garden size
+ggplot(data = env_var, mapping = aes(x = trees_of_interest, y = garden_size)) + 
+  stat_halfeye(mapping = aes(
+    color = trees_of_interest, 
+    fill = trees_of_interest),
+  width = 0.7, 
+  .width = 0, 
+  adjust = 0.5, 
+  justification = -.3,
+  point_color = NA) +
+  geom_boxplot(mapping = aes(
+    color = trees_of_interest, 
+    color = after_scale(darken(color, .1, space = "HLS")),
+    fill = after_scale(desaturate(lighten(color, .8), .4))), 
+    width = 0.32, 
+    outlier.shape = NA) +
+  geom_point(mapping = aes(
+    fill = trees_of_interest), 
+    color = "transparent", 
+    shape = 21, 
+    size = 3, 
+    stroke = .4,
+    alpha = .5,
+    position = position_jitter(seed = 1, width = 0.12)) + 
+  scale_y_continuous(
+    limits = c(0, 8000),
+    breaks = seq(0, 8000, by = 1000),
+    expand = c(.02, .001)) +
+  labs(x = "Trees of interest", 
+       y = "Garden size", 
+       title = "Trees of interest vs garden size") + 
+  theme_pubr() + 
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank(), 
+        legend.position = "none", 
+        panel.background = element_rect(fill = "white"), 
+        plot.background = element_rect(fill = "white"),
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 2), 
+        axis.ticks.length = unit(0.25, "cm"), 
+        plot.margin = margin(6, 10, 4, 4)) + 
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001), labels = c("No", "Yes"))
+
+# Dogs
+ggplot(data = env_var, mapping = aes(x = dogs_binary, fill = trees_of_interest)) + 
+  geom_bar(position = "dodge") + 
+  labs(title = "")+ 
+  scale_y_continuous(
+    limits = c(0, 600),
+    breaks = seq(0, 600, by = 100),
+    expand = c(.008, .001)) + 
+  labs(title = "Trees of interest vs dogs", x= "Dogs") + 
+  theme_pubr() + 
+  theme(legend.position = "none", 
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 1.5),
+        axis.ticks.length = unit(0.2, "cm"),
+        plot.margin = margin(6, 10, 4, 4)) +
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001), labels = c("no", "yes"))
+
+# Cats
+ggplot(data = env_var, mapping = aes(x = cats_binary, fill = trees_of_interest)) + 
+  geom_bar(position = "dodge") + 
+  scale_y_continuous(
+    limits = c(0, 600),
+    breaks = seq(0, 600, by = 100),
+    expand = c(.008, .001)) + 
+  labs(title = "Trees of interest vs cats", x= "Cats") + 
+  theme_pubr() + 
+  theme(legend.position = "none", 
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 1.5),
+        axis.ticks.length = unit(0.2, "cm"),
+        plot.margin = margin(6, 10, 4, 4)) +
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001), labels = c("no", "yes"))
+
+# Fence height
+ggplot(data = env_var, mapping = aes(x = trees_of_interest, y = fence_height)) + 
+  stat_halfeye(mapping = aes(
+    color = trees_of_interest, 
+    fill = trees_of_interest),
+  width = 0.7, 
+  .width = 0, 
+  adjust = 0.5, 
+  justification = -.3,
+  point_color = NA) +
+  geom_boxplot(mapping = aes(
+    color = trees_of_interest, 
+    color = after_scale(darken(color, .1, space = "HLS")),
+    fill = after_scale(desaturate(lighten(color, .8), .4))), 
+    width = 0.32, 
+    outlier.shape = NA) +
+  geom_point(mapping = aes(
+    fill = trees_of_interest), 
+    color = "transparent", 
+    shape = 21, 
+    size = 3, 
+    stroke = .4,
+    alpha = .5,
+    position = position_jitter(seed = 1, width = 0.12)) + 
+  scale_y_continuous(
+    limits = c(0, 300),
+    breaks = seq(0, 300, by = 50),
+    expand = c(.02, .001)) +
+  labs(x = "Trees of interest", 
+       y = "Fence height", 
+       title = "Trees of interest vs fence height") + 
+  theme_pubr() + 
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank(), 
+        legend.position = "none", 
+        panel.background = element_rect(fill = "white"), 
+        plot.background = element_rect(fill = "white"),
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 2), 
+        axis.ticks.length = unit(0.25, "cm"), 
+        plot.margin = margin(6, 10, 4, 4)) + 
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001), labels = c("No", "Yes"))
+
+# Compost type
+ggplot(data = env_var, mapping = aes(x = compost, fill = trees_of_interest)) + 
+  geom_bar(position = "dodge") + 
+  scale_y_continuous(
+    limits = c(0, 600),
+    breaks = seq(0, 600, by = 100),
+    expand = c(.008, .001)) + 
+  labs(title = "Trees of interest vs compost", x= "Compost type") + 
+  theme_pubr() + 
+  theme(legend.position = "none", 
+        panel.border = element_rect(colour = "black", fill=NA, size=2), 
+        axis.ticks = element_line(colour = "black", linewidth = 1.5),
+        axis.ticks.length = unit(0.2, "cm"),
+        plot.margin = margin(6, 10, 4, 4)) +
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11) + 
+  scale_colour_manual(values = pal_2, guide = "none") +
+  scale_fill_manual(values = pal_2, guide = "none") + 
+  scale_x_discrete(expand = c(0.2, 0.001))
 ```
 
-```{r}
-CT_squirrels %>%
-  group_by(trees_of_interest) %>%
-  summarise_at(vars(garden_size), funs(mean(., na.rm=TRUE)))
+There are so many gardens with trees of interest that we do not consider this variable in the further analysis
 
-CT_squirrels %>%
-  group_by(trees_of_interest) %>%
-  summarise_at(vars(garden_size), funs(range(., na.rm=TRUE)))
-```
-
-## Urban variables
-### Population density
-```{r}
-summary(CT_squirrels$pop_100)
-range(CT_squirrels$human_population_density_raster_10m_2017_3035, na.rm = T)
-summary((CT_squirrels$human_population_density_raster_10m_2017_3035*100))
-
-ggplot(data = CT_squirrels, mapping = aes(x = n, y = pop_100)) + 
-  geom_point() + 
-  ylim(0, 700) + 
-  labs(title = "Population density")
-ggplot(data = CT_squirrels, mapping = aes(x = n, y = (human_population_density_raster_10m_2017_3035*100))) + 
-  geom_point() + 
-  ylim(0, 700) + 
-  labs(title = "Population density by Marius")
-```
-
-### Distance to water
-```{r}
-ggplot(data = CT_squirrels, mapping = aes(x = n, y = dist_water_100)) + 
-  geom_point() + 
-  labs(title = "Distance to water")
-
-ggplot(data = CT_squirrels, mapping = aes(x = dist_water_100, y = n)) + 
-  geom_point() + 
-  labs(title = "Distance to water")
-```
-
-### Imperviousness
-```{r}
-ggplot(data = CT_squirrels, mapping = aes(x = n, y = imperv_100)) + 
-  geom_point() + 
-  labs(title = "Imperviousness")
-ggplot(data = CT_squirrels, mapping = aes(x = n, y = imperviousness_berlin_copernicus_raster_10m_2018_3035)) + 
-  geom_point() + 
-  labs(title = "Imperviousness by Marius")
-```
-
-### Noise
-```{r}
-ggplot(data = CT_squirrels, mapping = aes(x = n, y = noise_100)) + 
-  geom_point() + 
-  labs(title = "Noise")
-```
-
-### Tree cover
-```{r}
-ggplot(data = CT_squirrels, mapping = aes(x = n, y = Local_tree_cover)) + 
-  geom_point() + 
-  ylim(0, 100) + 
-  labs(title = "Local tree cover (by Citizens?)")
-ggplot(data = CT_squirrels, mapping = aes(x = n, y = tree_cover_100)) + 
-  geom_point() + 
-  ylim(0, 100) + 
-  labs(title = "Tree cover")
-```
-
-### Distance to city border
-```{r}
-ggplot(data = CT_squirrels, mapping = aes(x = n, y = distance_border)) + 
-  geom_point() + 
-  ylim(0, 20000) + 
-  labs(title = "Distance to border")
-
-ggplot(data = CT_squirrels, mapping = aes(x = n, y = distance_to_border_3035)) + 
-  geom_point()+ 
-  ylim(0, 20000) + 
-  labs(title = "Distance to border by Marius")
-```
-
-### Different measures
-```{r}
-ggplot(data = CT_squirrels, mapping = aes(x = n, y = distance_to_open_green_areas_raster_2020_10m_3035)) + 
-  geom_point() + 
-  labs(title = "Distance to open green areas")
-
-ggplot(data = CT_squirrels, mapping = aes(x = n, y = distance_to_streets_berlin_raster_10m_2015_3035)) + 
-  geom_point() + 
-  labs(title = "Distance to streets")
-
-ggplot(data = CT_squirrels, mapping = aes(x = n, y = green_capacity_berlin_raster_10m_2010_3035)) + 
-  geom_point() + 
-  labs(title = "Green capacity")
-
-ggplot(data = CT_squirrels, mapping = aes(x = n, y = summer_temperature_berlin_04h_2016_3035)) + 
-  geom_point() + 
-  labs(title = "Summer temperature 04h")
-
-ggplot(data = CT_squirrels, mapping = aes(x = n, y = traffic_volume_berlin_raster_10m_2014_3035)) + 
-  geom_point() + 
-  labs(title = "Traffic volume")
-```
 
 ***
 
