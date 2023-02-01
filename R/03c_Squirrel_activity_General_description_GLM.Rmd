@@ -1,0 +1,1401 @@
+---
+title: "Squirrel activity: General description - models" ## name of your project and analysis step
+description: |
+    The aim of this study is...
+author:
+    ## author information; single arguemnts can be deleted if not needed
+    - name: "John Smith"
+      url: https://izw-berlin.de/en/john-smith-en.html  
+      affiliation: Leibniz Institute for Zoo and Wildlife Research
+      affiliation_url: https://izw-berlin.de/en/
+      orcid_id: 0000-0000-0000-0000
+    - name: "Jane Doe"
+      url: https://janedoe.com
+      affiliation: Leibniz Institute for Zoo and Wildlife Research
+      affiliation_url: https://izw-berlin.de/en/
+    ## add more authors with the same intendation and styling if needed 
+    ## a new author always starts with a hyphen!
+date: "`r Sys.Date()`"
+output: 
+    distill::distill_article:
+        highlight: kate      ## styling of code
+        code_folding: false  ## if `true` you can expand and shrink code chunks
+        toc: true            ## if `true` adds a table of content
+        toc_depth: 2         ## level to be displayed in the table of content
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, 
+                      dev = "ragg_png", fig.width = 9, fig.height = 6, dpi = 600, retina = 1)
+Sys.setlocale("LC_TIME", "C")
+```
+
+* **Research question:**
+* **Study area:**
+* **Data:** 
+
+
+# Setup
+
+```{r packages}
+# install the package librarian, it loads and installs (if necessary) the specified packages from CRAN, GitHub or Bioconductor
+
+#devtools::install_github("DesiQuintans/librarian")
+librarian::shelf(#camtrapR,
+                 #dplyr,
+                 #evaluate,
+                 bayestestR, 
+                 DHARMa,
+                 easystats / easystats, 
+                 effects,
+                 ggeffects,
+                 #gdata, 
+                 #ggplot2, 
+                 ggpubr, 
+                 here, 
+                 insight,
+                 performance, 
+                 #janitor, 
+                 #lubridate, 
+                 #maptools, 
+                 #ropenscilabs / ochRe,
+                 # "optimbase", maybe needed but has to be installed from the CRAN archive https://cran.r-project.org/web/packages/optimbase/index.html
+                 plyr,
+                 rstanarm, 
+                 #raster,
+                 #readxl, 
+                 #rgdal, 
+                 #rgeos, 
+                 #rjags, 
+                 #rlecuyer, 
+                 #thomasp85 / scico, 
+                 #sf, 
+                 #showtext, 
+                 #skimr, 
+                 #snowfall, 
+                 #sp, 
+                 stringr, 
+                 tidyverse, 
+                 #vroom
+                 )
+```
+
+
+# Data
+```{r}
+# CT squirrels per station
+CT_squirrels_station <- readRDS(here::here("output",
+                                           "data-proc",
+                                           "all_seasons",
+                                           "CT_squirrels_per_station_20230128.RDS"))
+
+# CT squirrels per station with zeros
+CT_squirrels_station_zeros <- readRDS(here::here("output",
+                                                 "data-proc",
+                                                 "all_seasons",
+                                                 "CT_squirrels_per_station_zeros_20230128.RDS"))
+
+# CT Squirrels 30 mins
+CT_squirrels_30min <- readRDS(here::here("output",
+                                         "data-proc",
+                                         "all_seasons",
+                                         "CT_squirrels_30min_20230128.RDS"))
+
+env_var <- readRDS(here::here("output", 
+                              "data-proc", 
+                              "all_seasons",
+                              "ct_focal_covariates_100_20230126.RDS"))
+                              #"stacked_raster_values_and_garden_CT_all_seasons_no_nas_proc_20230124.RDS"))
+```
+
+## Data preparation
+```{r}
+CT_squirrels_30min_station <- CT_squirrels_30min %>%
+  dplyr::count(Species, project_phase, Station)  %>%
+  left_join(y = env_var[, c(1, 3:20)], by = "Station") %>%
+  droplevels()
+```
+
+
+# Without time limit
+## Frequentist approach (Base R)
+### Without zeros
+#### population density
+##### Full model
+```{r}
+# Null model
+full_null_mod <- glm(formula = n ~ 1, 
+                     family = "poisson", 
+                     data = CT_squirrels_station)
+summary(full_null_mod)
+with(summary(full_null_mod), 1 - deviance/null.deviance)
+
+# Null model with Season and lockdown
+full_null_mod_s_l <- glm(formula = n ~ 1 + Season + lockdown,
+                         family = "poisson", 
+                         data = CT_squirrels_station)
+summary(full_null_mod_s_l)
+with(summary(full_null_mod_s_l), 1 - deviance/null.deviance)
+
+# Full model with explanatory variables of urban and garden level
+full_mod_pd <- glm(formula = n ~ scale(imperviousness_2018) + scale(noise_2017) + scale(tree_cover_2019) + scale(pop_2019) + 
+                          garden_type + scale(garden_size) + dogs_binary + cats_binary + 
+                          Season + lockdown,
+                family = "poisson",
+                data = CT_squirrels_station)
+summary(full_mod_pd)
+with(summary(full_mod_pd), 1 - deviance/null.deviance)
+```
+
+```{r}
+plot(allEffects(full_null_mod_s_l), type = 'response', ylim = c(0,20))
+plot(allEffects(full_mod_pd), type = 'response', ylim = c(0,20))
+```
+
+##### Urban model
+```{r}
+# Full model with explanatory variables of urban and garden level
+urban_mod_pd <- glm(formula = n ~ scale(imperviousness_2018) + scale(noise_2017) + scale(tree_cover_2019) + scale(pop_2019) + 
+                          Season + lockdown,
+                family = "poisson",
+                data = CT_squirrels_station)
+summary(urban_mod_pd)
+with(summary(urban_mod_pd), 1 - deviance/null.deviance)
+```
+
+
+##### Garden model
+```{r}
+garden_mod <- glm(formula = n ~ garden_type + scale(garden_size) + dogs_binary + cats_binary + 
+                          Season + lockdown,
+                family = "poisson",
+                data = CT_squirrels_station)
+summary(garden_mod)
+with(summary(garden_mod), 1 - deviance/null.deviance)
+```
+
+##### comparison
+```{r}
+summary(full_mod_pd) # AIC 2603
+summary(urban_mod_pd) # AIC 2707
+summary(garden_mod) # AIC 3112
+```
+
+```{r}
+plot(allEffects(full_mod_pd), type = 'response', ylim = c(0,20))
+plot(allEffects(urban_mod_pd), type = 'response', ylim = c(0,20))
+plot(allEffects(garden_mod), type = 'response', ylim = c(0,20))
+```
+
+#### distance to border
+##### Full model
+```{r}
+# Null model
+# same as before
+
+# Null model with Season and lockdown
+# same as before
+
+# Full model with explanatory variables of urban and garden level
+full_mod_dist <- glm(formula = n ~ scale(imperviousness_2018) + scale(noise_2017) + scale(tree_cover_2019) + scale(distance_to_border) + 
+                          garden_type + scale(garden_size) + dogs_binary + cats_binary + 
+                          Season + lockdown,
+                family = "poisson",
+                data = CT_squirrels_station)
+summary(full_mod_dist)
+with(summary(full_mod_dist), 1 - deviance/null.deviance)
+```
+
+```{r}
+plot(allEffects(full_null_mod_s_l), type = 'response', ylim = c(0,20))
+plot(allEffects(full_mod_dist), type = 'response', ylim = c(0,20))
+```
+
+##### Urban model
+```{r}
+# Full model with explanatory variables of urban and garden level
+urban_mod_dist <- glm(formula = n ~ scale(imperviousness_2018) + scale(noise_2017) + scale(tree_cover_2019) + scale(distance_to_border) + 
+                          Season + lockdown,
+                family = "poisson",
+                data = CT_squirrels_station)
+summary(urban_mod_dist)
+with(summary(urban_mod_dist), 1 - deviance/null.deviance)
+```
+
+
+##### Garden model (same as before)
+
+##### comparison
+```{r}
+summary(full_mod_dist) 
+summary(urban_mod_dist) 
+summary(garden_mod) 
+```
+
+```{r}
+plot(allEffects(full_mod_dist), type = 'response', ylim = c(0,20))
+plot(allEffects(urban_mod_dist), type = 'response', ylim = c(0,20))
+plot(allEffects(garden_mod), type = 'response', ylim = c(0,20))
+```
+
+```{r}
+# AIC of all models
+full_null_mod$aic
+full_null_mod_s_l$aic
+full_mod_pd$aic # lowest AIC
+urban_mod_pd$aic
+full_mod_dist$aic
+urban_mod_dist$aic
+garden_mod$aic
+```
+
+### With zeros
+#### population density
+##### Full model
+```{r}
+# Null model
+full_null_mod_z <- glm(formula = n ~ 1, 
+                       family = "poisson", 
+                       data = CT_squirrels_station_zeros)
+summary(full_null_mod_z)
+with(summary(full_null_mod_z), 1 - deviance/null.deviance)
+
+# Null model with Season and lockdown
+full_null_mod_s_l_z <- glm(formula = n ~ 1 + Season + lockdown,
+                           family = "poisson", 
+                           data = CT_squirrels_station_zeros)
+summary(full_null_mod_s_l_z)
+with(summary(full_null_mod_s_l_z), 1 - deviance/null.deviance)
+
+# Full model with explanatory variables of urban and garden level
+full_mod_pd_z <- glm(formula = n ~ scale(imperviousness_2018) + scale(noise_2017) + scale(tree_cover_2019) + scale(pop_2019) + 
+                       garden_type + scale(garden_size) + dogs_binary + cats_binary + 
+                       Season + lockdown,
+                     family = "poisson",
+                     data = CT_squirrels_station_zeros)
+summary(full_mod_pd_z)
+with(summary(full_mod_pd_z), 1 - deviance/null.deviance)
+```
+
+```{r}
+plot(allEffects(full_null_mod_s_l_z), type = 'response', ylim = c(0,20))
+plot(allEffects(full_mod_pd_z), type = 'response', ylim = c(0,20))
+```
+
+##### Urban model
+```{r}
+# Full model with explanatory variables of urban and garden level
+urban_mod_pd_z <- glm(formula = n ~ scale(imperviousness_2018) + scale(noise_2017) + scale(tree_cover_2019) + scale(pop_2019) + 
+                          Season + lockdown,
+                family = "poisson",
+                data = CT_squirrels_station_zeros)
+summary(urban_mod_pd_z)
+with(summary(urban_mod_pd_z), 1 - deviance/null.deviance)
+```
+
+
+##### Garden model
+```{r}
+garden_mod_z <- glm(formula = n ~ garden_type + scale(garden_size) + dogs_binary + cats_binary + 
+                          Season + lockdown,
+                family = "poisson",
+                data = CT_squirrels_station_zeros)
+summary(garden_mod_z)
+with(summary(garden_mod_z), 1 - deviance/null.deviance)
+```
+
+##### comparison
+```{r}
+summary(full_mod_pd_z) # AIC 5326
+summary(urban_mod_pd_z) # AIC 5445
+summary(garden_mod_z) # AIC 6898
+```
+
+```{r}
+plot(allEffects(full_mod_pd_z), type = 'response', ylim = c(0,20))
+plot(allEffects(urban_mod_pd_z), type = 'response', ylim = c(0,20))
+plot(allEffects(garden_mod_z), type = 'response', ylim = c(0,20))
+```
+
+#### distance to border
+##### Full model
+```{r}
+# Null model
+# same as before
+
+# Null model with Season and lockdown
+# same as before
+
+# Full model with explanatory variables of urban and garden level
+full_mod_dist_z <- glm(formula = n ~ scale(imperviousness_2018) + scale(noise_2017) + scale(tree_cover_2019) + scale(distance_to_border) + 
+                          garden_type + scale(garden_size) + dogs_binary + cats_binary + 
+                          Season + lockdown,
+                family = "poisson",
+                data = CT_squirrels_station_zeros)
+summary(full_mod_dist_z)
+with(summary(full_mod_dist_z), 1 - deviance/null.deviance)
+```
+
+```{r}
+plot(allEffects(full_null_mod_s_l_z), type = 'response', ylim = c(0,20))
+plot(allEffects(full_mod_dist_z), type = 'response', ylim = c(0,20))
+```
+
+##### Urban model
+```{r}
+# Full model with explanatory variables of urban and garden level
+urban_mod_dist_z <- glm(formula = n ~ scale(imperviousness_2018) + scale(noise_2017) + scale(tree_cover_2019) + scale(distance_to_border) + 
+                          Season + lockdown,
+                family = "poisson",
+                data = CT_squirrels_station_zeros)
+summary(urban_mod_dist_z)
+with(summary(urban_mod_dist_z), 1 - deviance/null.deviance)
+```
+
+
+##### Garden model (same as before)
+
+##### comparison
+```{r}
+summary(full_mod_dist_z) 
+summary(urban_mod_dist_z) 
+summary(garden_mod_z) 
+```
+
+```{r}
+plot(allEffects(full_mod_dist_z), type = 'response', ylim = c(0,20))
+plot(allEffects(urban_mod_dist_z), type = 'response', ylim = c(0,20))
+plot(allEffects(garden_mod_z), type = 'response', ylim = c(0,20))
+```
+
+```{r}
+# AIC of all models
+full_null_mod_z$aic
+full_null_mod_s_l_z$aic
+full_mod_pd_z$aic # lowest AIC with zeros
+urban_mod_pd_z$aic
+full_mod_dist_z$aic
+urban_mod_dist_z$aic
+garden_mod_z$aic
+
+# Lowest AIC without zeros
+full_mod_pd$aic # overall lowest AIC = 2603
+```
+
+```{r}
+summary(full_mod_pd)
+```
+###### Test the best model
+```{r}
+sim_full_mod_pd <- simulateResiduals(full_mod_pd, plot = T)  
+sim_full_mod_pd_z <- simulateResiduals(full_mod_pd_z, plot = T)  
+
+plot(sim_full_mod_pd)
+plot(sim_full_mod_pd_z)
+```
+```{r}
+testDispersion(sim_full_mod_pd)
+testZeroInflation(sim_full_mod_pd)
+testOutliers(sim_full_mod_pd)
+```
+
+
+## Bayesian approach
+### Without zeros
+#### population density
+##### Full model
+```{r}
+# Null model
+full_null_mod_bayes <- stan_glm(formula = n ~ 1, 
+                                family = "poisson", 
+                                data = CT_squirrels_station)
+
+# Null model with Season and lockdown
+full_null_mod_s_l_bayes <- stan_glm(formula = n ~ 1 + Season + lockdown, 
+                                    family = "poisson", 
+                                    data = CT_squirrels_station)
+
+# Full model with explanatory variables of urban and garden level
+full_mod_bayes_pd <- stan_glm(formula = n ~ scale(imperviousness_2018) + scale(noise_2017) + 
+                                scale(tree_cover_2019) + scale(pop_2019) + 
+                                garden_type + scale(garden_size) + dogs_binary + cats_binary + 
+                                Season + lockdown,
+                              family = "poisson", 
+                              data = CT_squirrels_station)
+```
+
+
+```{r}
+# Summaries
+describe_posterior(full_null_mod_bayes, test = c("p_direction", "rope", "bayesfactor"))
+describe_posterior(full_null_mod_s_l_bayes, test = c("p_direction", "rope", "bayesfactor"))
+describe_posterior(full_mod_bayes_pd, test = c("p_direction", "rope", "bayesfactor"))
+```
+
+
+```{r}
+posteriors_bayes_pd <- get_parameters(full_mod_bayes_pd)
+#posteriors_bayes_pd$`scale(pop_2019)`
+
+# Example plots
+ggplot(posteriors_bayes_pd, aes(x = `scale(pop_2019)`)) +
+  geom_density(fill = "red") + 
+  ylim(c(0,20))
+
+
+ggplot(posteriors_bayes_pd, aes(x = dogs_binary1)) +
+  geom_density(fill = "red") + 
+  ylim(c(0,20))
+```
+
+```{r}
+# Plot of the significance
+plot(rope(full_null_mod_bayes))
+plot(rope(full_null_mod_s_l_bayes))
+plot(rope(full_mod_bayes_pd))
+```
+
+
+```{r}
+model_performance(full_mod_bayes_pd)
+# explanantions of the abbreviations: https://easystats.github.io/performance/reference/model_performance.stanreg.html
+# ELPD = expected log predictive density
+# LOOIC = leave one out cross validation information criterion
+# WAIC = widely applicable information criterion
+# RMSE = root mean squared error
+# Sigma = residual standard deviation
+# Score_Log = score of logarithmic proper scoring rule
+# Score_spherical = score of spherical proper scoring rule
+```
+
+
+##### Urban model
+```{r}
+# Urban model with explanatory variables of urban and garden level
+urban_mod_bayes_pd <- stan_glm(formula = n ~ scale(imperviousness_2018) + scale(noise_2017) + 
+                                 scale(tree_cover_2019) + scale(pop_2019) + 
+                                 Season + lockdown,
+                               family = "poisson", 
+                               data = CT_squirrels_station)
+```
+
+```{r}
+# Summaries
+describe_posterior(urban_mod_bayes_pd, test = c("p_direction", "rope", "bayesfactor"))
+```
+
+
+```{r}
+posteriors_urban_bayes_pd <- get_parameters(urban_mod_bayes_pd)
+
+# Example plots
+ggplot(posteriors_urban_bayes_pd, aes(x = `scale(pop_2019)`)) +
+  geom_density(fill = "red") + 
+  ylim(c(0,20))
+
+
+ggplot(posteriors_urban_bayes_pd, aes(x = `scale(imperviousness_2018)`)) +
+  geom_density(fill = "red") + 
+  ylim(c(0,20))
+```
+
+```{r}
+# Plot of the significance
+plot(rope(urban_mod_bayes_pd))
+```
+
+
+```{r}
+model_performance(urban_mod_bayes_pd)
+# explanantions of the abbreviations: https://easystats.github.io/performance/reference/model_performance.stanreg.html
+# ELPD = expected log predictive density
+# LOOIC = leave one out cross validation information criterion
+# WAIC = widely applicable information criterion
+# RMSE = root mean squared error
+# Sigma = residual standard deviation
+# Score_Log = score of logarithmic proper scoring rule
+# Score_spherical = score of spherical proper scoring rule
+```
+
+##### Garden model
+```{r}
+# Urban model with explanatory variables of urban and garden level
+garden_mod_bayes <- stan_glm(formula = n ~ garden_type + scale(garden_size) + dogs_binary + cats_binary + 
+                                  Season + lockdown,
+                                family = "poisson", 
+                                data = CT_squirrels_station)
+```
+
+```{r}
+# Summaries
+describe_posterior(garden_mod_bayes, test = c("p_direction", "rope", "bayesfactor"))
+```
+
+
+```{r}
+posteriors_garden_bayes <- get_parameters(garden_mod_bayes)
+posteriors_garden_bayes
+
+# Example plots
+ggplot(posteriors_garden_bayes, aes(x = dogs_binary1)) +
+  geom_density(fill = "red") + 
+  ylim(c(0,20))
+
+
+ggplot(posteriors_garden_bayes, aes(x = cats_binary1)) +
+  geom_density(fill = "red") + 
+  ylim(c(0,20))
+```
+
+```{r}
+# Plot of the significance
+plot(rope(garden_mod_bayes))
+```
+
+
+```{r}
+model_performance(garden_mod_bayes)
+# explanantions of the abbreviations: https://easystats.github.io/performance/reference/model_performance.stanreg.html
+# ELPD = expected log predictive density
+# LOOIC = leave one out cross validation information criterion
+# WAIC = widely applicable information criterion
+# RMSE = root mean squared error
+# Sigma = residual standard deviation
+# Score_Log = score of logarithmic proper scoring rule
+# Score_spherical = score of spherical proper scoring rule
+```
+
+##### comparison
+```{r}
+compare_parameters(full_null_mod_bayes, full_null_mod_s_l_bayes, full_mod_bayes_pd, urban_mod_bayes_pd, garden_mod_bayes)
+```
+
+
+```{r}
+#compare_performance(full_null_mod, full_null_mod_s_l, full_mod)
+compare_performance(full_null_mod_bayes, full_null_mod_s_l_bayes, full_mod_bayes_pd, urban_mod_bayes_pd, garden_mod_bayes)
+# full model has lowest WAIC
+```
+
+#### distance to border
+##### Full model
+```{r}
+# Null model
+# same as before
+
+# Null model with Season and lockdown
+# same as before
+
+# Full model with explanatory variables of urban and garden level
+full_mod_bayes_dist <- stan_glm(formula = n ~ scale(imperviousness_2018) + scale(noise_2017) + 
+                                scale(tree_cover_2019) + scale(distance_to_border) + 
+                                garden_type + scale(garden_size) + dogs_binary + cats_binary + 
+                                Season + lockdown,
+                              family = "poisson", 
+                              data = CT_squirrels_station)
+```
+
+
+```{r}
+# Summaries
+describe_posterior(full_null_mod_bayes, test = c("p_direction", "rope", "bayesfactor"))
+describe_posterior(full_null_mod_s_l_bayes, test = c("p_direction", "rope", "bayesfactor"))
+describe_posterior(full_mod_bayes_dist, test = c("p_direction", "rope", "bayesfactor"))
+```
+
+
+```{r}
+posteriors_bayes_dist <- get_parameters(full_mod_bayes_dist)
+#posteriors_bayes_dist$`scale(pop_2019)`
+
+# Example plots
+ggplot(posteriors_bayes_dist, aes(x = `scale(distance_to_border)`)) +
+  geom_density(fill = "red") + 
+  ylim(c(0,20))
+
+
+ggplot(posteriors_bayes_dist, aes(x = dogs_binary1)) +
+  geom_density(fill = "red") + 
+  ylim(c(0,20))
+```
+
+```{r}
+# Plot of the significance
+plot(rope(full_null_mod_bayes))
+plot(rope(full_null_mod_s_l_bayes))
+plot(rope(full_mod_bayes_dist))
+```
+
+
+```{r}
+model_performance(full_mod_bayes_dist)
+# explanantions of the abbreviations: https://easystats.github.io/performance/reference/model_performance.stanreg.html
+# ELdist = expected log predictive density
+# LOOIC = leave one out cross validation information criterion
+# WAIC = widely applicable information criterion
+# RMSE = root mean squared error
+# Sigma = residual standard deviation
+# Score_Log = score of logarithmic proper scoring rule
+# Score_spherical = score of spherical proper scoring rule
+```
+
+
+##### Urban model
+```{r}
+# Urban model with explanatory variables of urban and garden level
+urban_mod_bayes_dist <- stan_glm(formula = n ~ scale(imperviousness_2018) + scale(noise_2017) + 
+                                 scale(tree_cover_2019) + scale(distance_to_border) + 
+                                 Season + lockdown,
+                               family = "poisson", 
+                               data = CT_squirrels_station)
+```
+
+```{r}
+# Summaries
+describe_posterior(urban_mod_bayes_dist, test = c("p_direction", "rope", "bayesfactor"))
+```
+
+
+```{r}
+posteriors_urban_bayes_dist <- get_parameters(urban_mod_bayes_dist)
+
+# Example plots
+ggplot(posteriors_urban_bayes_dist, aes(x = `scale(distance_to_border)`)) +
+  geom_density(fill = "red") + 
+  ylim(c(0,20))
+
+
+ggplot(posteriors_urban_bayes_dist, aes(x = `scale(imperviousness_2018)`)) +
+  geom_density(fill = "red") + 
+  ylim(c(0,20))
+```
+
+```{r}
+# Plot of the significance
+plot(rope(urban_mod_bayes_dist))
+```
+
+
+```{r}
+model_performance(urban_mod_bayes_dist)
+# explanantions of the abbreviations: https://easystats.github.io/performance/reference/model_performance.stanreg.html
+# ELdist = expected log predictive density
+# LOOIC = leave one out cross validation information criterion
+# WAIC = widely applicable information criterion
+# RMSE = root mean squared error
+# Sigma = residual standard deviation
+# Score_Log = score of logarithmic proper scoring rule
+# Score_spherical = score of spherical proper scoring rule
+```
+
+##### Garden model
+same as before
+
+
+##### comparison
+```{r}
+compare_parameters(full_null_mod_bayes, full_null_mod_s_l_bayes, full_mod_bayes_dist, urban_mod_bayes_dist, garden_mod_bayes)
+```
+
+
+```{r}
+#compare_performance(full_null_mod, full_null_mod_s_l, full_mod)
+compare_performance(full_null_mod_bayes, full_null_mod_s_l_bayes, full_mod_bayes_dist, urban_mod_bayes_dist, garden_mod_bayes)
+# full model has lowest WAIC
+
+compare_performance(full_mod_bayes_dist, full_mod_bayes_pd)
+```
+
+
+### With zeros
+#### population density
+##### Full model
+```{r}
+# Null model
+full_null_mod_bayes_z <- stan_glm(formula = n ~ 1, 
+                                family = "poisson", 
+                                data = CT_squirrels_station_zeros)
+
+# Null model with Season and lockdown
+full_null_mod_s_l_bayes_z <- stan_glm(formula = n ~ 1 + Season + lockdown, 
+                                    family = "poisson", 
+                                    data = CT_squirrels_station_zeros)
+
+# Full model with explanatory variables of urban and garden level
+full_mod_bayes_pd_z <- stan_glm(formula = n ~ scale(imperviousness_2018) + scale(noise_2017) + 
+                                scale(tree_cover_2019) + scale(pop_2019) + 
+                                garden_type + scale(garden_size) + dogs_binary + cats_binary + 
+                                Season + lockdown,
+                              family = "poisson", 
+                              data = CT_squirrels_station_zeros)
+```
+
+
+```{r}
+# Summaries
+describe_posterior(full_null_mod_bayes_z,centrality = "median",  test = c("p_direction", "rope", "bayesfactor"))
+describe_posterior(full_null_mod_s_l_bayes_z, test = c("p_direction", "rope", "bayesfactor"))
+describe_posterior(full_mod_bayes_pd_z, test = c("p_direction", "rope", "bayesfactor"))
+?describe_posterior
+```
+
+
+```{r}
+posteriors_bayes_pd_z <- get_parameters(full_mod_bayes_pd_z)
+#posteriors_bayes_pd$`scale(pop_2019)`
+
+# Example plots
+ggplot(posteriors_bayes_pd_z, aes(x = `scale(pop_2019)`)) +
+  geom_density(fill = "red") + 
+  ylim(c(0,20))
+
+
+ggplot(posteriors_bayes_pd_z, aes(x = dogs_binary1)) +
+  geom_density(fill = "red") + 
+  ylim(c(0,20))
+```
+
+```{r}
+# Plot of the significance
+plot(rope(full_null_mod_bayes_z))
+plot(rope(full_null_mod_s_l_bayes_z))
+plot(rope(full_mod_bayes_pd_z))
+```
+
+
+```{r}
+model_performance(full_mod_bayes_pd_z)
+# explanantions of the abbreviations: https://easystats.github.io/performance/reference/model_performance.stanreg.html
+# ELPD = expected log predictive density
+# LOOIC = leave one out cross validation information criterion
+# WAIC = widely applicable information criterion
+# RMSE = root mean squared error
+# Sigma = residual standard deviation
+# Score_Log = score of logarithmic proper scoring rule
+# Score_spherical = score of spherical proper scoring rule
+```
+
+
+##### Urban model
+```{r}
+# Urban model with explanatory variables of urban and garden level
+urban_mod_bayes_pd_z <- stan_glm(formula = n ~ scale(imperviousness_2018) + scale(noise_2017) + 
+                                 scale(tree_cover_2019) + scale(pop_2019) + 
+                                 Season + lockdown,
+                               family = "poisson", 
+                               data = CT_squirrels_station_zeros)
+```
+
+```{r}
+# Summaries
+describe_posterior(urban_mod_bayes_pd_z, test = c("p_direction", "rope", "bayesfactor"))
+```
+
+
+```{r}
+posteriors_urban_bayes_pd_z <- get_parameters(urban_mod_bayes_pd_z)
+
+# Example plots
+ggplot(posteriors_urban_bayes_pd_z, aes(x = `scale(pop_2019)`)) +
+  geom_density(fill = "red") + 
+  ylim(c(0,20))
+
+
+ggplot(posteriors_urban_bayes_pd_z, aes(x = `scale(imperviousness_2018)`)) +
+  geom_density(fill = "red") + 
+  ylim(c(0,20))
+```
+
+```{r}
+# Plot of the significance
+plot(rope(urban_mod_bayes_pd_z))
+```
+
+
+```{r}
+model_performance(urban_mod_bayes_pd_z)
+# explanantions of the abbreviations: https://easystats.github.io/performance/reference/model_performance.stanreg.html
+# ELPD = expected log predictive density
+# LOOIC = leave one out cross validation information criterion
+# WAIC = widely applicable information criterion
+# RMSE = root mean squared error
+# Sigma = residual standard deviation
+# Score_Log = score of logarithmic proper scoring rule
+# Score_spherical = score of spherical proper scoring rule
+```
+
+##### Garden model
+```{r}
+# Urban model with explanatory variables of urban and garden level
+garden_mod_bayes_z <- stan_glm(formula = n ~ garden_type + scale(garden_size) + dogs_binary + cats_binary + 
+                                  Season + lockdown,
+                                family = "poisson", 
+                                data = CT_squirrels_station_zeros)
+```
+
+```{r}
+# Summaries
+describe_posterior(garden_mod_bayes_z, test = c("p_direction", "rope", "bayesfactor"))
+```
+
+
+```{r}
+posteriors_garden_bayes_z <- get_parameters(garden_mod_bayes_z)
+posteriors_garden_bayes_z
+
+# Example plots
+ggplot(posteriors_garden_bayes_z, aes(x = dogs_binary1)) +
+  geom_density(fill = "red") + 
+  ylim(c(0,20))
+
+
+ggplot(posteriors_garden_bayes_z, aes(x = cats_binary1)) +
+  geom_density(fill = "red") + 
+  ylim(c(0,20))
+```
+
+```{r}
+# Plot of the significance
+plot(rope(garden_mod_bayes_z))
+```
+
+
+```{r}
+model_performance(garden_mod_bayes_z)
+# explanantions of the abbreviations: https://easystats.github.io/performance/reference/model_performance.stanreg.html
+# ELPD = expected log predictive density
+# LOOIC = leave one out cross validation information criterion
+# WAIC = widely applicable information criterion
+# RMSE = root mean squared error
+# Sigma = residual standard deviation
+# Score_Log = score of logarithmic proper scoring rule
+# Score_spherical = score of spherical proper scoring rule
+```
+
+##### comparison
+```{r}
+compare_parameters(full_null_mod_bayes_z, full_null_mod_s_l_bayes_z, full_mod_bayes_pd_z, urban_mod_bayes_pd_z, garden_mod_bayes_z)
+```
+
+
+```{r}
+#compare_performance(full_null_mod, full_null_mod_s_l, full_mod)
+compare_performance(full_null_mod_bayes, full_null_mod_s_l_bayes, full_mod_bayes_pd, urban_mod_bayes_pd, garden_mod_bayes)
+# full model has lowest WAIC
+
+compare_performance(full_null_mod_bayes_z, full_null_mod_s_l_bayes_z, full_mod_bayes_pd_z, urban_mod_bayes_pd_z, garden_mod_bayes_z)
+```
+
+#### distance to border
+##### Full model
+```{r}
+# Null model
+# same as before
+
+# Null model with Season and lockdown
+# same as before
+
+# Full model with explanatory variables of urban and garden level
+full_mod_bayes_dist_z <- stan_glm(formula = n ~ scale(imperviousness_2018) + scale(noise_2017) + 
+                                scale(tree_cover_2019) + scale(distance_to_border) + 
+                                garden_type + scale(garden_size) + dogs_binary + cats_binary + 
+                                Season + lockdown,
+                              family = "poisson", 
+                              data = CT_squirrels_station_zeros)
+```
+
+
+```{r}
+# Summaries
+describe_posterior(full_null_mod_bayes_z, test = c("p_direction", "rope", "bayesfactor"))
+describe_posterior(full_null_mod_s_l_bayes_z, test = c("p_direction", "rope", "bayesfactor"))
+describe_posterior(full_mod_bayes_dist_z, test = c("p_direction", "rope", "bayesfactor"))
+```
+
+
+```{r}
+posteriors_bayes_dist_z <- get_parameters(full_mod_bayes_dist_z)
+#posteriors_bayes_dist$`scale(pop_2019)`
+
+# Example plots
+ggplot(posteriors_bayes_dist_z, aes(x = `scale(distance_to_border)`)) +
+  geom_density(fill = "red") + 
+  ylim(c(0,20))
+
+
+ggplot(posteriors_bayes_dist_z, aes(x = dogs_binary1)) +
+  geom_density(fill = "red") + 
+  ylim(c(0,20))
+```
+
+```{r}
+# Plot of the significance
+plot(rope(full_null_mod_bayes_z))
+plot(rope(full_null_mod_s_l_bayes_z))
+plot(rope(full_mod_bayes_dist_z))
+```
+
+
+```{r}
+model_performance(full_mod_bayes_dist_z)
+# explanantions of the abbreviations: https://easystats.github.io/performance/reference/model_performance.stanreg.html
+# ELdist = expected log predictive density
+# LOOIC = leave one out cross validation information criterion
+# WAIC = widely applicable information criterion
+# RMSE = root mean squared error
+# Sigma = residual standard deviation
+# Score_Log = score of logarithmic proper scoring rule
+# Score_spherical = score of spherical proper scoring rule
+```
+
+
+##### Urban model
+```{r}
+# Urban model with explanatory variables of urban and garden level
+urban_mod_bayes_dist_z <- stan_glm(formula = n ~ scale(imperviousness_2018) + scale(noise_2017) + 
+                                 scale(tree_cover_2019) + scale(distance_to_border) + 
+                                 Season + lockdown,
+                               family = "poisson", 
+                               data = CT_squirrels_station_zerosv)
+```
+
+```{r}
+# Summaries
+describe_posterior(urban_mod_bayes_dist_z, test = c("p_direction", "rope", "bayesfactor"))
+```
+
+
+```{r}
+posteriors_urban_bayes_dist_z <- get_parameters(urban_mod_bayes_dist_z)
+
+# Example plots
+ggplot(posteriors_urban_bayes_dist_z, aes(x = `scale(distance_to_border)`)) +
+  geom_density(fill = "red") + 
+  ylim(c(0,20))
+
+
+ggplot(posteriors_urban_bayes_dist_z, aes(x = `scale(imperviousness_2018)`)) +
+  geom_density(fill = "red") + 
+  ylim(c(0,20))
+```
+
+```{r}
+# Plot of the significance
+plot(rope(urban_mod_bayes_dist_z))
+```
+
+
+```{r}
+model_performance(urban_mod_bayes_dist_z)
+# explanantions of the abbreviations: https://easystats.github.io/performance/reference/model_performance.stanreg.html
+# ELdist = expected log predictive density
+# LOOIC = leave one out cross validation information criterion
+# WAIC = widely applicable information criterion
+# RMSE = root mean squared error
+# Sigma = residual standard deviation
+# Score_Log = score of logarithmic proper scoring rule
+# Score_spherical = score of spherical proper scoring rule
+```
+
+##### Garden model
+same as before
+
+
+##### comparison
+```{r}
+compare_parameters(full_null_mod_bayes_z, full_null_mod_s_l_bayes_z, full_mod_bayes_dist_z, 
+                   urban_mod_bayes_dist_z, garden_mod_bayes_z)
+```
+
+
+```{r}
+#compare_performance(full_null_mod, full_null_mod_s_l, full_mod)
+compare_performance(full_null_mod_bayes_z, full_null_mod_s_l_bayes_z, full_mod_bayes_dist_z, 
+                    urban_mod_bayes_dist_z, garden_mod_bayes_z)
+# full model has lowest WAIC
+
+compare_performance(full_mod_bayes_dist_z, full_mod_bayes_pd_z)
+# best model: full model with population density
+# explanantions of the abbreviations: https://easystats.github.io/performance/reference/model_performance.stanreg.html
+# ELPD = expected log predictive density
+# LOOIC = leave one out cross validation information criterion
+# WAIC = widely applicable information criterion
+# RMSE = root mean squared error
+# Sigma = residual standard deviation
+# Score_Log = score of logarithmic proper scoring rule
+# Score_spherical = score of spherical proper scoring rule
+```
+
+
+
+# With time limit
+## Frequentist approach (Base R)
+### population density
+
+
+### distance to border
+
+### comparison
+
+## Bayesian approach
+### Without zeros
+#### population density
+##### Full model
+```{r}
+# Null model
+full_null_mod_bayes_30 <- stan_glm(formula = n ~ 1, 
+                                     family = "poisson", 
+                                     data = CT_squirrels_30min_station)
+
+# Null model with Season and lockdown
+full_null_mod_s_l_bayes_30 <- stan_glm(formula = n ~ 1 + Season + lockdown, 
+                                         family = "poisson", 
+                                         data = CT_squirrels_30min_station)
+
+# Full model with explanatory variables of urban and garden level
+full_mod_bayes_pd_30 <- stan_glm(formula = n ~ scale(imperviousness_2018) + scale(noise_2017) + 
+                                     scale(tree_cover_2019) + scale(pop_2019) + 
+                                     garden_type + scale(garden_size) + dogs_binary + cats_binary + 
+                                     Season + lockdown,
+                                   family = "poisson", 
+                                   data = CT_squirrels_30min_station)
+```
+
+
+```{r}
+# Summaries
+describe_posterior(full_null_mod_bayes_30, test = c("p_direction", "rope", "bayesfactor"))
+describe_posterior(full_null_mod_s_l_bayes_30, test = c("p_direction", "rope", "bayesfactor"))
+describe_posterior(full_mod_bayes_pd_30, test = c("p_direction", "rope", "bayesfactor"))
+```
+
+
+```{r}
+posteriors_bayes_pd_30 <- get_parameters(full_mod_bayes_pd_30)
+#posteriors_bayes_pd$`scale(pop_2019)`
+
+# Example plots
+ggplot(posteriors_bayes_pd_30, aes(x = `scale(pop_2019)`)) +
+  geom_density(fill = "red") + 
+  ylim(c(0,20))
+
+
+ggplot(posteriors_bayes_pd_30, aes(x = dogs_binary1)) +
+  geom_density(fill = "red") + 
+  ylim(c(0,20))
+```
+
+```{r}
+# Plot of the significance
+plot(rope(full_null_mod_bayes_30))
+plot(rope(full_null_mod_s_l_bayes_30))
+plot(rope(full_mod_bayes_pd_30))
+```
+
+
+```{r}
+model_performance(full_mod_bayes_pd_30)
+# explanantions of the abbreviations: https://easystats.github.io/performance/reference/model_performance.stanreg.html
+# ELPD = expected log predictive density
+# LOOIC = leave one out cross validation information criterion
+# WAIC = widely applicable information criterion
+# RMSE = root mean squared error
+# Sigma = residual standard deviation
+# Score_Log = score of logarithmic proper scoring rule
+# Score_spherical = score of spherical proper scoring rule
+```
+
+
+##### Urban model
+```{r}
+# Urban model with explanatory variables of urban and garden level
+urban_mod_bayes_pd_30 <- stan_glm(formula = n ~ scale(imperviousness_2018) + scale(noise_2017) + 
+                                 scale(tree_cover_2019) + scale(pop_2019) + 
+                                 Season + lockdown,
+                               family = "poisson", 
+                               data = CT_squirrels_30min_station)
+```
+
+```{r}
+# Summaries
+describe_posterior(urban_mod_bayes_pd_30, test = c("p_direction", "rope", "bayesfactor"))
+```
+
+
+```{r}
+posteriors_urban_bayes_pd_30 <- get_parameters(urban_mod_bayes_pd_30)
+
+# Example plots
+ggplot(posteriors_urban_bayes_pd_30, aes(x = `scale(pop_2019)`)) +
+  geom_density(fill = "red") + 
+  ylim(c(0,20))
+
+
+ggplot(posteriors_urban_bayes_pd_30, aes(x = `scale(imperviousness_2018)`)) +
+  geom_density(fill = "red") + 
+  ylim(c(0,20))
+```
+
+```{r}
+# Plot of the significance
+plot(rope(urban_mod_bayes_pd_30))
+```
+
+
+```{r}
+model_performance(urban_mod_bayes_pd_30)
+# explanantions of the abbreviations: https://easystats.github.io/performance/reference/model_performance.stanreg.html
+# ELPD = expected log predictive density
+# LOOIC = leave one out cross validation information criterion
+# WAIC = widely applicable information criterion
+# RMSE = root mean squared error
+# Sigma = residual standard deviation
+# Score_Log = score of logarithmic proper scoring rule
+# Score_spherical = score of spherical proper scoring rule
+```
+
+##### Garden model
+```{r}
+# Urban model with explanatory variables of urban and garden level
+garden_mod_bayes_30 <- stan_glm(formula = n ~ garden_type + scale(garden_size) + dogs_binary + cats_binary + 
+                                  Season + lockdown,
+                                family = "poisson", 
+                                data = CT_squirrels_30min_station)
+```
+
+```{r}
+# Summaries
+describe_posterior(garden_mod_bayes_30, test = c("p_direction", "rope", "bayesfactor"))
+```
+
+
+```{r}
+posteriors_garden_bayes_30 <- get_parameters(garden_mod_bayes_30)
+posteriors_garden_bayes_30
+
+# Example plots
+ggplot(posteriors_garden_bayes_30, aes(x = dogs_binary1)) +
+  geom_density(fill = "red") + 
+  ylim(c(0,20))
+
+
+ggplot(posteriors_garden_bayes_30, aes(x = cats_binary1)) +
+  geom_density(fill = "red") + 
+  ylim(c(0,20))
+```
+
+```{r}
+# Plot of the significance
+plot(rope(garden_mod_bayes_30))
+```
+
+
+```{r}
+model_performance(garden_mod_bayes_30)
+# explanantions of the abbreviations: https://easystats.github.io/performance/reference/model_performance.stanreg.html
+# ELPD = expected log predictive density
+# LOOIC = leave one out cross validation information criterion
+# WAIC = widely applicable information criterion
+# RMSE = root mean squared error
+# Sigma = residual standard deviation
+# Score_Log = score of logarithmic proper scoring rule
+# Score_spherical = score of spherical proper scoring rule
+```
+
+##### comparison
+```{r}
+compare_parameters(full_null_mod_bayes_30, full_null_mod_s_l_bayes_30, full_mod_bayes_pd_30, 
+                   urban_mod_bayes_pd_30, garden_mod_bayes_30)
+```
+
+
+```{r}
+compare_performance(full_null_mod_bayes, full_null_mod_s_l_bayes, full_mod_bayes_pd, urban_mod_bayes_pd, garden_mod_bayes)
+# full model has lowest WAIC
+
+compare_performance(full_null_mod_bayes_30, full_null_mod_s_l_bayes_30, full_mod_bayes_pd_30, 
+                    urban_mod_bayes_pd_30, garden_mod_bayes_30)
+```
+
+#### distance to border
+##### Full model
+```{r}
+# Null model
+# same as before
+
+# Null model with Season and lockdown
+# same as before
+
+# Full model with explanatory variables of urban and garden level
+full_mod_bayes_dist_30 <- stan_glm(formula = n ~ scale(imperviousness_2018) + scale(noise_2017) + 
+                                scale(tree_cover_2019) + scale(distance_to_border) + 
+                                garden_type + scale(garden_size) #+ dogs_binary + cats_binary + 
+                                Season + lockdown,
+                              family = "poisson", 
+                              data = CT_squirrels_30min_station)
+
+full_mod_bayes_dist_30_dogsgarden <- stan_glm(formula = n ~ scale(imperviousness_2018) + scale(noise_2017) + 
+                                scale(tree_cover_2019) + scale(distance_to_border) + 
+                                garden_type + scale(garden_size) + dogs_binary + cats_binary + dogs_binary:garden_type +
+                                Season + lockdown,
+                              family = "poisson", 
+                              data = CT_squirrels_30min_station)
+
+
+# One model only for gardens, not allotments and include dogs and cats
+# full_mod_bayes_dist_30 <- stan_glm(formula = n ~ scale(imperviousness_2018) + scale(noise_2017) + 
+#                                 scale(tree_cover_2019) + scale(distance_to_border) + 
+#                                 garden_type + scale(garden_size) + dogs_binary + cats_binary + 
+#                                 Season + lockdown,
+#                               family = "poisson", 
+#                               data = CT_squirrels_30min_station)
+```
+
+
+```{r}
+# Summaries
+describe_posterior(full_null_mod_bayes_30, test = c("p_direction", "rope", "bayesfactor"))
+describe_posterior(full_null_mod_s_l_bayes_30, test = c("p_direction", "rope", "bayesfactor"))
+describe_posterior(full_mod_bayes_dist_30, test = c("p_direction", "rope", "bayesfactor"))
+```
+
+
+```{r}
+posteriors_bayes_dist_30 <- get_parameters(full_mod_bayes_dist_30)
+#posteriors_bayes_dist$`scale(pop_2019)`
+
+# Example plots
+ggplot(posteriors_bayes_dist_30, aes(x = `scale(distance_to_border)`)) +
+  geom_density(fill = "red") + 
+  ylim(c(0,20))
+
+
+ggplot(posteriors_bayes_dist_30, aes(x = dogs_binary1)) +
+  geom_density(fill = "red") + 
+  ylim(c(0,20))
+```
+
+```{r}
+# Plot of the significance
+plot(rope(full_null_mod_bayes_30))
+plot(rope(full_null_mod_s_l_bayes_30))
+plot(rope(full_mod_bayes_dist_30))
+plot(rope(full_mod_bayes_dist_30_dogsgarden))
+```
+
+
+```{r}
+model_performance(full_mod_bayes_dist_30)
+# explanantions of the abbreviations: https://easystats.github.io/performance/reference/model_performance.stanreg.html
+# ELdist = expected log predictive density
+# LOOIC = leave one out cross validation information criterion
+# WAIC = widely applicable information criterion
+# RMSE = root mean squared error
+# Sigma = residual standard deviation
+# Score_Log = score of logarithmic proper scoring rule
+# Score_spherical = score of spherical proper scoring rule
+```
+
+
+##### Urban model
+```{r}
+# Urban model with explanatory variables of urban and garden level
+urban_mod_bayes_dist_30 <- stan_glm(formula = n ~ scale(imperviousness_2018) + scale(noise_2017) + 
+                                 scale(tree_cover_2019) + scale(distance_to_border) + 
+                                 Season + lockdown,
+                               family = "poisson", 
+                               data = CT_squirrels_30min_station)
+```
+
+```{r}
+# Summaries
+describe_posterior(urban_mod_bayes_dist_30, test = c("p_direction", "rope", "bayesfactor"))
+```
+
+
+```{r}
+posteriors_urban_bayes_dist_30 <- get_parameters(urban_mod_bayes_dist_30)
+
+# Example plots
+ggplot(posteriors_urban_bayes_dist_30, aes(x = `scale(distance_to_border)`)) +
+  geom_density(fill = "red") + 
+  ylim(c(0,20))
+
+
+ggplot(posteriors_urban_bayes_dist_30, aes(x = `scale(imperviousness_2018)`)) +
+  geom_density(fill = "red") + 
+  ylim(c(0,20))
+```
+
+```{r}
+# Plot of the significance
+plot(rope(urban_mod_bayes_dist_30))
+```
+
+
+```{r}
+model_performance(urban_mod_bayes_dist_30)
+# explanantions of the abbreviations: https://easystats.github.io/performance/reference/model_performance.stanreg.html
+# ELdist = expected log predictive density
+# LOOIC = leave one out cross validation information criterion
+# WAIC = widely applicable information criterion
+# RMSE = root mean squared error
+# Sigma = residual standard deviation
+# Score_Log = score of logarithmic proper scoring rule
+# Score_spherical = score of spherical proper scoring rule
+```
+
+##### Garden model
+same as before
+
+
+##### comparison
+```{r}
+compare_parameters(full_null_mod_bayes_30, full_null_mod_s_l_bayes_30, full_mod_bayes_dist_30, 
+                   urban_mod_bayes_dist_30, garden_mod_bayes_30)
+```
+
+
+
+```{r}
+compare_performance(full_null_mod_bayes, full_null_mod_s_l_bayes, full_mod_bayes_pd, urban_mod_bayes_pd, garden_mod_bayes)
+# full model has lowest WAIC
+
+compare_performance(full_null_mod_bayes_30, full_null_mod_s_l_bayes_30, full_mod_bayes_pd_30, 
+                    urban_mod_bayes_pd_30, garden_mod_bayes_30, full_mod_bayes_dist_30_dogsgarden)
+# explanantions of the abbreviations: https://easystats.github.io/performance/reference/model_performance.stanreg.html
+# ELPD = expected log predictive density
+# LOOIC = leave one out cross validation information criterion
+# WAIC = widely applicable information criterion
+# RMSE = root mean squared error
+# Sigma = residual standard deviation
+# Score_Log = score of logarithmic proper scoring rule
+# Score_spherical = score of spherical proper scoring rule
+```
+
+
+```{r}
+compare_performance(full_null_mod_bayes, full_null_mod_s_l_bayes, full_mod_bayes_dist, 
+                   urban_mod_bayes_dist, garden_mod_bayes)
+
+compare_performance(full_null_mod_bayes_30, full_null_mod_s_l_bayes_30, full_mod_bayes_dist_30, 
+                   urban_mod_bayes_dist_30, garden_mod_bayes_30)
+```
+
+
+
+
+***
+
+<details><summary>Session Info</summary>
+
+```{r sessionInfo}
+## DO NOT REMOVE!
+## We store the settings of your computer and the current versions of the
+## packages used to allow for reproducibility
+Sys.time()
+#git2r::repository() ## uncomment if you are using GitHub
+sessionInfo()
+```
+
+</details>
