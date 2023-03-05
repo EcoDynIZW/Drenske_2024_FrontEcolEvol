@@ -1,0 +1,332 @@
+---
+title: "Squirrel activity: Daily patterns data preparation" ## name of your project and analysis step
+description: |
+    The aim of this study is...
+author:
+    ## author information; single arguemnts can be deleted if not needed
+    - name: "John Smith"
+      url: https://izw-berlin.de/en/john-smith-en.html  
+      affiliation: Leibniz Institute for Zoo and Wildlife Research
+      affiliation_url: https://izw-berlin.de/en/
+      orcid_id: 0000-0000-0000-0000
+    - name: "Jane Doe"
+      url: https://janedoe.com
+      affiliation: Leibniz Institute for Zoo and Wildlife Research
+      affiliation_url: https://izw-berlin.de/en/
+    ## add more authors with the same intendation and styling if needed 
+    ## a new author always starts with a hyphen!
+date: "`r Sys.Date()`"
+output: 
+    distill::distill_article:
+        highlight: kate      ## styling of code
+        code_folding: false  ## if `true` you can expand and shrink code chunks
+        toc: true            ## if `true` adds a table of content
+        toc_depth: 2         ## level to be displayed in the table of content
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, 
+                      dev = "ragg_png", fig.width = 9, fig.height = 6, dpi = 600, retina = 1)
+Sys.setlocale("LC_TIME", "C")
+```
+
+* **Research question:**
+* **Study area:**
+* **Data:** 
+
+# Setup
+
+```{r packages}
+# install the package librarian, it loads and installs (if necessary) the specified packages from CRAN, GitHub or Bioconductor
+
+#devtools::install_github("DesiQuintans/librarian")
+librarian::shelf(update_all = FALSE,
+                 #activity,
+                 #camtrapR,
+                 #colorspace, 
+                 #corrplot,
+                 #dplyr,
+                 EcoDynIZW / d6berlin,
+                 #extrafont, 
+                 #evaluate, 
+                 #gdata, 
+                 #ggplot2, 
+                 #ggdist, 
+                 #ggpubr, 
+                 here, 
+                 #janitor, 
+                 lubridate, 
+                 #maptools, 
+                 #ropenscilabs / ochRe,
+                 #overlap,
+                 # "optimbase", maybe needed but has to be installed from the CRAN archive https://cran.r-project.org/web/packages/optimbase/index.html
+                 #plyr,
+                 #raster,
+                 #readxl, 
+                 #rgdal, 
+                 #rgeos, 
+                 #rjags, 
+                 #rlecuyer, 
+                # scico,
+                 #sf, 
+                 #showtext, 
+                 skimr, 
+                 #snowfall, 
+                 #sp, 
+                 #stringr, 
+                 tidyverse, 
+                 #vroom
+                 )
+```
+
+
+# Data
+```{r data}
+#loading the environmental variables and using only the user IDs that are within the cov table
+env_var <- readRDS(here::here("output",
+                              "data-proc",
+                              "all_seasons",
+                              "env_var_binary_species_20230223.RDS"))
+                              #"stacked_raster_values_and_garden_CT_all_seasons_no_nas_proc_20230124.RDS"))
+
+#already formatted and filtered data 
+# CT_act_date_proc <- readRDS(here::here("output", "data-proc", "all_seasons",
+#                                        "CT_act_date_proc_20230124.RDS"))
+CT_species_interest <- readRDS(here::here("output", 
+                                          "data-proc", 
+                                          "all_seasons",
+                                          "CT_species_interest_with_env_20230223.RDS"))
+```
+
+
+# Data for overlap plots (activity plots)
+original data combined with environmental data
+
+calculate the time in radians
+```{r}
+# Calculate the time in fractions and the radiated time for the overlap estimates
+CT_species_interest$time_frac <- (hour(CT_species_interest$DateTimeOriginal)*60 + minute(CT_species_interest$DateTimeOriginal))/(24*60)
+CT_species_interest$radtime <- CT_species_interest$time_frac * 2 * pi
+```
+
+
+# Data for GLMMs
+As response for the GLMMs we use the sum of squirrel pictures per hour of the day.
+
+Add a column for the hour of the day and calculate the sum of pictures per hour per station
+```{r}
+CT_species_interest_hour_station <- CT_species_interest %>%
+  mutate(hour_day = hour(Time)) %>%
+  group_by(Species, project_phase, Station, hour_day) %>%
+  summarize(sum_hour = n()) %>% # number of pics per station per hour of the day
+  left_join(y = env_var[, c(1, 3:23)], by = "Station")
+```
+
+Split the data per species
+```{r}
+CT_species <- split(x = CT_species_interest_hour_station, f = CT_species_interest_hour_station$Species)
+CT_cat <- CT_species[[1]] %>% rename(cat_sum_hour = sum_hour)
+CT_marten <- CT_species[[2]] %>% rename(marten_sum_hour = sum_hour)
+CT_raccoon <- CT_species[[3]] %>% rename(raccoon_sum_hour = sum_hour)
+CT_fox <- CT_species[[4]] %>% rename(fox_sum_hour = sum_hour)
+CT_squirrel <- CT_species[[5]] %>% rename(squirrel_sum_hour = sum_hour)
+```
+
+Add zeros for hours during the day when squirrels where not seen on a camera
+How many stations have squirrels on their camera? (see also 5b)
+```{r}
+length(unique(CT_squirrel$Station))
+```
+
+from when to when are squirrels active
+```{r}
+range(CT_squirrel$hour_day)
+```
+170 stations, Can be active at 13 hours per day
+170*13 = 2210 rows with zeros
+
+```{r}
+CT_squirrel_day <- CT_squirrel[, c(1:5)] %>% 
+  complete(hour_day = c(5:17), fill = list(squirrel_sum_hour = 0)) %>%
+  left_join(y = env_var[, c(1, 3:23)], by = "Station")
+```
+
+
+
+Add the number of pictures per species per hour
+```{r}
+CT_squirrel_predators_hour <- CT_squirrel_day %>%
+  left_join(y = CT_cat[,c(3,4,5)], by = c("Station", "hour_day")) %>%
+  left_join(y = CT_marten[,c(3,4,5)], by = c("Station", "hour_day")) %>%
+  left_join(y = CT_raccoon[,c(3,4,5)], by = c("Station", "hour_day")) %>%
+  left_join(y = CT_fox[,c(3,4,5)], by = c("Station", "hour_day")) %>%
+  replace_na(list( squirrel_sum_hour = 99, cat_sum_hour = 0, marten_sum_hour = 0, raccoon_sum_hour = 0, fox_sum_hour = 0))
+```
+
+Small overview of the data
+```{r}
+summary(CT_squirrel_predators_hour$squirrel_sum_hour) # many zeros
+```
+
+
+# Save data
+```{r}
+# # CT_species_interest
+# saveRDS(object = CT_species_interest,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "all_seasons",
+#                           "CT_species_interest_radians_20230223.RDS"))
+# # CT_species_interest_hour_station
+# saveRDS(object = CT_species_interest_hour_station,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "all_seasons",
+#                           "CT_species_interest_hour_station_20230223.RDS"))
+# # CT_squirrel_predators_hour
+# saveRDS(object = CT_squirrel_predators_hour,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "all_seasons",
+#                           "CT_squirrel_left_join_20230228.RDS"))
+```
+
+# OLD
+Split the dataset in separate lists per project phase
+```{r}
+# CT_project_phase <- split(x = CT_species_interest_hour_station, f = CT_species_interest_hour_station$project_phase)
+```
+
+Fill the dataset with zeros for days and hours were no picture was taken per species
+```{r}
+# # Phase 1
+# CT_phase1_species_station_date_hour <- CT_project_phase[[1]] %>%
+#   as.data.frame() %>%
+#   droplevels() %>%
+#   complete(Species, project_phase, Station, 
+#            Date = as.Date(as.Date("2018-10-07"):as.Date("2018-11-04"), origin="1970-01-01"), 
+#            hour_day = c(0:23), 
+#            fill = list(pic_hour = 0))
+# 
+# # # 29 days
+# # length(unique(CT_phase1$Date))
+# # # a 24 hours 
+# # length(unique(CT_phase1$hour_day))
+# # # a 5 species
+# # length(unique(CT_phase1$Species))
+# # # a 150 stations
+# # length(unique(CT_phase1$Station))
+# # # 29*24*5*150 = 522000 rows
+# 
+# # Phase 2
+# CT_phase2_species_station_date_hour <- CT_project_phase[[2]] %>%
+#   as.data.frame() %>%
+#   droplevels() %>%
+#   complete(Species, project_phase, Station, 
+#            Date = as.Date(as.Date("2019-04-01"):as.Date("2019-04-28"), origin="1970-01-01"), 
+#            hour_day = c(0:23), 
+#            fill = list(pic_hour = 0))
+# 
+# # Phase 3
+# CT_phase3_species_station_date_hour <- CT_project_phase[[3]] %>%
+#   as.data.frame() %>%
+#   droplevels() %>%
+#   complete(Species, project_phase, Station, 
+#            Date = as.Date(as.Date("2019-09-30"):as.Date("2019-10-27"), origin="1970-01-01"), 
+#            hour_day = c(0:23), 
+#            fill = list(pic_hour = 0))
+# # # 28 days
+# # length(unique(CT_phase3$Date))
+# # # a 24 hours 
+# # length(unique(CT_phase3$hour_day))
+# # # a 5 species
+# # length(unique(CT_phase3$Species))
+# # # a 133 stations
+# # length(unique(CT_phase3$Station))
+# # # 28*24*5*133 = 446880 rows
+# 
+# 
+# # Phase 4
+# CT_phase4_species_station_date_hour <- CT_project_phase[[4]] %>%
+#   as.data.frame() %>%
+#   droplevels() %>%
+#   complete(Species, project_phase, Station, 
+#            Date = as.Date(as.Date("2020-03-30"):as.Date("2020-04-26"), origin="1970-01-01"), 
+#            hour_day = c(0:23), 
+#            fill = list(pic_hour = 0))
+# 
+# # Phase 5
+# CT_phase5_species_station_date_hour <- CT_project_phase[[5]] %>%
+#   as.data.frame() %>%
+#   droplevels() %>%
+#   complete(Species, project_phase, Station, 
+#            Date = as.Date(as.Date("2020-09-28"):as.Date("2020-10-26"), origin="1970-01-01"), 
+#            hour_day = c(0:23), 
+#            fill = list(pic_hour = 0))
+```
+
+Combine all data sets
+```{r}
+# CT_species_station_date_hour <- rbind(CT_phase1_species_station_date_hour, 
+#                                       CT_phase2_species_station_date_hour, 
+#                                       CT_phase3_species_station_date_hour, 
+#                                       CT_phase4_species_station_date_hour, 
+#                                       CT_phase5_species_station_date_hour)
+```
+
+
+```{r}
+# CT_species_station_mean_hour <- CT_species_station_date_hour %>%
+#   group_by(Species, project_phase, Station, hour_day) %>%
+#   summarize(mean_hour = mean(pic_hour), sd_hour = sd(pic_hour)) %>%
+#   left_join(y = env_var[, c(1, 3:25)], by = "Station")
+# 
+# # 5 species, 666 cameras, 24 hours = 79920
+```
+
+
+```{r}
+# CT_phase1_species_station_mean_hour <- CT_phase1_species_station_date_hour %>%
+#   group_by(Species, project_phase, Station, hour_day) %>%
+#   summarize(mean_hour = mean(pic_hour), sd_hour = sd(pic_hour))
+# # 5 species, 150 cameras, 24 hours = 18 000 rows
+# 
+# CT_phase1_species_mean_hour <- CT_phase1_species_station_date_hour %>%
+#   group_by(Species, project_phase, hour_day) %>%
+#   summarize(mean_hour = mean(pic_hour), sd_hour = sd(pic_hour))
+# # 5 species, 24 hours = 120
+```
+
+## Prepare data for activity plots and overlap calculation
+rad time + overlap with date
+
+```{r}
+# # Build a date column for the overlap calculation or plots (maybe not necessary)
+# CT_species_station_mean_hour$hour_day_overlap <- as.POSIXct(x = paste(CT_species_station_mean_hour$hour_day, 00, sep=":"), 
+#                                             format = "%H:%M", 
+#                                             tz = "GMT")
+# # Calculate the time in radians (for overlap calculation)
+# CT_species_station_mean_hour$time_rad <- (CT_species_station_mean_hour$hour_day/24)*2*pi
+```
+
+
+### Build a dataset only for squirrels
+```{r}
+# CT_squirrels_station_mean_hour <- CT_species_station_mean_hour %>%
+#   filter(Species == "Squirrel")
+```
+
+***
+
+<details><summary>Session Info</summary>
+
+```{r sessionInfo}
+## DO NOT REMOVE!
+## We store the settings of your computer and the current versions of the
+## packages used to allow for reproducibility
+Sys.time()
+#git2r::repository() ## uncomment if you are using GitHub
+sessionInfo()
+```
+
+</details>
