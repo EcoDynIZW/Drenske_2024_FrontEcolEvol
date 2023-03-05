@@ -27,11 +27,17 @@
 
 
 # Folder
+data-raw/geo-raw
+data-raw/r-raw/Old
 docs/admin
 docs/literature
 docs/manuscript
 docs/presentations
+docs/reports/Old
 model/Old
+plots/01_environmental_variables/Old
+plots/02_overall_activity/Old
+plots/03_daily_activity/Old
 sciurus_vulgaris_b_cttemp_drenske_s/
-data-raw/geo-raw
+
 R/Old
