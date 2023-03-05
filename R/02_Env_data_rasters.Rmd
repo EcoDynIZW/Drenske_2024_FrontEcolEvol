@@ -1,13 +1,27 @@
 ---
+title: "Squirrel activity: Preparation of the environmental data and correlation test" ## name of your project and analysis step
+description: |
+    The aim of this study is...
+author:
+    ## author information; single arguemnts can be deleted if not needed
+    - name: "John Smith"
+      url: https://izw-berlin.de/en/john-smith-en.html  
+      affiliation: Leibniz Institute for Zoo and Wildlife Research
+      affiliation_url: https://izw-berlin.de/en/
+      orcid_id: 0000-0000-0000-0000
+    - name: "Jane Doe"
+      url: https://janedoe.com
+      affiliation: Leibniz Institute for Zoo and Wildlife Research
+      affiliation_url: https://izw-berlin.de/en/
+    ## add more authors with the same intendation and styling if needed 
+    ## a new author always starts with a hyphen!
 date: "`r Sys.Date()`"
 output: 
     distill::distill_article:
         highlight: kate      ## styling of code
-        code_folding: false  ## if `true` you can expand and shrink code chunks
+        code_folding: TRUE  ## if `true` you can expand and shrink code chunks
         toc: true            ## if `true` adds a table of content
         toc_depth: 2         ## level to be displayed in the table of content
-editor_options: 
-  chunk_output_type: inline
 ---
 
 ```{r setup, include=FALSE}
@@ -16,20 +30,25 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE,
 Sys.setlocale("LC_TIME", "C")
 ```
 
+* **Research question:**
+* **Study area:**
+* **Data:** 
+
 # Setup
 
 ```{r packages}
 # Please install the package librarian, it loads and installs (if necessary) the specified packages from CRAN, GitHub or Bioconductor
 
 #devtools::install_github("DesiQuintans/librarian")
-librarian::shelf(raster, 
+librarian::shelf(update_all = FALSE,
+                 ggpubr,
+                 raster, 
                  sf,
                  tidyverse) 
 ```
 
 
 # Data
-
 ```{r data}
 # City border
 berlin <- st_read(here::here("data-raw",
@@ -61,7 +80,7 @@ imperviousness_2018<-
                     "imperviousness_berlin_copernicus_raster_10m_2018_3035",
                     "imperviousness_berlin_copernicus_raster_10m_2018_3035.tif"
   )) %>%
-  focal(w=matrix(1,nrow=11,ncol = 11),fun=mean)
+  focal(w=matrix(1,nrow=11,ncol = 11),fun=mean, na.rm = TRUE)
 
 crs(imperviousness_2018)<-crs("+init=epsg:3035")
 
@@ -90,13 +109,20 @@ population_density_2019<-
   ))
 
 ## Tree cover density
-tree_cover_density_2019<-
+tree_cover_density_2018<-
   raster(here::here("data-raw",
                     "geo-raw",
                     "tree-cover-density_berlin_2018_10m_03035_tif",
                     "tree-cover-density_berlin_2018_10m_03035.tif"
   ))
+
+
+focal_tree_cover_density_2018 <- focal(tree_cover_density_2018, w=matrix(1,11,11), fun=mean, na.rm = TRUE)
+
+#writeRaster(focal_tree_cover_density_2018, "./output/geo-proc/tree_cover_2018_focalmean_3035.tif")
+
 ```
+
 
 Plot all layers
 ```{r}
@@ -105,14 +131,17 @@ plot(imperviousness_2018)
 plot(light_pollution_2021)
 plot(noise_pollution_2017)
 plot(population_density_2019)
-plot(tree_cover_density_2019)
+plot(tree_cover_density_2018)
+plot(focal_tree_cover_density_2018)
 ```
 
+
+# Combine urban data with garden data
 ```{r extract data}
 ct_locations <- readRDS(here::here("output",
                                    "data-proc",
                                    "all_seasons",
-                                   "stacked_raster_values_and_garden_CT_all_seasons_no_nas_proc_20230124.RDS"))
+                                   "stacked_raster_values_and_garden_CT_all_seasons_no_nas_proc_20230223.RDS"))
 
 ct_spatial <- st_as_sf(ct_locations,coords = c("Long","Lat"),remove=F,crs=32633) %>%
   st_transform(crs = 3035)
@@ -145,10 +174,12 @@ cov_pop_2019 <- terra::extract(x=population_density_2019,y=ct_spatial) %>%
 colnames(cov_pop_2019) <- "pop_2019"
 
 # Tree cover density
-cov_tree_cover_2019 <- raster::extract(x=tree_cover_density_2019,y=ct_spatial) %>%
+cov_tree_cover_2018 <- raster::extract(x=focal_tree_cover_density_2018,y=ct_spatial) %>%
   data.frame()
 
-colnames(cov_tree_cover_2019) <- "tree_cover_2019"
+colnames(cov_tree_cover_2018) <- "tree_cover_2018"
+
+###################
 
 # distance to border
 dist_border <- st_distance(ct_spatial, berlin)
@@ -162,33 +193,33 @@ ct_cov <- cbind(ct_spatial,
                 cov_light_2021, 
                 cov_noise_2017, 
                 cov_pop_2019, 
-                cov_tree_cover_2019, 
+                cov_tree_cover_2018, 
                 dist_border
 ) %>%
   st_drop_geometry() %>%
-  as.tibble()
-  
-  #dplyr::select(-c(10,12,13,15:18)) # only to compare them
-  #dplyr::select(-c(pop_100,distance_border,imperv_100))
+  as_tibble()
+
+#dplyr::select(-c(10,12,13,15:18)) # only to compare them
+#dplyr::select(-c(pop_100,distance_border,imperv_100))
 
 ct_cov$distance_to_border <- as.numeric(ct_cov$distance_to_border)
 ```
 
 
-# Save data
+## Save data
 
 ```{r save data}
 # ct_cov_save <- ct_cov %>%
 #   dplyr::select(Station, project_phase, Season, lockdown,
 #                 garden_type, garden_size, Local_tree_cover, fence_height, compost,
 #                 dogs_binary, cats_binary, trees_of_interest, Lat, Long, inside,
-#                 imperviousness_2018, noise_2017, pop_2019, tree_cover_2019, distance_to_border)
+#                 imperviousness_2018, noise_2017, pop_2019, tree_cover_2018, distance_to_border)
 # saveRDS(ct_cov_save,here::here("output",
 #                                "data-proc",
 #                                "all_seasons",
-#                                "ct_focal_covariates_100_20230126.RDS"))
-#                               #"ct_focal_covariates_100.RDS"))
+#                                "ct_focal_covariates_100_20230223.RDS"))
 ```
+
 
 # Plots
 ## Imperviousness
@@ -261,13 +292,13 @@ ggplot(data = ct_cov, mapping = aes(x = Station, y = tree_cover_100)) +
   xlim(0, 100) +
   labs(title = "Tree cover density")
 
-ggplot(data = ct_cov, mapping = aes(x = Station, y = tree_cover_2019)) + 
+ggplot(data = ct_cov, mapping = aes(x = Station, y = tree_cover_2018)) + 
   geom_point() + 
   ylim(0, 100) + 
   xlim(0, 100) + 
   labs(title = "New Tree cover density")
 
-ggplot(data = ct_cov, mapping = aes(x = tree_cover_100, y = tree_cover_2019)) + 
+ggplot(data = ct_cov, mapping = aes(x = tree_cover_100, y = tree_cover_2018)) + 
   geom_point() + 
   ylim(0, 100) + 
   xlim(0, 100) + 
@@ -294,8 +325,7 @@ ggplot(data = ct_cov, mapping = aes(x = distance_border, y = distance_to_border)
 ```
 
 # Correlation plots
-```{r correlation at ct locations}
-
+```{r correlation at ct locations, fig.height=9, fig.width=12}
 cov<-ct_cov%>%
   dplyr::select(garden_size,
                 Local_tree_cover,
@@ -305,7 +335,7 @@ cov<-ct_cov%>%
                 light_2021,
                 noise_2017, 
                 pop_2019,
-                tree_cover_2019,
+                tree_cover_2018,
                 distance_to_border                
                 )%>%
   mutate(distance_to_border=as.numeric(distance_to_border))%>%
@@ -318,8 +348,36 @@ cor_loc<-cor(cov, use = "complete.obs")%>%
   as.matrix()
 
 melted_cor_loc<-reshape2::melt(cor_loc)
+```
 
-ggplot(data = melted_cor_loc, aes(x=Var2, y=forcats::fct_rev(Var1), fill=value)) +
+```{r}
+melted_cor_loc <- melted_cor_loc %>%
+  mutate(Var1 = recode(Var1, garden_size = "garden size", 
+                       Local_tree_cover = "local tree cover", 
+                       fence_height = "fence height", 
+                       dist_water_100 = "distance to water bodies", 
+                       imperviousness_2018 = "imperviousness", 
+                       light_2021 = "light pollution", 
+                       noise_2017 = "noise levels", 
+                       pop_2019 = "human population density", 
+                       tree_cover_2018 = "tree cover density", 
+                       distance_to_border = "distance to city border"), 
+         Var2 = recode(Var2, garden_size = "garden size", 
+                       Local_tree_cover = "local tree cover", 
+                       fence_height = "fence height", 
+                       dist_water_100 = "distance to water bodies", 
+                       imperviousness_2018 = "imperviousness", 
+                       light_2021 = "light pollution", 
+                       noise_2017 = "noise levels", 
+                       pop_2019 = "human population density", 
+                       tree_cover_2018 = "tree cover density", 
+                       distance_to_border = "distance to city border"))
+```
+
+
+
+```{r correlation at ct locations, fig.height=9, fig.width=12}
+ggplot(data = melted_cor_loc, mapping = aes(x=Var2, y=forcats::fct_rev(Var1), fill=value)) +
   geom_tile() +
   geom_text(aes(
     label = format(round(value, 2), nsmall = 2),
@@ -330,26 +388,32 @@ ggplot(data = melted_cor_loc, aes(x=Var2, y=forcats::fct_rev(Var1), fill=value))
                      guide = "none") +
   scale_fill_distiller(
     palette = "RdBu", na.value = "white",
-    direction = 1, limits = c(-1, 1)
+    direction = 1, limits = c(-1, 1), name = "Pearson\nCorrelation"
   ) +
-  labs(x = NULL, y = NULL) + scale_x_discrete(position = "top")+
-  theme(panel.border = element_rect(color = NA, fill = NA),
-        axis.text.x = element_text(angle = 45, hjust=0,size = 12),
-        axis.text.y = element_text(size = 12),
+  labs(x = NULL, y = NULL) + 
+  scale_x_discrete(position = "top") +
+  theme_pubr() + 
+  theme(panel.border = element_rect(color = "black", fill = NA, linewidth = 1.5),
+        axis.text.x = element_text(angle = 45, hjust=0),
+        legend.position = "right",
         legend.key.size = unit(1.2,"cm"),
         legend.text = element_text(size = 15),
-        legend.title = element_text(size = 20))
+        legend.title = element_text(size = 20)) + 
+  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
+  font(object = "xy.text", family = "Roboto", size = 11)
 
 
-#ggsave(here::here("plots", "01_environmental_variables", "ct_correlation_20230126.png"), width = 12, height = 9)
+
+
+# ggsave(here::here("plots", "01_environmental_variables", "ct_correlation_20230202.png"), width = 12, height = 9)
 
 # Light correlates with imperviousness, population density and distance to border. It is not used for further analysis.
-# Population density and distance to border are correlated. We test each of the variables in a separate model.
+# Tree cover and imperviousness are highly correlated. We build separate models for both of them. 
 # Distance to water is not of interest and is not used for further analysis. 
 ```
 
-```{r correlation at ct locations old and new values}
 
+```{r correlation at ct locations old and new values}
 cov<-ct_cov%>%
   dplyr::select(garden_size,
                 Local_tree_cover,
@@ -364,7 +428,7 @@ cov<-ct_cov%>%
                 light_2021,
                 noise_2017, 
                 pop_2019,
-                tree_cover_2019,
+                tree_cover_2018,
                 distance_to_border                
                 )%>%
   mutate(distance_to_border=as.numeric(distance_to_border))%>%
@@ -403,7 +467,6 @@ ggplot(data = melted_cor_loc, aes(x=Var2, y=forcats::fct_rev(Var1), fill=value))
 #ggsave(here::here("plots", "01_environmental_variables", "ct_correlation_old_new_values.png"), width = 12, height = 9)
 
 ```
-
 
 ```{r correlation of full raster, eval=FALSE, echo=TRUE}
 # cor<-as.data.frame(layerStats(raster_stack,stat="pearson",na.rm = T))

@@ -49,42 +49,37 @@ Julie Louvrier, Stephanie Kramer-Schadt
 List of keywords for the modelling notebook (from Ayllon et al. 2021 +
 own terms)
 
-+----------------+------------------------------+
-| Modelling      | Modelling Notebook keyword   |
-| Notebook entry |                              |
-| tag/TRACE      |                              |
-| element        |                              |
-+================+==============================+
-| Problem        | Model purpose; Research      |
-| formulation    | questions                    |
-+----------------+------------------------------+
-| Model          | Model development; Design    |
-| description    | decisions                    |
-+----------------+------------------------------+
-| Data           | Parameterization; Patterns   |
-| evaluation     |                              |
-+----------------+------------------------------+
-| Conceptual     | Conceptual design decisions  |
-| model          |                              |
-| evaluation     |                              |
-+----------------+------------------------------+
-| Implementation | Debugging; Software          |
-| verification   | verification; Testing;       |
-|                | Usability tools design       |
-+----------------+------------------------------+
-| Model output   | Output verification;         |
-| verification   | Goodness-of-fit;             |
-|                | Calibration; tests on\       |
-|                | environmental drivers        |
-+----------------+------------------------------+
-| Model analysis | Sensitivity analysis;        |
-| and            | Uncertainty analysis;        |
-| application    | Robustness analysis;\        |
-|                | Simulation experiment        |
-+----------------+------------------------------+
-| Model output   | Output corroboration;        |
-| corroboration  | Validation                   |
-+----------------+------------------------------+
++---------------------------------+---------------------------------+
+| Modelling Notebook entry        | Modelling Notebook keyword      |
+| tag/TRACE element               |                                 |
++=================================+=================================+
+| Problem formulation             | Model purpose; Research         |
+|                                 | questions                       |
++---------------------------------+---------------------------------+
+| Model description               | Model development; Design       |
+|                                 | decisions                       |
++---------------------------------+---------------------------------+
+| Data evaluation                 | Parameterization; Patterns      |
++---------------------------------+---------------------------------+
+| Conceptual model evaluation     | Conceptual design decisions     |
++---------------------------------+---------------------------------+
+| Implementation verification     | Debugging; Software             |
+|                                 | verification; Testing;          |
+|                                 | Usability tools design          |
++---------------------------------+---------------------------------+
+| Model output verification       | Output verification;            |
+|                                 | Goodness-of-fit; Calibration;   |
+|                                 | tests on\                       |
+|                                 | environmental drivers           |
++---------------------------------+---------------------------------+
+| Model analysis and application  | Sensitivity analysis;           |
+|                                 | Uncertainty analysis;           |
+|                                 | Robustness analysis;\           |
+|                                 | Simulation experiment           |
++---------------------------------+---------------------------------+
+| Model output corroboration      | Output corroboration;           |
+|                                 | Validation                      |
++---------------------------------+---------------------------------+
 
 # Topical index
 
@@ -112,6 +107,90 @@ description of the file and folder taxonomy.
 ### Specific details
 
 XYZ...
+
+## 21.02.2023 - Meeting with Aimara, Stephanie
+
+### General information
+
+**Date**:\
+**Author**: Sinah Drenske\
+**Entry Type**:\
+**TRACE tag**:\
+**Keywords**:\
+**Overview**:\
+**Files**:
+
+### Specific details
+
+XYZ...
+
+Was ist mit Stunden in denen es keine Eichhörnchenfotos gibt, aber Fotos
+von den Prädatoren???
+
+Warum sind meine Activity plots mit Fotos pro Stunde so unterschiedlich
+von den Activity plots??
+
+## 07.02.2023 - Meeting with Aimara, Marius and Stephanie
+
+### General information
+
+**Date**:\
+**Author**: Sinah Drenske\
+**Entry Type**:\
+**TRACE tag**:\
+**Keywords**:\
+**Overview**:\
+**Files**:
+
+### Specific details
+
+-   Environmental variables
+
+    -   Dogs/ cats in gardens
+
++-------------+-------------+---------------+-------------------------+
+| Garden type | Dogs Binary | Number of all | Number stations with    |
+|             |             | stations      | squirrel pics           |
++=============+=============+===============+=========================+
+| allotment   | 0           | 129           | 44                      |
++-------------+-------------+---------------+-------------------------+
+| allotment   | 1           | 12            | 0                       |
++-------------+-------------+---------------+-------------------------+
+| garden      | 0           | 463           | 161                     |
++-------------+-------------+---------------+-------------------------+
+| garden      | 1           | 62            | 23                      |
++-------------+-------------+---------------+-------------------------+
+
+: Dogs per garden type
+
++-------------+-------------+---------------+-------------------------+
+| Garden type | Cats binary | Number of all | Number stations with    |
+|             |             | stations      | squirrel pics           |
++=============+=============+===============+=========================+
+| allotment   | 0           | 132           | 43                      |
++-------------+-------------+---------------+-------------------------+
+| allotment   | 1           | 9             | 1                       |
++-------------+-------------+---------------+-------------------------+
+| garden      | 0           | 396           | 146                     |
++-------------+-------------+---------------+-------------------------+
+| garden      | 1           | 129           | 38                      |
++-------------+-------------+---------------+-------------------------+
+
+: Cats per garden type
+
+-   Mean value per project phase
+
+    -   only per station
+
+-   Models
+
+    -   Confidence interval:
+
+        -   ETI (equal tailed) or HDI (highest density)?
+
+        -   95 or 89%?
+
+        -   
 
 ## 31.01.2023 - Meeting with Aimara, Marius and Stephanie
 
