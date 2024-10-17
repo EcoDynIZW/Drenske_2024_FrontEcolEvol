@@ -1,20 +1,32 @@
 ---
-title: "Squirrel activity: Data Preparation" ## name of your project and analysis step
+title: "Squirrel activity: Data Preparation" 
 description: |
-    The aim of this study is...
+    The aim of the study is to investigate the influence of altered environmental urban parameters and direct human disturbance expressed by the lockdown together with animal predator risk parameters on the general activity of squirrels
 author:
-    ## author information; single arguemnts can be deleted if not needed
-    - name: "John Smith"
-      url: https://izw-berlin.de/en/john-smith-en.html  
+    - name: "Sinah Drenske"
+      affiliation: Leibniz Institute for Zoo and Wildlife Research, Technical University Berlin
+      affiliation_url: https://izw-berlin.de/en/
+      orcid_id: 0000-0002-2247-6507
+    - name: "Julie Louvrier"
       affiliation: Leibniz Institute for Zoo and Wildlife Research
       affiliation_url: https://izw-berlin.de/en/
-      orcid_id: 0000-0000-0000-0000
-    - name: "Jane Doe"
-      url: https://janedoe.com
+      orcid_id: 0000-0003-1252-1746
+    - name: "Marius Grabow"
+      affiliation: Leibniz Institute for Zoo and Wildlife Research, Technical University Berlin
+      affiliation_url: https://izw-berlin.de/en/
+      orcid_id: 0000-0003-0702-9642
+    - name: "Conny Landgraf"
       affiliation: Leibniz Institute for Zoo and Wildlife Research
       affiliation_url: https://izw-berlin.de/en/
-    ## add more authors with the same intendation and styling if needed 
-    ## a new author always starts with a hyphen!
+      #orcid_id: 0000-0000-0000-0000
+    - name: "Stephanie Kramer-Schadt"
+      affiliation: Leibniz Institute for Zoo and Wildlife Research, Technical University Berlin
+      affiliation_url: https://izw-berlin.de/en/
+      orcid_id: 0000-0002-9269-4446
+    - name: "Aimara Planillo"
+      affiliation: Leibniz Institute for Zoo and Wildlife Research
+      affiliation_url: https://izw-berlin.de/en/
+      orcid_id: 0000-0001-6763-9923
 date: "`r Sys.Date()`"
 output: 
     distill::distill_article:
@@ -30,29 +42,19 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE,
 Sys.setlocale("LC_TIME", "C")
 ```
 
-* **Research question:**
-* **Study area:**
-* **Data:** 
-
+* **Research question:** Which risk effects increase or decrease the overall activity of red squirrels in urban gardens?  
+* **Study area:** Berlin 2019-2020 
+* **Data:** Detection histories of squirrels, martens and cats from 4 seasons (spring 2019, autumn 2019, spring 2020, autumn 2020), already filtered as in Louvrier et al. 2021 + environmental information on camera stations. 
 
 # Setup
 
 ```{r packages}
-# install the package librarian, it loads and installs (if necessary) the specified packages from CRAN, GitHub or Bioconductor
-
-#devtools::install_github("DesiQuintans/librarian")
-librarian::shelf(update_all = FALSE,
-                 #colorspace, 
-                 #corrplot,
-                 EcoDynIZW / d6berlin,
-                 #extrafont, 
-                 #gdata, 
-                 #ggdist, 
-                 #ggpubr, 
-                 here, 
-                 skimr, 
-                 tidyverse
-                 )
+#remotes::install_github("EcoDynIZW/d6")
+d6::simple_load(c("EcoDynIZW/d6berlin",
+                  "here", 
+                  "skimr", 
+                  "tidyverse"
+))
 ```
 
 
@@ -62,8 +64,8 @@ librarian::shelf(update_all = FALSE,
 #loading the environmental variables and using only the user IDs that are within the cov table
 env_var <- readRDS(here::here("output", 
                               "data-proc", 
-                              "all_seasons",
-                              "ct_focal_covariates_100_20230223.RDS"))
+                              "01_overall_activity",
+                              "ct_focal_covariates_100_20230305.RDS"))
                               #"stacked_raster_values_and_garden_CT_all_seasons_no_nas_proc_20230124.RDS"))
 
 #already formatted and filtered data 
@@ -71,8 +73,8 @@ env_var <- readRDS(here::here("output",
 #                                        "CT_act_date_proc_20230124.RDS"))
 CT_species_interest <- readRDS(here::here("output", 
                                           "data-proc", 
-                                          "all_seasons",
-                                          "CT_species_interest_time_20230223.RDS"))
+                                          "01_overall_activity",
+                                          "CT_species_interest_time_20230305.RDS"))
 ```
 
 
@@ -82,7 +84,7 @@ Count the number of pictures per species per station
 station_IDs <- env_var$Station
 
 # Build a table with the number of pictures per species of interest per station
-# the full table should have 666 Stations * 5 species = 3330 rows
+# the full table should have 516 Stations * 3 species = 1548 rows
 
 CT_per_station <- CT_species_interest[, c(1:11)] %>%
   droplevels() %>%
@@ -90,7 +92,7 @@ CT_per_station <- CT_species_interest[, c(1:11)] %>%
   group_by(Species, Station) %>%
   dplyr::summarise(sum_pic = sum(n)) %>%
   ungroup() %>% 
-  complete(Station, Species, fill = list(sum_pic = 0)) %>%
+  complete(Station = c(station_IDs), Species, fill = list(sum_pic = 0)) %>%
   full_join(y = env_var[, c(1:20)], by = "Station") %>%
   replace_na(list(Species = "Squirrel", sum_pic = 0)) %>%
   droplevels()
@@ -126,24 +128,6 @@ CT_squirrels_station <- CT_per_station %>%
       Species == "Marten" & sum_pic == 0 ~ 0)) %>%
   select(Station,  marten_cam_binary) %>%
   full_join(y = CT_squirrels_station, by = "Station")
-
-# CT_squirrels_station <- CT_per_station %>%
-#   filter(Species == "Raccoon") %>% 
-#   mutate(
-#     raccoon_cam_binary = case_when(
-#       Species == "Raccoon" & sum_pic > 0 ~ 1, 
-#       Species == "Raccoon" & sum_pic == 0 ~ 0)) %>%
-#   select(Station,  raccoon_cam_binary) %>%
-#   full_join(y = CT_squirrels_station, by = "Station")
-# 
-# CT_squirrels_station <- CT_per_station %>%
-#   filter(Species == "Red Fox") %>% 
-#   mutate(
-#     fox_cam_binary = case_when(
-#       Species == "Red Fox" & sum_pic > 0 ~ 1, 
-#       Species == "Red Fox" & sum_pic == 0 ~ 0)) %>%
-#   select(Station,  fox_cam_binary) %>%
-#   full_join(y = CT_squirrels_station, by = "Station")
 ```
 
 
@@ -152,6 +136,7 @@ Compare cats_binary (cats as pets) and cats_cam_binary
 ```{r}
 table(CT_squirrels_station$cats_binary)
 table(CT_squirrels_station$cats_cam_binary) # many more cats on cameras than per garden as pets
+table(CT_squirrels_station$marten_cam_binary)
 ```
 
 Change the column type
@@ -159,14 +144,15 @@ Change the column type
 CT_squirrels_station <- 
   CT_squirrels_station %>%
   dplyr::mutate(across(.cols = c(squirrels_cam_binary, cats_cam_binary, marten_cam_binary), # , raccoon_cam_binary, fox_cam_binary
-                       .fns =  as.factor))%>%
+                       .fns =  as.factor)) %>%
   droplevels()
 ```
 
 Combine the binary columns with the data per station
 ```{r}
 env_var <- env_var %>%
-  left_join(y = CT_squirrels_station[, c(1:4)], by = "Station") %>%
+  left_join(y = CT_squirrels_station[, c(1:4,6)], by = "Station") %>%
+  rename(squirrel_pics = sum_pic) %>%
   droplevels()
 ```
 
@@ -191,36 +177,36 @@ CT_squirrels <- CT_species_interest %>%
 # saveRDS(object = env_var,
 #         file = here::here("output",
 #                           "data-proc",
-#                           "all_seasons",
-#                           "env_var_binary_species_20230223.RDS"))
+#                           "01_overall_activity",
+#                           "env_var_binary_species_20230305.RDS"))
 # 
 # # CT species interest with env data
 # saveRDS(object = CT_species_interest,
 #         file = here::here("output",
 #                           "data-proc",
-#                           "all_seasons",
-#                           "CT_species_interest_with_env_20230223.RDS"))
+#                           "01_overall_activity",
+#                           "CT_species_interest_with_env_20230305.RDS"))
 # 
 # # CT Squirrels
 # saveRDS(object = CT_squirrels,
 #         file = here::here("output",
 #                           "data-proc",
 #                           "all_seasons",
-#                           "CT_squirrels_20230223.RDS"))
+#                           "CT_squirrels_20230305.RDS"))
 # 
 # # CT species of interest per station
 # saveRDS(object = CT_per_station,
 #         file = here::here("output",
 #                           "data-proc",
-#                           "all_seasons",
-#                           "CT_species_interest_per_station_20230223.RDS"))
+#                           "01_overall_activity",
+#                           "CT_species_interest_per_station_20230305.RDS"))
 # 
 # # CT squirrels per station
 # saveRDS(object = CT_squirrels_station,
 #         file = here::here("output",
 #                           "data-proc",
-#                           "all_seasons",
-#                           "CT_squirrels_per_station_20230223.RDS"))
+#                           "01_overall_activity",
+#                           "CT_squirrels_per_station_20230305.RDS"))
 ```
 
 

@@ -81,7 +81,7 @@ Sys.setlocale("LC_TIME", "C")
 
 # or use
 library("here")
-library("activity")
+#library("activity")
 library("lubridate")
 library("overlap")
 library("tidyverse")
@@ -196,8 +196,7 @@ Combine all data sets
 CT_species_station_date_hour <- rbind(CT_phase1_species_station_date_hour, 
                                       CT_phase2_species_station_date_hour, 
                                       CT_phase3_species_station_date_hour, 
-                                      CT_phase4_species_station_date_hour, 
-                                      CT_phase5_species_station_date_hour)
+                                      CT_phase4_species_station_date_hour)
 ```
 
 Calculate the mean per hour per station
@@ -360,6 +359,103 @@ overlapEst(A = subset(CT_squirrels_station_mean_hour, Season == "autumn")$time_r
 # Now it works. But is the result correct?
 # In the ggplot (from line 232) it does not look like an overlap of 0.966. Or am I wrong there?
 # density(CT_squirrels_autumn)
+```
+
+Trying overlap again
+```{r}
+recordTable = CT_species_interest, 
+                          speciesCol = "Species", 
+                          speciesA = "Squirrel", 
+                          speciesB = "Cat", 
+                          recordDateTimeCol = "DateTimeOriginal", 
+                          recordDateTimeFormat = "ymd HMS"
+
+
+Squirrels_spring <- CT_species_interest %>%
+  filter(Species == "Squirrel") %>%
+  filter(Season == "spring") %>%
+  mutate(hour_day = hour(Time)) %>%
+  mutate(rad_time = (hour_day/24) * 2 * pi) %>%
+  select(Time, rad_time)
+
+Squirrels_autumn <- CT_species_interest %>%
+  filter(Species == "Squirrel") %>%
+  filter(Season == "autumn") %>%
+  mutate(hour_day = hour(Time)) %>%
+  mutate(rad_time = (hour_day/24) * 2 * pi) %>%
+  select(Time, rad_time)
+
+densityPlot(Squirrels$rad_time, rug=TRUE)
+
+Cats_spring <- CT_species_interest %>%
+  filter(Species == "Cat") %>%
+  filter(Season == "spring") %>%
+  mutate(hour_day = hour(Time)) %>%
+  mutate(rad_time = (hour_day/24) * 2 * pi) %>%
+  select(Time, rad_time)
+
+Cats_autumn <- CT_species_interest %>%
+  filter(Species == "Cat") %>%
+  filter(Season == "autumn") %>%
+  mutate(hour_day = hour(Time)) %>%
+  mutate(rad_time = (hour_day/24) * 2 * pi) %>%
+  select(Time, rad_time)
+
+densityPlot(Cats_autumn$rad_time, rug=TRUE)
+
+sq_ca_d4 <- overlapEst(A = Squirrels$rad_time, B = Cats$rad_time, kmax = 50, type = "Dhat4")
+
+spring_EST <- overlapEst(A = Squirrels_spring$rad_time, B= Cats_spring$rad_time, kmax = 50, type = "Dhat4")
+autumn_EST <- overlapEst(A = Squirrels_autumn$rad_time, B= Cats_autumn$rad_time, kmax = 50, type = "Dhat4")
+spring_EST
+autumn_EST
+# We are doing bootstrap to get CI, nb has to be at least 1000, better 10000
+tigmac2 <- overlap::bootstrap(A = Squirrels$rad_time, B = Cats$rad_time, kmax = 50, nb = 100, type="Dhat4") # takes a few seconds
+tigmac2
+
+mean(tigmac2) 
+
+bootCI(sq_ca_d4, tigmac2)
+#######
+spring <- overlap::bootstrap(A = Squirrels_spring$rad_time, B= Cats_spring$rad_time, kmax = 50, nb = 100, type="Dhat4") # takes a few seconds
+
+mean(spring) 
+
+bootCI(spring_EST, spring)
+
+autumn <- overlap::bootstrap(A = Squirrels_autumn$rad_time, B= Cats_autumn$rad_time, kmax = 50, nb = 100, type="Dhat4") # takes a few seconds
+
+
+mean(autumn) 
+
+bootCI(autumn_EST, autumn)
+
+
+```
+# TEST
+```{r}
+recordTable2 <- CT_species_interest[,c(1:8)]
+#recordTable$Time2 <-   format(recordTable$Time, format = "%H:%M:%S", usetz = FALSE)
+recordTable2$Time.rad <- (as.numeric(as.POSIXct(strptime(recordTable2$Time, 
+                                                        format = "%H:%M:%S", 
+                                                        tz = "UTC"))) -
+                           as.numeric(as.POSIXct(strptime("0", 
+                                                          format = "%S", 
+                                                          tz = "UTC")))) / 3600 * (pi/12)
+Squirrels_spring_test <- recordTable2 %>%
+  filter(Species == "Squirrel") %>%
+  filter(Season == "spring") %>%
+  select(Time, Time.rad)
+
+densityPlot(Squirrels_spring$rad_time, rug = TRUE)
+densityPlot(Squirrels_spring_test$Time.rad, rug = TRUE)
+activityDensity(recordTable = CT_species_interest[CT_species_interest$Species == "Squirrel", ], species = "spring", speciesCol = "Season")
+
+# sq_season <- activityOverlap(recordTable = CT_species_interest[CT_species_interest$Species == "Squirrel", ], 
+#                              speciesA = "autumn", 
+#                              speciesB = "spring", 
+#                              speciesCol = "Season", 
+#                              overlapEstimator = "Dhat4")
 ```
 
 

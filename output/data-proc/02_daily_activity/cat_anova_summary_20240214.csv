@@ -1,0 +1,8 @@
+Predictors,Chisq,Df,p
+"poly(hour_day, 4)",50.63761,4,0
+lockdown,8.04218,1,0.00457
+Season,5.6257,1,0.0177
+cat_presence,12.97127,1,3.2e-4
+"poly(hour_day, 4):lockdown",6.99674,4,0.13606
+"poly(hour_day, 4):Season",24.62801,4,6e-5
+"poly(hour_day, 4):cat_presence",7.4551,4,0.11371

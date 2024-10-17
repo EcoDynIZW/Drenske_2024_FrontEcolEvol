@@ -1,20 +1,32 @@
 ---
 title: "Squirrel activity: Daily patterns activity plots" ## name of your project and analysis step
 description: |
-    The aim of this study is...
+    The aim of the study is to investigate the influence of altered environmental urban parameters and direct human disturbance expressed by the lockdown together with animal predator risk parameters on the general activity of squirrels
 author:
-    ## author information; single arguemnts can be deleted if not needed
-    - name: "John Smith"
-      url: https://izw-berlin.de/en/john-smith-en.html  
+    - name: "Sinah Drenske"
+      affiliation: Leibniz Institute for Zoo and Wildlife Research, Technical University Berlin
+      affiliation_url: https://izw-berlin.de/en/
+      orcid_id: 0000-0002-2247-6507
+    - name: "Julie Louvrier"
       affiliation: Leibniz Institute for Zoo and Wildlife Research
       affiliation_url: https://izw-berlin.de/en/
-      orcid_id: 0000-0000-0000-0000
-    - name: "Jane Doe"
-      url: https://janedoe.com
+      orcid_id: 0000-0003-1252-1746
+    - name: "Marius Grabow"
+      affiliation: Leibniz Institute for Zoo and Wildlife Research, Technical University Berlin
+      affiliation_url: https://izw-berlin.de/en/
+      orcid_id: 0000-0003-0702-9642
+    - name: "Conny Landgraf"
       affiliation: Leibniz Institute for Zoo and Wildlife Research
       affiliation_url: https://izw-berlin.de/en/
-    ## add more authors with the same intendation and styling if needed 
-    ## a new author always starts with a hyphen!
+      #orcid_id: 0000-0000-0000-0000
+    - name: "Stephanie Kramer-Schadt"
+      affiliation: Leibniz Institute for Zoo and Wildlife Research, Technical University Berlin
+      affiliation_url: https://izw-berlin.de/en/
+      orcid_id: 0000-0002-9269-4446
+    - name: "Aimara Planillo"
+      affiliation: Leibniz Institute for Zoo and Wildlife Research
+      affiliation_url: https://izw-berlin.de/en/
+      orcid_id: 0000-0001-6763-9923
 date: "`r Sys.Date()`"
 output: 
     distill::distill_article:
@@ -30,84 +42,128 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE,
 Sys.setlocale("LC_TIME", "C")
 ```
 
-* **Research question:**
-* **Study area:**
-* **Data:** 
+* **Research question:** How do urban conditions affect the daily activity patterns of squirrels?
+* **Study area:** Berlin 2019-2020 
+* **Data:** Detection histories of squirrels, martens and cats from 4 seasons (spring 2019, autumn 2019, spring 2020, autumn 2020), already filtered as in Louvrier et al. 2021 + environmental information on camera stations. 
 
 # Setup
 ```{r packages, message=FALSE, warning=FALSE}
-# install the package librarian, it loads and installs (if necessary) the specified packages from CRAN, GitHub or Bioconductor
-
-#devtools::install_github("DesiQuintans/librarian")
-librarian::shelf(update_all = FALSE,
-                 camtrapR,
-                 extrafont,
-                 #dplyr,
-                 #evaluate, 
-                 gdata, 
-                 #ggplot2, 
-                 ggpubr, 
-                 here, 
-                 #janitor, 
-                 lubridate,
-                 overlap, 
-                 #maptools, 
-                 #ropenscilabs / ochRe,
-                 #"optimbase", maybe needed but has to be installed from the CRAN archive https://cran.r-project.org/web/packages/optimbase/index.html
-                 #plyr,
-                 #raster,
-                 #readxl, 
-                 #rgdal, 
-                 #rgeos, 
-                 #rjags, 
-                 #rlecuyer, 
-                 thomasp85 / scico, 
-                 #sf, 
-                 showtext, 
-                 skimr, 
-                 #snowfall, 
-                 #sp, 
-                 stringr, 
-                 tidyverse, 
-                 #vroom
-                 )
+#remotes::install_github("EcoDynIZW/d6")
+d6::simple_load(c("camtrapR",
+                  "extrafont",
+                  "gdata", 
+                  "ggh4x", 
+                  "ggpubr", 
+                  "here", 
+                  "lubridate",
+                  "overlap", 
+                  "purrr",
+                  "thomasp85/scico", 
+                  "showtext", 
+                  "skimr", 
+                  "stringr", 
+                  "tidyverse"
+))
 ```
+
+
+## Plot setup
+Set theme for ggplots
+```{r theme}
+# theme_set(
+#   theme(
+#     legend.position = "none",
+#     panel.grid = element_blank(),
+#     panel.background = element_rect(fill = "white"),
+#     panel.border = element_rect(colour = "black", fill = NA, linewidth = 1),
+#     #plot.margin = margin(6, 10, 4, 4),
+#     axis.ticks = element_line(colour = "black", linewidth = 1.5),
+#     axis.ticks.length = unit(0.2, "cm"), 
+#     title = element_text(family = "Zilla Slab", size = 15),
+#     axis.text = element_text(family = "Roboto", size = rel(0.87)))) 
+
+#my_theme <- 
+theme_set(
+  theme(
+    legend.position = "none",
+    panel.grid = element_blank(),
+    panel.background = element_rect(fill = "white"),
+    panel.border = element_rect(colour = "black", fill = NA, linewidth = 1),
+    plot.margin = margin(6, 10, 4, 4),
+    axis.ticks = element_line(colour = "black", linewidth = 1),
+    axis.ticks.length = unit(0.2, "cm"), 
+    title = element_text(family = "Zilla Slab", size = 15),
+    axis.text = element_text(family = "Roboto", size = rel(0.87))))
+```
+
+Palettes
+
+```{r palette}
+# darkdarkblue beige greyblue brown | red
+#pal_5 <- c("#303B4A", "#E4CAA5", "#4D6476", "#837461", "#C83649", "#574a3a") #  
+pal_5 <- c("#574a3a", "#1D2F51", "#75768f", "#8F84AD", "#201B24") # Imp, Noise, Pop dens, Distance to city border, Garden size
+pal_4 <- c("#303B4A", "#E4CAA5", "#4D6476", "#837461")
+#pal_3 <- c("#E4CAA5", "#4D6476", "#837461")
+col_season <- c("#93a143", "#a83a0a") # spring, autumn, 
+col_lock <- c("#E4CAA5", "#4D6476") # no lockdown, lockdown
+col_dogs <- c("#6d328c", "#36b3a6") # no dogs, dogs old: "#52144f", 
+col_cats <- c("#5784c2", "#d96b1c") # no cats, cats old: "#303B4A", 
+col_martens <- c("#155926", "#871338") # no martens, martens old: "#11451e", 
+col_imp <- c("#837461", "#574a3a", "#919189")
+col_animals <- c("#36b3a6", "#d96b1c", "#871338") # dogs, cats, martens
+```
+
+Fonts
+```{r load fonts, message=FALSE, include=FALSE}
+#font_import()
+loadfonts(device = "win")
+fonts()
+```
+
 
 # Data
 ```{r}
 # CT_species_interest
-CT_species_interest <- readRDS(here::here("output",
-                                          "data-proc",
-                                          "all_seasons",
-                                          "CT_species_interest_radians_20230223.RDS"))
+CT_species_interest <- readRDS(here::here("output", 
+                                          "data-proc", 
+                                          "01_overall_activity",
+                                          "CT_species_interest_with_env_20230305.RDS"))
 # CT_species_interest_hour_station
 CT_species_interest_hour_station <- readRDS(here::here("output",
                                                        "data-proc",
-                                                       "all_seasons",
-                                                       "CT_species_interest_hour_station_20230223.RDS"))
+                                                       "02_daily_activity",
+                                                       "CT_species_interest_hour_station_20230316.RDS"))
+# Squirrel_cat_combi
+Squirrel_cat_combi <- readRDS(file = here::here("output", 
+                                                   "data-proc", 
+                                                   "02_daily_activity", 
+                                                   "Squirrel_cat_combi_20230827.RDS"))
+
+#loading the environmental variables and using only the user IDs that are within the cov table
+env_var <- readRDS(here::here("output", 
+                              "data-proc", 
+                              "01_overall_activity",
+                              "env_var_binary_species_20230305.RDS"))
+```
+
+set the seed
+```{r seed}
+set.seed(20200604)
 ```
 
 Build a class for the imperviousness
 ```{r}
 CT_species_interest <- CT_species_interest %>%
-  mutate(class = as.factor(case_when(imperviousness_2018 < 20 ~ 1, 
-                                     imperviousness_2018 < 40 ~ 2, 
-                                     imperviousness_2018 < 60 ~ 3, 
-                                     imperviousness_2018 < 80 ~ 4, 
-                                     imperviousness_2018 < 101 ~ 5)))
+  mutate(imp_class = as.factor(case_when(imperviousness_2018 < 20 ~ 1, 
+                                         imperviousness_2018 < 40 ~ 2, 
+                                         imperviousness_2018 < 60 ~ 3, 
+                                         imperviousness_2018 < 80 ~ 4, 
+                                         imperviousness_2018 < 101 ~ 5)), 
+         pop_class = as.factor(case_when(pop_2019 < 50 ~ 1, 
+                                         pop_2019 < 100 ~ 2, 
+                                         pop_2019 < 200 ~ 3, 
+                                         pop_2019 < 700 ~ 4)))
 ```
-
-
-## Palettes
-```{r palette}
-# darkdarkblue beige greyblue red brown 
-pal_5 <- c("#303B4A", "#E4CAA5", "#4D6476", "#C83649", "#837461") # 
-pal_3 <- c("#E4CAA5", "#4D6476", "#837461")
-pal_2 <- c("#E4CAA5", "#4D6476")
-```
-
-
-
 
 # Summary tables
 The first table is a summary of all pictures that were taken of the species and the mean, median, min and max per day
@@ -126,67 +182,171 @@ CT_per_species_day <- CT_species_interest %>%
 
 CT_per_species_day
 
-CT_per_species <- CT_species_interest %>% 
-  dplyr::count(Species, project_phase, Station) %>%
-  group_by(Species, project_phase) %>% 
-  dplyr::summarize(n_overall = sum(n), 
-                   n_stations = n())
-
-CT_per_species
-
-
-# Pictures per species per project phase
-CT_per_species_season <- CT_species_interest %>% 
-  dplyr::count(Species, project_phase, Date) %>%
-  group_by(Species, project_phase) %>% 
-  dplyr::summarize(n_overall = sum(n),
-                   n_days = n(),
-                   mean_day = mean(n), 
-                   median_day = median(n), 
-                   min_day = min(n), 
-                   max_day = max(n))
-
-CT_per_species_season
+# CT_per_species <- CT_species_interest %>% 
+#   dplyr::count(Species, project_phase, Station) %>%
+#   group_by(Species, project_phase) %>% 
+#   dplyr::summarize(n_overall = sum(n), 
+#                    n_stations = n())
+# 
+# CT_per_species
+# 
+# 
+# # Pictures per species per project phase
+# CT_per_species_season <- CT_species_interest %>% 
+#   dplyr::count(Species, project_phase, Date) %>%
+#   group_by(Species, project_phase) %>% 
+#   dplyr::summarize(n_overall = sum(n),
+#                    n_days = n(),
+#                    mean_day = mean(n), 
+#                    median_day = median(n), 
+#                    min_day = min(n), 
+#                    max_day = max(n))
+# 
+# CT_per_species_season
 ```
 
-Here is a plot that shows the number of pictures per species for all seasons
 ```{r}
-ggdotchart(data = CT_per_species, x = "Species", y = "n_overall", 
-           sorting = "descending", 
-           ylab = "Number of pictures",
-           shape = 19,
-           size = 5,
-           dot.size = 6,
-           add = "segments", 
-           add.params = list(color = "darkgray", size = 2), 
-           color = "Species",
-           #palette = "magma",
-           #position = position_dodge(width = 0.2, preserve = "single"), 
-           rotate = FALSE, 
-           show.legend = FALSE, 
-           ggtheme = theme_pubr(x.text.angle = 90)) + 
+# number of stations per project phase
+table(env_var$project_phase)
+
+CT_per_species_phase <- CT_species_interest %>% 
+  dplyr::count(Species, project_phase, Station, Date) %>%
+  group_by(Species, project_phase) %>% 
+  dplyr::summarize(
+    n_overall = sum(n), 
+    n_stations = n_distinct(Station),  # Unique count of stations
+    n_days = n_distinct(Date),         # Unique count of days
+    mean_day = mean(n), 
+    median_day = median(n), 
+    min_day = min(n), 
+    max_day = max(n)
+  ) %>%
+  mutate(
+    station_perc = case_when(
+      project_phase == 2 ~ n_stations/116,
+      project_phase == 3 ~ n_stations/133,
+      project_phase == 4 ~ n_stations/121,
+      project_phase == 5 ~ n_stations/146),
+    days_perc = case_when(
+      project_phase == 2 ~ n_days/28,
+      project_phase == 3 ~ n_days/28,
+      project_phase == 4 ~ n_days/28,
+      project_phase == 5 ~ n_days/29
+    ))
+
+CT_per_species_phase
+```
+
+## Summary plot
+```{r}
+# Plot with values per species per project phase: number
+# ggplot(data = CT_per_species_phase, mapping = aes(x = Species)) +
+#   geom_bar(mapping = aes(y = n_overall, fill = project_phase), stat = "identity",position = 'dodge') #+ # 
+#   #geom_line(mapping = aes(y = station_perc), stat = "identity", color = "red", size = 5) + 
+#   #scale_y_continuous(sec.axis = sec_axis(~.*0.0004, name="Percentage")) # 0.0004
+# 
+# ggplot(data = CT_per_species_phase, mapping = aes(x = Species, group = project_phase)) +
+#   #geom_bar(mapping = aes(y = n_overall, fill = project_phase), stat = "identity",position = 'dodge') + # 
+#   geom_line(mapping = aes(y = station_perc, group = Species, colour = project_phase), stat = "identity", color = "red", size = 5) #+ 
+#   #scale_y_continuous(sec.axis = sec_axis(~.*0.0004, name="Percentage"))
+# 
+# 
+# ggplot(CT_per_species_phase, aes(x=project_phase, fill=project_phase))  + 
+#   geom_bar(aes(y=n_overall) ,stat="identity") + # x=project_phase, 
+#   geom_line(aes(y=station_perc*100, group=Species), size = 3) + # ,stat="identity" x=project_phase, 
+#   scale_y_continuous(sec.axis = sec_axis(~.*0.04, name="station_perc")) +
+#   facet_wrap(.~Species)
+
+# Axis Limit bis 4500, bessere Farben
+ggplot(CT_per_species_phase, mapping = aes(x = project_phase, fill = project_phase))  + 
+  geom_bar(mapping = aes(y = n_overall), stat = "identity") + 
+  geom_line(mapping = aes(y = station_perc * max(n_overall) / max(station_perc), 
+                          group = Species), 
+            size = 3, 
+            color = "red") +
+  geom_line(mapping = aes(y = days_perc * max(n_overall) / max(days_perc), 
+                          group = Species), 
+            size = 3, 
+            color = "green") + 
   scale_y_continuous(
-    limits = c(0, 19000),
-    breaks = seq(0, 18000, by = 2000),
-    expand = c(.001, .001)) + 
-  scale_x_discrete(expand = c(0.08, 0.001)) + 
-  scale_colour_manual(values = pal_5) +
-  theme(legend.position = "none", 
-        panel.background = element_rect(fill = "white"), #e9e5db
-        plot.background = element_rect(fill = "white"),
-        panel.border = element_rect(colour = "black", fill=NA, size=2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2),
-        axis.text.x = element_text(angle = 0, vjust = 1, hjust = 0.5), 
-        axis.ticks.length = unit(0.1, "cm")) + 
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11)
+    #name = "n_overall",
+    sec.axis = sec_axis(~. * max(CT_per_species_phase$station_perc) / max(CT_per_species_phase$n_overall), 
+                        name = "Percentage (%)")) +
+  facet_wrap(.~Species) 
 
-# ggsave(filename = here::here("plots","02_general_patterns", "pics_per_species.png"),
-#        width = 1200*1.25,
-#        height = 1200,
-#        units = "px",
+# Bars represent total numbers, lines represent % of days and cameras
+```
+```{r}
+ggplot(CT_per_species_phase, mapping = aes(x = project_phase, fill = project_phase))  + 
+  geom_bar(mapping = aes(y = n_overall), stat = "identity") + 
+  geom_line(mapping = aes(y = station_perc * 5000 / max(days_perc), 
+                          group = Species), 
+            size = 2, 
+            color = "#DE4968FF") +
+  geom_line(mapping = aes(y = days_perc * 5000 / max(days_perc), 
+                          group = Species), 
+            size = 2, 
+            color = "#4AC16DFF") + 
+  scale_y_continuous(
+    limits = c(0, 5000),
+    breaks = seq(0, 5000, by = 1000),
+    
+    #name = "n_overall",
+    sec.axis = sec_axis(trans = ~. * max(CT_per_species_phase$days_perc) / 5000, 
+                        name = "Percentage", 
+                        breaks = seq(0, 1, by = 0.25))) +
+  labs(x = "Project phase",
+       y = "Number of pictures") + 
+  scale_fill_manual(values = pal_4) + 
+  facet_wrap(.~Species) + 
+  theme(
+    strip.text.x = element_text(
+      size = 12, 
+      color = "black"),
+    strip.background = element_rect(
+      color = "black", 
+      fill = "white", 
+      size = 1, 
+      linetype = "solid"),
+    panel.spacing = unit(0, "lines"))
+
+# # Save the plot
+# ggsave(filename = here::here("plots",
+#                              "proj_summary2.tiff"),
+#        width = 180,
+#        height = 85,
+#        units = "mm",
 #        dpi = 300)
+```
 
+```{r}
+# CT_per_species_phase$station_perc
+# CT_per_species_phase$station_perc * 5000 / max(CT_per_species_phase$station_perc)
+# CT_per_species_phase$station_perc * 5000 / max(CT_per_species_phase$days_perc)
+```
+
+
+Here is a plot that shows the number of pictures per species for all seasons
+```{r fig.width = 4, fig.height = 4}
+ggplot(data = CT_per_species_day, mapping = aes(x = Species, y = n_overall, colour = Species)) + 
+  geom_segment(mapping = aes(x = Species, xend = Species, y = 0, yend = n_overall), 
+               size = 3, colour = "darkgray") + 
+  geom_point(size = 7) + 
+  scale_y_continuous(
+    limits = c(0, 15000),
+    breaks = seq(0, 15000, by = 5000),
+    expand = c(.005, .001)) + 
+  scale_x_discrete(expand = c(0.09, .001)) + 
+  #scale_colour_manual(values = pal_3) + 
+  labs(y = "Number of pictures")
+
+# ggsave(filename = here::here("plots",
+#                              "02_overall_activity",
+#                              "pics_per_species.png"),
+#        width = 85,
+#        height = 85, #1200,
+#        units = "mm",
+#        dpi = 300)
 ```
 
 
@@ -195,25 +355,20 @@ And this table shows the number of pictures per species per project phase
 table(CT_species_interest$Species, CT_species_interest$project_phase)
 ```
 
-Number of pictures per species per project phase
-```{r}
-ggplot(data = CT_species_interest, mapping = aes(x = Species)) + 
-  geom_bar() + 
-  facet_grid(project_phase ~ .)
-```
+
 
 Number of pictures per species per project phase
 ```{r}
-CT_per_species_phase <- CT_species_interest %>% 
-  dplyr::count(Species, project_phase, Date) %>%
-  group_by(Species, project_phase) %>% 
-  dplyr::summarize(n_overall = sum(n), 
-                   mean_day = mean(n), 
-                   median_day = median(n), 
-                   min_day = min(n), 
-                   max_day = max(n))
-
-CT_per_species_phase
+# CT_per_species_phase <- CT_species_interest %>% 
+#   dplyr::count(Species, project_phase, Date) %>%
+#   group_by(Species, project_phase) %>% 
+#   dplyr::summarize(n_overall = sum(n), 
+#                    mean_day = mean(n), 
+#                    median_day = median(n), 
+#                    min_day = min(n), 
+#                    max_day = max(n))
+# 
+# CT_per_species_phase
 ```
 
 Plot of the number of pictures per species per day per project phase
@@ -253,1193 +408,1811 @@ mean(squirrels_phase$n[c(2,4)])
 mean(squirrels_phase$n[c(1,3)])
 ```
 
-
-# Activity plots
-## overall
 ```{r}
-CT_species_interest_hour_station %>%
-  filter(Species == "Squirrel") %>%
-  group_by(Species, hour_day) %>%
-  dplyr::summarize(n_hour = sum(sum_hour)) %>%
-  ungroup() %>%
-  add_row(Species = "Squirrel", hour_day = c(0:4, 19:23), n_hour = 0) %>%
-  ggplot() + 
-  geom_col(mapping = aes(hour_day, n_hour, fill = n_hour), colour = "white", width = 1) + 
-  coord_polar(start = 25, direction = 1) + 
-  scale_fill_scico(palette = "lajolla") + # bilbao, lajolla, vikO, turku, 
-  theme_light() + 
-  ylab("number of pictures\n") + 
-  labs(title = paste0("Daily activity of Squirrels"), 
-       fill = "pictures \nper hour") + 
-  theme(title = element_text(size = 16, face = "bold"),
-        axis.title = element_text(size = 14), 
-        axis.title.x = element_blank(),
-        axis.text.x = element_text(colour = "grey20", size = 12), 
-        axis.text.y = element_text(colour = "grey20", size = 12),
-        legend.title = element_text(size = 12, face = "bold"),
-        legend.text = element_text(size = 12),
-        panel.border = element_blank(),
-        panel.grid = element_line(colour = "#8c8c8b"),#8c8c8b, #b3b2b1
-        panel.background = element_rect(fill = "white"), # "#ded9ca"
-        plot.background = element_rect(fill = "white"), # "#ded9ca"
-        legend.background = element_rect(colour = "white", fill = "white"))
+# cats
+cats_phase <- CT_species_interest %>%
+  filter(Species == "Cat") %>%
+  dplyr::count(project_phase)
+cats_phase
+
+# sum photos of squirrels during all seasons
+sum(cats_phase$n)
+# mean number of photos during all seasons
+mean(cats_phase$n)
+
+
+# martens
+martens_phase <- CT_species_interest %>%
+  filter(Species == "Marten") %>%
+  dplyr::count(project_phase)
+martens_phase
+
+# sum photos of squirrels during all seasons
+sum(martens_phase$n)
+# mean number of photos during all seasons
+mean(martens_phase$n)
+
+
+# Stations
+CT_stations <- CT_species_interest %>%
+  dplyr::count(project_phase, Station)
+table(CT_stations$project_phase)
+
+CT_per_species <- CT_species_interest %>% 
+  dplyr::count(Species, project_phase, Station) %>%
+  group_by(Species, project_phase) %>% 
+  dplyr::summarize(n_overall = sum(n), 
+                   n_stations = n())
+
+CT_per_species
 ```
 
+
+# Activity plots + overlap
 ```{r}
-# Sum
-CT_species_interest_hour_station %>%
-  filter(Species == "Squirrel") %>%
-  group_by(Species, hour_day) %>%
-  dplyr::summarize(n_hour = sum(sum_hour)) %>%
-  ungroup() %>%
-  complete(hour_day = c(0:23), fill = list(n_hour = 0))  %>%
-  ggplot() + 
-  geom_line(mapping = aes(x = hour_day, y = n_hour), colour = "#C83649", size = 2) + #"#AC4645" "#5D3125" "#191900"
+# taken from camtrapR
+CT_species_interest$rad_time <- (as.numeric(as.POSIXct(strptime(CT_species_interest$Time, 
+                                                                format = "%H:%M:%S", 
+                                                                tz = "UTC"))) -
+                                   as.numeric(as.POSIXct(strptime("0", 
+                                                                  format = "%S", 
+                                                                  tz = "UTC")))) / 3600 * (pi/12)
+```
+
+
+## Squirrels
+```{r}
+Squirrels <- CT_species_interest %>%
+  filter(Species == "Squirrel")
+
+plot_squirrels <- densityPlot(Squirrels$rad_time, rug = TRUE)
+```
+
+```{r fig.height=6}
+ggplot(data = plot_squirrels) + # , colour = Season
+  # geom_area(mapping = aes(x = x, y = pmin(y.spr,y.aut)),
+  #           fill = col_season[1]
+  # ) +
+  #geom_line(mapping = aes(x = x, y = y.aut), colour = col_season[2], size = 2) +  
+  geom_line(mapping = aes(x = x, y = y), colour = "black", size = 2) +  
   scale_x_continuous(
-    limits = c(0,23), 
+    limits = c(0,23),
     breaks = seq(0, 21, by = 3),
-    expand = c(.001, .001)) + 
+    expand = c(.001, .001)) +
   scale_y_continuous(
-    limits = c(0, 200),
-    breaks = seq(0, 200, by = 50),
+    limits = c(0, 0.15),
+    breaks = seq(0, 0.15, by = 0.05),
     expand = c(.01, .001)) +
-  labs(x = "Hour of the day", 
-       y = "Number of pictures") + 
-  theme_pubr() + 
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(), 
-        legend.position = "none", 
-        panel.background = element_rect(fill = "white"), 
-        plot.background = element_rect(fill = "white"),
-        panel.border = element_rect(colour = "black", fill = NA, size = 2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2), 
-        axis.ticks.length = unit(0.25, "cm"), 
-        plot.margin = margin(6, 10, 4, 4)) + 
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11)
-
-# Sum
-CT_squirrel_predators_hour %>%
-  group_by(Species, hour_day) %>%
-  dplyr::summarize(n_hour = sum(squirrel_sum_hour), sd_hour = sd(squirrel_sum_hour)) %>%
-  ungroup() %>%
-  complete(hour_day = c(0:23), fill = list(n_hour = 0, sd_hour = 0))  %>%
-  ggplot() + 
-  geom_line(mapping = aes(x = hour_day, y = n_hour), colour = "#C83649", size = 2) + #"#AC4645" "#5D3125" "#191900"
-  #geom_line(mapping = aes(x = hour_day, y = (n_hour - sd_hour)), colour = "green", size = 1) + 
-  #geom_line(mapping = aes(x = hour_day, y = (n_hour + sd_hour)), colour = "blue", size = 1) + 
-  geom_ribbon(aes(x = hour_day, y = n_hour, ymin = n_hour - sd_hour, ymax = n_hour + sd_hour, fill = "black")) +
-  scale_x_continuous(
-    limits = c(0,23), 
-    breaks = seq(0, 21, by = 3),
-    expand = c(.001, .001)) + 
-  scale_y_continuous(
-    limits = c(0, 200),
-    breaks = seq(0, 200, by = 50),
-    expand = c(.01, .001)) +
-  labs(x = "Hour of the day", 
-       y = "Number of pictures") + 
-  theme_pubr() + 
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(), 
-        legend.position = "none", 
-        panel.background = element_rect(fill = "white"), 
-        plot.background = element_rect(fill = "white"),
-        panel.border = element_rect(colour = "black", fill = NA, size = 2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2), 
-        axis.ticks.length = unit(0.25, "cm"), 
-        plot.margin = margin(6, 10, 4, 4)) + 
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11)
-
-# ggsave(filename = here::here("plots","03_daily_patterns", "squirrels_overall.png"),
-#        width = 1200*1.25,
-#        height = 1200,
-#        units = "px",
-#        dpi = 300)
+ # scale_colour_manual(values = c("red", "blue")) + 
+  labs(x = "Hour of the day",
+       y = "Density", 
+       title = "Activity patterns of squirrels") 
 ```
 
-
-
-## Project phase
-```{r}
-CT_species_interest_hour_station %>%
-  filter(Species == "Squirrel") %>%
-  group_by(project_phase, hour_day) %>%
-  dplyr::summarize(n_hour = sum(sum_hour)) %>%
-  complete(hour_day = c(0:23), fill = list(n_hour = 0)) %>%
-  ungroup() %>%
-  ggplot(mapping = aes(x = hour_day, y = n_hour, colour = project_phase, fill = project_phase)) + 
-  geom_line(size =2) + 
-  scale_x_continuous(
-    limits = c(0,23), 
-    breaks = seq(0, 21, by = 3),
-    expand = c(.001, .001)) + 
-  scale_y_continuous(
-    limits = c(0, 300),
-    breaks = seq(0, 300, by = 50),
-    expand = c(.01, .001)) +
-  labs(x = "Hour of the day", 
-       y = "Number of pictures") + 
-  theme_pubr() + 
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(), 
-        #legend.position = "none", 
-        panel.background = element_rect(fill = "white"), 
-        plot.background = element_rect(fill = "white"),
-        panel.border = element_rect(colour = "black", fill=NA, size=2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2), 
-        axis.ticks.length = unit(0.25, "cm"), 
-        plot.margin = margin(6, 10, 4, 4)) + 
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_colour_manual(values = pal_5) 
-```
-
-Overlap estimate
-```{r}
-activityOverlap(recordTable = CT_species_interest[CT_species_interest$Species == "Squirrel", ], 
-                speciesA = "2", 
-                speciesB = "3", 
-                speciesCol = "project_phase", 
-                overlapEstimator = "Dhat4")
-```
-
-```{r}
-overlapEst(A = CT_species_interest[CT_species_interest$Species == "Squirrel" & CT_species_interest$project_phase == "2", ]$radtime, 
-           B = CT_species_interest[CT_species_interest$Species == "Squirrel" & CT_species_interest$project_phase == "3", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-```
-
-Mean activity time
-```{r}
-CT_species_interest %>%
-  filter(Species == "Squirrel") %>%
-  group_by(project_phase) %>%
-  dplyr::summarise(mean_act_time = hms::hms(seconds_to_period(mean(Time))))
-```
-
-
-## Season
-### Overall
-```{r}
-CT_species_interest_hour_station %>%
-  filter(Species == "Squirrel") %>%
-  group_by(Season, hour_day) %>%
-  dplyr::summarize(n_hour = sum(sum_hour)) %>%
-  complete(hour_day = c(0:23), fill = list(n_hour = 0)) %>%
-  ungroup() %>%
-  ggplot(mapping = aes(x = hour_day, y = n_hour, colour = Season, fill = Season)) + 
-  geom_line(size =2) + 
-  scale_x_continuous(
-    limits = c(0,23), 
-    breaks = seq(0, 21, by = 3),
-    expand = c(.001, .001)) + 
-  scale_y_continuous(
-    limits = c(0, 250),
-    breaks = seq(0, 250, by = 50),
-    expand = c(.01, .001)) +
-  labs(x = "Hour of the day", 
-       y = "Number of pictures") + 
-  theme_pubr() + 
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(), 
-        #legend.position = "none", 
-        panel.background = element_rect(fill = "white"), 
-        plot.background = element_rect(fill = "white"),
-        panel.border = element_rect(colour = "black", fill=NA, size=2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2), 
-        axis.ticks.length = unit(0.25, "cm"), 
-        plot.margin = margin(6, 10, 4, 4)) + 
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_colour_manual(values = pal_2) 
-
-# ggsave(filename = here::here("plots","03_daily_patterns", "squirrels_season.png"),
-#        width = 1200*1.25,
-#        height = 1200,
-#        units = "px",
-#        dpi = 300)
-```
-
-Overlap estimate
-```{r}
-test <- activityOverlap(recordTable = CT_species_interest[CT_species_interest$Species == "Squirrel", ], 
-                        speciesA = "autumn", 
-                        speciesB = "spring", 
-                        speciesCol = "Season", 
-                        overlapEstimator = "Dhat4")
-```
-### ggplot solution
-```{r}
-ggplot(data = test) + 
-  geom_line(mapping = aes(x = x, y = densityA)) + 
-  geom_line(mapping = aes(x = x, y = densityB)) + 
-  geom_area(mapping = aes(x = x, y = pmin(densityA,densityB)), fill = "red")
-```
-
-```{r}
-overlapEst(A = CT_species_interest[CT_species_interest$Species == "Squirrel" & 
-                                     CT_species_interest$Season == "autumn", ]$radtime, 
-           B = CT_species_interest[CT_species_interest$Species == "Squirrel" & 
-                                     CT_species_interest$Season == "spring", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-```
-
-Mean activity time
-```{r}
-CT_species_interest %>%
-  filter(Species == "Squirrel") %>%
-  group_by(Season) %>%
-  dplyr::summarise(mean_act_time = hms::hms(seconds_to_period(mean(Time))))
-```
-
-DELET### Season and other variables
-Build a dataset for the different seasons
+### Season
+Create the data sets for the overlap calculation and the plots
 ```{r}
 Squirrels_spring <- CT_species_interest %>%
-  filter(Species == "Squirrel" & Season == "spring") %>%
-  droplevels()
+  filter(Species == "Squirrel") %>%
+  filter(Season == "spring") #%>%
+  #select(Time, rad_time)
 
 Squirrels_autumn <- CT_species_interest %>%
-  filter(Species == "Squirrel" & Season == "autumn") %>%
-  droplevels()
-
-Squirrels_spring_hour <- CT_species_interest_hour_station %>%
-  filter(Species == "Squirrel" & Season == "spring") %>%
-  droplevels()
-
-Squirrels_autumn_hour <- CT_species_interest_hour_station %>%
-  filter(Species == "Squirrel" & Season == "autumn") %>%
-  droplevels()
-```
-
-#### Season and dogs binary
-```{r}
-Squirrels_spring_hour %>%
-  #filter(Species == "Squirrel") %>%
-  group_by(dogs_binary, hour_day) %>%
-  dplyr::summarize(n_hour = sum(sum_hour)) %>%
-  complete(hour_day = c(0:23), fill = list(n_hour = 0)) %>%
-  ungroup() %>%
-  ggplot(mapping = aes(x = hour_day, y = n_hour, colour = dogs_binary, fill = dogs_binary)) + 
-  geom_line(size =2) + 
-  scale_x_continuous(
-    limits = c(0,23), 
-    breaks = seq(0, 21, by = 3),
-    expand = c(.001, .001)) + 
-  scale_y_continuous(
-    limits = c(0, 250),
-    breaks = seq(0, 250, by = 50),
-    expand = c(.01, .001)) +
-  labs(x = "Hour of the day", 
-       y = "Number of pictures") + 
-  theme_pubr() + 
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(), 
-        #legend.position = "none", 
-        panel.background = element_rect(fill = "white"), 
-        plot.background = element_rect(fill = "white"),
-        panel.border = element_rect(colour = "black", fill=NA, size=2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2), 
-        axis.ticks.length = unit(0.25, "cm"), 
-        plot.margin = margin(6, 10, 4, 4)) + 
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_colour_manual(values = pal_2) 
-
-Squirrels_autumn_hour %>%
-  #filter(Species == "Squirrel") %>%
-  group_by(dogs_binary, hour_day) %>%
-  dplyr::summarize(n_hour = sum(sum_hour)) %>%
-  complete(hour_day = c(0:23), fill = list(n_hour = 0)) %>%
-  ungroup() %>%
-  ggplot(mapping = aes(x = hour_day, y = n_hour, colour = dogs_binary, fill = dogs_binary)) + 
-  geom_line(size =2) + 
-  scale_x_continuous(
-    limits = c(0,23), 
-    breaks = seq(0, 21, by = 3),
-    expand = c(.001, .001)) + 
-  scale_y_continuous(
-    limits = c(0, 250),
-    breaks = seq(0, 250, by = 50),
-    expand = c(.01, .001)) +
-  labs(x = "Hour of the day", 
-       y = "Number of pictures") + 
-  theme_pubr() + 
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(), 
-        #legend.position = "none", 
-        panel.background = element_rect(fill = "white"), 
-        plot.background = element_rect(fill = "white"),
-        panel.border = element_rect(colour = "black", fill=NA, size=2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2), 
-        axis.ticks.length = unit(0.25, "cm"), 
-        plot.margin = margin(6, 10, 4, 4)) + 
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_colour_manual(values = pal_2)
-```
-
-Overlap estimate
-```{r}
-activityOverlap(recordTable = Squirrels_spring, 
-                speciesA = "0", 
-                speciesB = "1", 
-                speciesCol = "dogs_binary", 
-                overlapEstimator = "Dhat4", 
-                ylim = c(0,0.2))
-
-activityOverlap(recordTable = Squirrels_autumn, 
-                speciesA = "0", 
-                speciesB = "1", 
-                speciesCol = "dogs_binary", 
-                overlapEstimator = "Dhat4", 
-                ylim = c(0,0.2))
-
-activityOverlap(recordTable = Squirrels_autumn, 
-                speciesA = "0", 
-                speciesB = "1", 
-                speciesCol = "dogs_binary", 
-                overlapEstimator = "Dhat4",  
-                ylim = c(0,0.2), 
-                legend = FALSE, 
-                bty = "o", 
-                main = " ", 
-                linecol = pal_2, 
-                linewidth = c(3,3), 
-                olapcol = "#E4CAA5", 
-                xlab = "Hour of the day") # brown: #837461 darkblue: #303B4A beige #E4CAA5
-#box(lwd = 2, which = "plot")
-legend("topleft", c("no dog", "dog"), lty=1, col=c("#E4CAA5", "#4D6476"), bg="white")
-
-```
-
-
-```{r}
-activityOverlap
-```
-
-```{r}
-overlapEst(A = Squirrels_spring[Squirrels_spring$dogs_binary == "0", ]$radtime, 
-           B = Squirrels_spring[Squirrels_spring$dogs_binary == "1", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-
-overlapEst(A = Squirrels_autumn[Squirrels_autumn$dogs_binary == "0", ]$radtime, 
-           B = Squirrels_autumn[Squirrels_autumn$dogs_binary == "1", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-```
-
-Mean activity time
-```{r}
-Squirrels_spring %>%
-  group_by(dogs_binary) %>%
-  dplyr::summarise(mean_act_time = hms::hms(seconds_to_period(mean(Time))))
-
-Squirrels_autumn %>%
-  group_by(dogs_binary) %>%
-  dplyr::summarise(mean_act_time = hms::hms(seconds_to_period(mean(Time))))
-```
-
-
-
-#### Season and cats binary
-```{r}
-activityOverlap(recordTable = Squirrels_spring, 
-                speciesA = "0", 
-                speciesB = "1", 
-                speciesCol = "cats_binary", 
-                overlapEstimator = "Dhat4", 
-                ylim = c(0,0.25))
-
-activityOverlap(recordTable = Squirrels_autumn, 
-                speciesA = "0", 
-                speciesB = "1", 
-                speciesCol = "cats_binary", 
-                overlapEstimator = "Dhat4", 
-                ylim = c(0,0.25))
-```
-
-
-```{r}
-overlapEst(A = Squirrels_spring[Squirrels_spring$cats_binary == "0", ]$radtime, 
-           B = Squirrels_spring[Squirrels_spring$cats_binary == "1", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-
-overlapEst(A = Squirrels_autumn[Squirrels_autumn$cats_binary == "0", ]$radtime, 
-           B = Squirrels_autumn[Squirrels_autumn$cats_binary == "1", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-```
-
-Mean activity time
-```{r}
-Squirrels_spring %>%
-  group_by(cats_binary) %>%
-  dplyr::summarise(mean_act_time = hms::hms(seconds_to_period(mean(Time))))
-
-Squirrels_autumn %>%
-  group_by(cats_binary) %>%
-  dplyr::summarise(mean_act_time = hms::hms(seconds_to_period(mean(Time))))
-```
-
-#### Season and cats
-Overlap estimate
-```{r}
-# png(file=here::here("plots","03_daily_patterns", "squirrels_cats_overlap_spring.png"),
-#     width=600, 
-#     height=350)
-activityOverlap(recordTable = CT_species_interest[CT_species_interest$Season == "spring", ], 
-                speciesA = "Squirrel", 
-                speciesB = "Cat", 
-                speciesCol = "Species", 
-                overlapEstimator = "Dhat4",
-                ylim = c(0,0.15), 
-                legend = FALSE, 
-                bty = "o", 
-                linecol = pal_2, 
-                linewidth = c(3,3), 
-                olapcol = "#E4CAA5", 
-                xlab = "Hour of the day")
-legend("topleft", c("Squirrel", "Cat"), lty=1, col=c("#E4CAA5", "#4D6476"), bg="white")
-#dev.off()
-
-# png(file=here::here("plots","03_daily_patterns", "squirrels_cats_overlap_autumn.png"),
-#     width=600, 
-#     height=350)
-activityOverlap(recordTable = CT_species_interest[CT_species_interest$Season == "autumn", ], 
-                speciesA = "Squirrel", 
-                speciesB = "Cat", 
-                speciesCol = "Species", 
-                overlapEstimator = "Dhat4",
-                ylim = c(0,0.15), 
-                legend = FALSE, 
-                bty = "o", 
-                linecol = pal_2, 
-                linewidth = c(3,3), 
-                olapcol = "#E4CAA5", 
-                xlab = "Hour of the day")
-legend("topleft", c("Squirrel", "Cat"), lty=1, col=c("#E4CAA5", "#4D6476"), bg="white")
-#dev.off()
-```
-
-```{r}
-overlapEst(A = CT_species_interest[CT_species_interest$Species == "Squirrel" & 
-                                     CT_species_interest$Season == "spring", ]$radtime, 
-           B = CT_species_interest[CT_species_interest$Species == "Cat" & 
-                                     CT_species_interest$Season == "spring", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-
-overlapEst(A = CT_species_interest[CT_species_interest$Species == "Squirrel" & 
-                                     CT_species_interest$Season == "autumn", ]$radtime, 
-           B = CT_species_interest[CT_species_interest$Species == "Cat" & 
-                                     CT_species_interest$Season == "autumn", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-```
-
-Mean activity time
-```{r}
-CT_species_interest %>%
-  filter(Species == "Squirrel" | Species == "Cat") %>%
-  group_by(Species, Season) %>%
-  dplyr::summarise(mean_act_time = hms::hms(seconds_to_period(mean(Time))))
-
-# Cats cam binary
-Squirrels_spring %>%
-  group_by(cats_cam_binary) %>%
-  dplyr::summarise(mean_act_time = hms::hms(seconds_to_period(mean(Time))))
-
-Squirrels_autumn %>%
-  group_by(cats_cam_binary) %>%
-  dplyr::summarise(mean_act_time = hms::hms(seconds_to_period(mean(Time))))
-```
-
-#### Season and martens
-Overlap estimate
-```{r}
-activityOverlap(recordTable = CT_species_interest[CT_species_interest$Season == "spring", ], 
-                        speciesA = "Squirrel", 
-                        speciesB = "Marten", 
-                        speciesCol = "Species", 
-                        overlapEstimator = "Dhat4")
-
-activityOverlap(recordTable = CT_species_interest[CT_species_interest$Season == "autumn", ], 
-                        speciesA = "Squirrel", 
-                        speciesB = "Marten", 
-                        speciesCol = "Species", 
-                        overlapEstimator = "Dhat4")
-```
-
-```{r}
-overlapEst(A = CT_species_interest[CT_species_interest$Species == "Squirrel" & 
-                                     CT_species_interest$Season == "spring", ]$radtime, 
-           B = CT_species_interest[CT_species_interest$Species == "Marten" & 
-                                     CT_species_interest$Season == "spring", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-
-overlapEst(A = CT_species_interest[CT_species_interest$Species == "Squirrel" & 
-                                     CT_species_interest$Season == "autumn", ]$radtime, 
-           B = CT_species_interest[CT_species_interest$Species == "Marten" & 
-                                     CT_species_interest$Season == "autumn", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-```
-
-Mean activity time
-```{r}
-CT_species_interest %>%
-  filter(Species == "Squirrel" | Species == "Marten") %>%
-  group_by(Species, Season) %>%
-  dplyr::summarise(mean_act_time = hms::hms(seconds_to_period(mean(Time))))
-
-# Cats cam binary
-Squirrels_spring %>%
-  group_by(marten_cam_binary) %>%
-  dplyr::summarise(mean_act_time = hms::hms(seconds_to_period(mean(Time))))
-
-Squirrels_autumn %>%
-  group_by(marten_cam_binary) %>%
-  dplyr::summarise(mean_act_time = hms::hms(seconds_to_period(mean(Time))))
-```
-
-#### Season and imperviousness
-```{r}
-activityOverlap(recordTable = Squirrels_spring, 
-                speciesA = "1", 
-                speciesB = "2", 
-                speciesCol = "class", 
-                overlapEstimator = "Dhat4", 
-                ylim = c(0,0.25))
-
-activityOverlap(recordTable = Squirrels_autumn, 
-                speciesA = "1", 
-                speciesB = "2", 
-                speciesCol = "class", 
-                overlapEstimator = "Dhat4", 
-                ylim = c(0,0.25))
-```
-
-```{r}
-table(Squirrels_spring$class)
-table(Squirrels_autumn$class)
-
-```
-
-```{r}
-overlapEst(A = Squirrels_spring[Squirrels_spring$class == "1", ]$radtime, 
-           B = Squirrels_spring[Squirrels_spring$class == "2", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-
-overlapEst(A = Squirrels_autumn[Squirrels_autumn$class == "1", ]$radtime, 
-           B = Squirrels_autumn[Squirrels_autumn$class == "2", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-```
-
-
-```{r}
-overlapEst(A = Squirrels_spring[Squirrels_spring$class == "2", ]$radtime, 
-           B = Squirrels_spring[Squirrels_spring$class == "3", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-
-overlapEst(A = Squirrels_autumn[Squirrels_autumn$class == "2", ]$radtime, 
-           B = Squirrels_autumn[Squirrels_autumn$class == "3", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-```
-
-```{r}
-overlapEst(A = Squirrels_spring[Squirrels_spring$class == "4", ]$radtime, 
-           B = Squirrels_spring[Squirrels_spring$class == "5", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-
-overlapEst(A = Squirrels_autumn[Squirrels_autumn$class == "4", ]$radtime, 
-           B = Squirrels_autumn[Squirrels_autumn$class == "5", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-```
-
-Mean activity time
-```{r}
-Squirrels_spring %>%
-  group_by(class) %>%
-  dplyr::summarise(mean_act_time = hms::hms(seconds_to_period(mean(Time))))
-
-Squirrels_autumn %>%
-  group_by(class) %>%
-  dplyr::summarise(mean_act_time = hms::hms(seconds_to_period(mean(Time))))
-```
-
-### Season and Lockdown and others
-```{r}
-Squirrels_spring_lock0 <- Squirrels_spring %>%
-  filter(lockdown == "0") %>%
-  droplevels()
-
-Squirrels_spring_lock1 <- Squirrels_spring %>%
-  filter(lockdown == "1") %>%
-  droplevels()
-
-
-Squirrels_autumn_lock0 <- Squirrels_autumn %>%
-  filter(lockdown == "0") %>%
-  droplevels()
-
-Squirrels_autumn_lock1 <- Squirrels_autumn %>%
-  filter(lockdown == "1") %>%
-  droplevels()
-```
-
-#### dogs binary
-```{r}
-activityOverlap(recordTable = Squirrels_spring_lock0, 
-                speciesA = "0", 
-                speciesB = "1", 
-                speciesCol = "dogs_binary", 
-                overlapEstimator = "Dhat4", 
-                ylim = c(0,0.2))
-
-activityOverlap(recordTable = Squirrels_spring_lock1, 
-                speciesA = "0", 
-                speciesB = "1", 
-                speciesCol = "dogs_binary", 
-                overlapEstimator = "Dhat4", 
-                ylim = c(0,0.2))
-
-activityOverlap(recordTable = Squirrels_autumn_lock0, 
-                speciesA = "0", 
-                speciesB = "1", 
-                speciesCol = "dogs_binary", 
-                overlapEstimator = "Dhat4", 
-                ylim = c(0,0.2))
-
-activityOverlap(recordTable = Squirrels_autumn_lock1, 
-                speciesA = "0", 
-                speciesB = "1", 
-                speciesCol = "dogs_binary", 
-                overlapEstimator = "Dhat4", 
-                ylim = c(0,0.2))
-```
-
-```{r}
-overlapEst(A = Squirrels_spring_lock0[Squirrels_spring_lock0$dogs_binary == "0", ]$radtime, 
-           B = Squirrels_spring_lock0[Squirrels_spring_lock0$dogs_binary == "1", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-
-overlapEst(A = Squirrels_spring_lock1[Squirrels_spring_lock1$dogs_binary == "0", ]$radtime, 
-           B = Squirrels_spring_lock1[Squirrels_spring_lock1$dogs_binary == "1", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-
-overlapEst(A = Squirrels_autumn_lock0[Squirrels_autumn_lock0$dogs_binary == "0", ]$radtime, 
-           B = Squirrels_autumn_lock0[Squirrels_autumn_lock0$dogs_binary == "1", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-
-overlapEst(A = Squirrels_autumn_lock1[Squirrels_autumn_lock1$dogs_binary == "0", ]$radtime, 
-           B = Squirrels_autumn_lock1[Squirrels_autumn_lock1$dogs_binary == "1", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-```
-##### dhat per camera
-```{r}
-overlapEst(A = Squirrels_spring_lock0[Squirrels_spring_lock0$dogs_binary == "0" & Squirrels_spring_lock0$Station == 453, ]$radtime, 
-           B = Squirrels_spring_lock0[Squirrels_spring_lock0$dogs_binary == "1" & Squirrels_spring_lock0$Station == 453, ]$radtime, 
-           kmax = 3, 
-           type = "Dhat4") 
-```
-
-per camera
-```{r}
-# save cameras as vector
-cams_Squirrels_spring_lock0 <- unique(Squirrels_spring_lock0$Station)
-# for loop for calculation per camera
-for (n in 1:length(unique(Squirrels_spring_lock0$Station))) {
-overlapEst(A = Squirrels_spring_lock0[Squirrels_spring_lock0$dogs_binary == "0" & Squirrels_spring_lock0$Station == n, ]$radtime, 
-           B = Squirrels_spring_lock0[Squirrels_spring_lock0$dogs_binary == "1" & Squirrels_spring_lock0$Station == n, ]$radtime, 
-           kmax = 3, 
-           type = "Dhat4") 
-}
-```
-
-
-## Lockdown
-```{r}
-CT_species_interest_hour_station %>%
   filter(Species == "Squirrel") %>%
-  group_by(lockdown, hour_day) %>%
-  dplyr::summarize(n_hour = sum(sum_hour)) %>%
-  complete(hour_day = c(0:23), fill = list(n_hour = 0)) %>%
-  ungroup() %>%
-  ggplot(mapping = aes(x = hour_day, y = n_hour, colour = lockdown, fill = lockdown)) + 
-  geom_line(size =2) + 
+  filter(Season == "autumn") #%>%
+  #select(Time, rad_time)
+```
+
+Calculate dhat4 + confidence intervals (CI)
+```{r}
+dhat4_season <- 
+  overlapEst(A = Squirrels_spring$rad_time, 
+                           B = Squirrels_autumn$rad_time, 
+                           kmax = 50, type = "Dhat4") %>% 
+  round(digits = 2)
+# this is needed to calculate the CI
+boot_squirrel_season <- overlap::bootstrap(A = Squirrels_spring$rad_time, 
+                                           B = Squirrels_autumn$rad_time, 
+                                           kmax = 50, nb = 1000, type = "Dhat4") # takes a few seconds
+
+dhat4_season
+#dhat4_season2
+#dhat4_season2 <- overlapEst(A = Squirrels_spring$rad_time, B = Squirrels_autumn$rad_time, kmax = 50, type = "Dhat4") %>% round(digits = 2)
+#dhat4_season2
+# mean(boot_squirrel_season) # should be close to dhat4
+
+# Calculate the confidence interval
+# bootCI(dhat4_season, boot_squirrel_season)
+dhat4_season_CI <- bootCI(dhat4_season, boot_squirrel_season)[2,] # norm0
+dhat4_season_CI
+```
+Save plots as variables to better customise the plot
+
+```{r fig.height=6}
+plot_spring_sq <- densityPlot(Squirrels_spring$rad_time, rug = TRUE)
+plot_autumn_sq <- densityPlot(Squirrels_autumn$rad_time, rug = TRUE)
+plot_season_sq <- left_join(x = plot_spring_sq, y = plot_autumn_sq, by = "x", suffix = c(".spr", ".aut"))
+```
+
+Nice plot
+```{r fig.height=6}
+ggplot(data = plot_season_sq, colour = Season) +
+  geom_area(mapping = aes(x = x, y = pmin(y.spr,y.aut)),
+            fill = col_season[1]
+  ) +
+  geom_line(mapping = aes(x = x, y = y.aut), colour = col_season[2], size = 2) +  
+  geom_line(mapping = aes(x = x, y = y.spr), colour = col_season[1], size = 2) +  
   scale_x_continuous(
-    limits = c(0,23), 
+    limits = c(0,23),
     breaks = seq(0, 21, by = 3),
-    expand = c(.001, .001)) + 
+    expand = c(.001, .001)) +
   scale_y_continuous(
-    limits = c(0, 300),
-    breaks = seq(0, 300, by = 50),
+    limits = c(0, 0.15),
+    breaks = seq(0, 0.15, by = 0.05),
     expand = c(.01, .001)) +
-  labs(x = "Hour of the day", 
-       y = "Number of pictures") + 
-  theme_pubr() + 
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(), 
-        #legend.position = "none", 
-        panel.background = element_rect(fill = "white"), 
-        plot.background = element_rect(fill = "white"),
-        panel.border = element_rect(colour = "black", fill=NA, size=2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2), 
-        axis.ticks.length = unit(0.25, "cm"), 
-        plot.margin = margin(6, 10, 4, 4)) + 
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_colour_manual(values = pal_2) 
+ # scale_colour_manual(values = c("red", "blue")) + 
+  labs(x = "Hour of the day",
+       y = "Density", 
+       title = "Activity patterns of squirrels during spring () and autumn ()") +
+  annotate("text", x = 20, y = 0.14, size = 6, label = "Dhat4 = 0.72")
 ```
 
-Overlap estimate
+### Lockdown
 ```{r}
-activityOverlap(recordTable = CT_species_interest[CT_species_interest$Species == "Squirrel", ], 
-                speciesA = "0", 
-                speciesB = "1", 
-                speciesCol = "lockdown", 
-                overlapEstimator = "Dhat4")
-```
-
-```{r}
-overlapEst(A = CT_species_interest[CT_species_interest$Species == "Squirrel" & CT_species_interest$lockdown == "0", ]$radtime, 
-           B = CT_species_interest[CT_species_interest$Species == "Squirrel" & CT_species_interest$lockdown == "1", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-```
-
-Mean activity time
-```{r}
-CT_species_interest %>%
+Squirrels_lock <- CT_species_interest %>%
   filter(Species == "Squirrel") %>%
-  group_by(lockdown) %>%
-  dplyr::summarise(mean_act_time = hms::hms(seconds_to_period(mean(Time))))
-```
+  filter(lockdown == "1") #%>%
+  #select(Time, rad_time)
 
-### Lockdown and other variables
-Build a dataset for the different seasons
-```{r}
-Squirrels_lock0 <- CT_species_interest %>%
-  filter(Species == "Squirrel" & lockdown == "0") %>%
-  droplevels()
-
-Squirrels_lock1 <- CT_species_interest %>%
-  filter(Species == "Squirrel" & lockdown == "1") %>%
-  droplevels()
-
-Squirrels_lock0_hour <- CT_species_interest_hour_station %>%
-  filter(Species == "Squirrel" & lockdown == "0") %>%
-  droplevels()
-
-Squirrels_lock1_hour <- CT_species_interest_hour_station %>%
-  filter(Species == "Squirrel" & lockdown == "1") %>%
-  droplevels()
-```
-
-#### Lockdown and dogs binary
-```{r}
-Squirrels_lock0_hour %>%
-  #filter(Species == "Squirrel") %>%
-  group_by(dogs_binary, hour_day) %>%
-  dplyr::summarize(n_hour = sum(sum_hour)) %>%
-  complete(hour_day = c(0:23), fill = list(n_hour = 0)) %>%
-  ungroup() %>%
-  ggplot(mapping = aes(x = hour_day, y = n_hour, colour = dogs_binary, fill = dogs_binary)) + 
-  geom_line(size =2) + 
-  scale_x_continuous(
-    limits = c(0,23), 
-    breaks = seq(0, 21, by = 3),
-    expand = c(.001, .001)) + 
-  scale_y_continuous(
-    limits = c(0, 250),
-    breaks = seq(0, 250, by = 50),
-    expand = c(.01, .001)) +
-  labs(x = "Hour of the day", 
-       y = "Number of pictures") + 
-  theme_pubr() + 
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(), 
-        #legend.position = "none", 
-        panel.background = element_rect(fill = "white"), 
-        plot.background = element_rect(fill = "white"),
-        panel.border = element_rect(colour = "black", fill=NA, size=2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2), 
-        axis.ticks.length = unit(0.25, "cm"), 
-        plot.margin = margin(6, 10, 4, 4)) + 
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_colour_manual(values = pal_2) 
-
-Squirrels_lock1_hour %>%
-  #filter(Species == "Squirrel") %>%
-  group_by(dogs_binary, hour_day) %>%
-  dplyr::summarize(n_hour = sum(sum_hour)) %>%
-  complete(hour_day = c(0:23), fill = list(n_hour = 0)) %>%
-  ungroup() %>%
-  ggplot(mapping = aes(x = hour_day, y = n_hour, colour = dogs_binary, fill = dogs_binary)) + 
-  geom_line(size =2) + 
-  scale_x_continuous(
-    limits = c(0,23), 
-    breaks = seq(0, 21, by = 3),
-    expand = c(.001, .001)) + 
-  scale_y_continuous(
-    limits = c(0, 250),
-    breaks = seq(0, 250, by = 50),
-    expand = c(.01, .001)) +
-  labs(x = "Hour of the day", 
-       y = "Number of pictures") + 
-  theme_pubr() + 
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(), 
-        #legend.position = "none", 
-        panel.background = element_rect(fill = "white"), 
-        plot.background = element_rect(fill = "white"),
-        panel.border = element_rect(colour = "black", fill=NA, size=2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2), 
-        axis.ticks.length = unit(0.25, "cm"), 
-        plot.margin = margin(6, 10, 4, 4)) + 
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_colour_manual(values = pal_2)
-```
-
-Overlap estimate
-```{r}
-activityOverlap(recordTable = Squirrels_lock0, 
-                speciesA = "0", 
-                speciesB = "1", 
-                speciesCol = "dogs_binary", 
-                overlapEstimator = "Dhat4", 
-                ylim = c(0,0.2))
-
-activityOverlap(recordTable = Squirrels_lock1, 
-                speciesA = "0", 
-                speciesB = "1", 
-                speciesCol = "dogs_binary", 
-                overlapEstimator = "Dhat4", 
-                ylim = c(0,0.2))
-```
-
-
-```{r}
-overlapEst(A = Squirrels_lock0[Squirrels_lock0$dogs_binary == "0", ]$radtime, 
-           B = Squirrels_lock0[Squirrels_lock0$dogs_binary == "1", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-
-overlapEst(A = Squirrels_lock1[Squirrels_lock1$dogs_binary == "0", ]$radtime, 
-           B = Squirrels_lock1[Squirrels_lock1$dogs_binary == "1", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-```
-
-Mean activity time
-```{r}
-Squirrels_lock0 %>%
-  group_by(dogs_binary) %>%
-  dplyr::summarise(mean_act_time = hms::hms(seconds_to_period(mean(Time))))
-
-Squirrels_lock1 %>%
-  group_by(dogs_binary) %>%
-  dplyr::summarise(mean_act_time = hms::hms(seconds_to_period(mean(Time))))
-```
-
-
-
-#### Lockdown and cats binary
-```{r}
-activityOverlap(recordTable = Squirrels_lock0, 
-                speciesA = "0", 
-                speciesB = "1", 
-                speciesCol = "cats_binary", 
-                overlapEstimator = "Dhat4", 
-                ylim = c(0,0.25))
-
-activityOverlap(recordTable = Squirrels_lock1, 
-                speciesA = "0", 
-                speciesB = "1", 
-                speciesCol = "cats_binary", 
-                overlapEstimator = "Dhat4", 
-                ylim = c(0,0.25))
-```
-
-
-```{r}
-overlapEst(A = Squirrels_lock0[Squirrels_lock0$cats_binary == "0", ]$radtime, 
-           B = Squirrels_lock0[Squirrels_lock0$cats_binary == "1", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-
-overlapEst(A = Squirrels_lock1[Squirrels_lock1$cats_binary == "0", ]$radtime, 
-           B = Squirrels_lock1[Squirrels_lock1$cats_binary == "1", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-```
-
-Mean activity time
-```{r}
-Squirrels_lock0 %>%
-  group_by(cats_binary) %>%
-  dplyr::summarise(mean_act_time = hms::hms(seconds_to_period(mean(Time))))
-
-Squirrels_lock1 %>%
-  group_by(cats_binary) %>%
-  dplyr::summarise(mean_act_time = hms::hms(seconds_to_period(mean(Time))))
-```
-
-#### Lockdown and cats
-Overlap estimate
-```{r}
-activityOverlap(recordTable = CT_species_interest[CT_species_interest$lockdown == "0", ], 
-                        speciesA = "Squirrel", 
-                        speciesB = "Cat", 
-                        speciesCol = "Species", 
-                        overlapEstimator = "Dhat4")
-
-activityOverlap(recordTable = CT_species_interest[CT_species_interest$lockdown == "1", ], 
-                        speciesA = "Squirrel", 
-                        speciesB = "Cat", 
-                        speciesCol = "Species", 
-                        overlapEstimator = "Dhat4")
-```
-
-```{r}
-overlapEst(A = CT_species_interest[CT_species_interest$Species == "Squirrel" & CT_species_interest$lockdown == "0", ]$radtime, 
-           B = CT_species_interest[CT_species_interest$Species == "Cat" & CT_species_interest$lockdown == "0", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-
-overlapEst(A = CT_species_interest[CT_species_interest$Species == "Squirrel" & CT_species_interest$lockdown == "1", ]$radtime, 
-           B = CT_species_interest[CT_species_interest$Species == "Cat" & CT_species_interest$lockdown == "1", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-```
-
-Mean activity time
-```{r}
-CT_species_interest %>%
-  filter(Species == "Squirrel" | Species == "Cat") %>%
-  group_by(Species, lockdown) %>%
-  dplyr::summarise(mean_act_time = hms::hms(seconds_to_period(mean(Time))))
-```
-
-#### Lockdown and martens
-Overlap estimate
-```{r}
-activityOverlap(recordTable = CT_species_interest[CT_species_interest$lockdown == "0", ], 
-                        speciesA = "Squirrel", 
-                        speciesB = "Marten", 
-                        speciesCol = "Species", 
-                        overlapEstimator = "Dhat4")
-
-activityOverlap(recordTable = CT_species_interest[CT_species_interest$lockdown == "1", ], 
-                        speciesA = "Squirrel", 
-                        speciesB = "Marten", 
-                        speciesCol = "Species", 
-                        overlapEstimator = "Dhat4")
-```
-
-```{r}
-overlapEst(A = CT_species_interest[CT_species_interest$Species == "Squirrel" & CT_species_interest$lockdown == "0", ]$radtime, 
-           B = CT_species_interest[CT_species_interest$Species == "Marten" & CT_species_interest$lockdown == "0", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-
-overlapEst(A = CT_species_interest[CT_species_interest$Species == "Squirrel" & CT_species_interest$lockdown == "1", ]$radtime, 
-           B = CT_species_interest[CT_species_interest$Species == "Marten" & CT_species_interest$lockdown == "1", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-```
-
-Mean activity time
-```{r}
-CT_species_interest %>%
-  filter(Species == "Squirrel" | Species == "Marten") %>%
-  group_by(Species, lockdown) %>%
-  dplyr::summarise(mean_act_time = hms::hms(seconds_to_period(mean(Time))))
-```
-
-#### Lockdown and imperviousness
-```{r}
-table(Squirrels_lock0$class)
-table(Squirrels_lock1$class)
-```
-
-
-```{r}
-activityOverlap(recordTable = Squirrels_lock0, 
-                speciesA = "1", 
-                speciesB = "2", 
-                speciesCol = "class", 
-                overlapEstimator = "Dhat4", 
-                ylim = c(0,0.25))
-
-activityOverlap(recordTable = Squirrels_lock1, 
-                speciesA = "1", 
-                speciesB = "2", 
-                speciesCol = "class", 
-                overlapEstimator = "Dhat4", 
-                ylim = c(0,0.25))
-
-activityOverlap(recordTable = Squirrels_lock0, 
-                speciesA = "2", 
-                speciesB = "3", 
-                speciesCol = "class", 
-                overlapEstimator = "Dhat4", 
-                ylim = c(0,0.25))
-
-activityOverlap(recordTable = Squirrels_lock1, 
-                speciesA = "2", 
-                speciesB = "3", 
-                speciesCol = "class", 
-                overlapEstimator = "Dhat4", 
-                ylim = c(0,0.25))
-```
-
-
-
-```{r}
-overlapEst(A = Squirrels_lock0[Squirrels_lock0$class == "1", ]$radtime, 
-           B = Squirrels_lock0[Squirrels_lock0$class == "2", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-
-overlapEst(A = Squirrels_lock1[Squirrels_lock1$class == "1", ]$radtime, 
-           B = Squirrels_lock1[Squirrels_lock1$class == "2", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-```
-
-
-```{r}
-overlapEst(A = Squirrels_lock0[Squirrels_lock0$class == "2", ]$radtime, 
-           B = Squirrels_lock0[Squirrels_lock0$class == "3", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-
-overlapEst(A = Squirrels_lock1[Squirrels_lock1$class == "2", ]$radtime, 
-           B = Squirrels_lock1[Squirrels_lock1$class == "3", ]$radtime, 
-           kmax = 3, 
-           type = "all")
-```
-
-Mean activity time
-```{r}
-Squirrels_lock0 %>%
-  group_by(class) %>%
-  dplyr::summarise(mean_act_time = hms::hms(seconds_to_period(mean(Time))))
-
-Squirrels_lock1 %>%
-  group_by(class) %>%
-  dplyr::summarise(mean_act_time = hms::hms(seconds_to_period(mean(Time))))
-```
-
-
-## Garden type
-```{r}
-CT_species_interest_hour_station %>%
+Squirrels_nolock <- CT_species_interest %>%
   filter(Species == "Squirrel") %>%
-  group_by(garden_type, hour_day) %>%
-  dplyr::summarize(n_hour = sum(sum_hour)) %>%
-  complete(hour_day = c(0:23), fill = list(n_hour = 0)) %>%
-  ungroup() %>%
-  ggplot(mapping = aes(x = hour_day, y = n_hour, colour = garden_type, fill = garden_type)) + 
-  geom_line(size =2) + 
+  filter(lockdown == "0") #%>%
+  #select(Time, rad_time)
+
+dhat4_lock <- overlapEst(A = Squirrels_lock$rad_time, 
+                         B = Squirrels_nolock$rad_time, 
+                         kmax = 50, type = "Dhat4")
+
+boot_squirrel_lock <- overlap::bootstrap(A = Squirrels_lock$rad_time, 
+                                         B = Squirrels_nolock$rad_time, 
+                                         kmax = 50, nb = 1000, type = "Dhat4") 
+
+dhat4_lock
+
+dhat4_lock_CI <- bootCI(dhat4_lock, boot_squirrel_lock)[2,] # norm0
+dhat4_lock_CI
+```
+
+```{r fig.height=6}
+plot_lock <- densityPlot(Squirrels_lock$rad_time, rug = TRUE)
+plot_nolock <- densityPlot(Squirrels_nolock$rad_time, rug = TRUE)
+plot_lockdown <- left_join(x = plot_lock, y = plot_nolock, by = "x", suffix = c(".lock", ".nolock"))
+```
+
+
+```{r fig.height=6}
+ggplot(data = plot_lockdown) +
+  geom_area(mapping = aes(x = x, y = pmin(y.lock,y.nolock)),
+            fill = col_lock[1]) +
+  geom_line(mapping = aes(x = x, y = y.nolock), colour = col_lock[1], size = 2) +
+  geom_line(mapping = aes(x = x, y = y.lock), colour = col_lock[2], size = 2) + 
   scale_x_continuous(
-    limits = c(0,23), 
+    limits = c(0,23),
     breaks = seq(0, 21, by = 3),
-    expand = c(.001, .001)) + 
+    expand = c(.001, .001)) +
   scale_y_continuous(
-    limits = c(0, 300),
-    breaks = seq(0, 300, by = 50),
+    limits = c(0, 0.16),
+    breaks = seq(0, 0.15, by = 0.05),
     expand = c(.01, .001)) +
-  labs(x = "Hour of the day", 
-       y = "Number of pictures") + 
-  theme_pubr() + 
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(), 
-        #legend.position = "none", 
-        panel.background = element_rect(fill = "white"), 
-        plot.background = element_rect(fill = "white"),
-        panel.border = element_rect(colour = "black", fill=NA, size=2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2), 
-        axis.ticks.length = unit(0.25, "cm"), 
-        plot.margin = margin(6, 10, 4, 4)) + 
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_colour_manual(values = pal_2) 
+  labs(x = "Hour of the day",
+       y = "Density", 
+       title = "Activity patterns of squirrels during lockdown () or without lockdown ()") +
+  annotate("text", x = 20, y = 0.14, size = 6, label = "Dhat4 = ")
 ```
 
-Overlap estimate
+### Lockdown & Season 
 ```{r}
-activityOverlap(recordTable = CT_species_interest[CT_species_interest$Species == "Squirrel", ], 
-                speciesA = "garden", 
-                speciesB = "allotment", 
-                speciesCol = "garden_type", 
-                overlapEstimator = "Dhat4")
+# Filtering
+Squirrels_spr_lock <- Squirrels_lock %>%
+  filter(Season == "spring") 
+
+Squirrels_aut_lock <- Squirrels_lock %>%
+  filter(Season == "autumn")
+
+Squirrels_spr_nolock <- Squirrels_nolock %>%
+  filter(Season == "spring") 
+
+Squirrels_aut_nolock <- Squirrels_nolock %>%
+  filter(Season == "autumn")
+
+# dhat4 per season with lockdown
+dhat4_season_lock <- overlapEst(A = Squirrels_spr_lock$rad_time, 
+                                B = Squirrels_aut_lock$rad_time, 
+                                kmax = 50, type = "Dhat4")
+
+boot_squirrel_season_lock <- overlap::bootstrap(A = Squirrels_spr_lock$rad_time, 
+                                                B = Squirrels_aut_lock$rad_time, 
+                                                kmax = 50, nb = 1000, type = "Dhat4") 
+
+dhat4_season_lock_CI <- bootCI(dhat4_season_lock, boot_squirrel_season_lock)[2,] # norm0
+dhat4_season_lock
+dhat4_season_lock_CI
+
+# dhat4 per season without lockdown
+dhat4_season_nolock <- overlapEst(A = Squirrels_spr_nolock$rad_time, 
+                                B = Squirrels_aut_nolock$rad_time, 
+                                kmax = 50, type = "Dhat4")
+
+boot_squirrel_season_nolock <- overlap::bootstrap(A = Squirrels_spr_nolock$rad_time, 
+                                                B = Squirrels_aut_nolock$rad_time, 
+                                                kmax = 50, nb = 1000, type = "Dhat4") 
+
+dhat4_season_nolock_CI <- bootCI(dhat4_season_nolock, boot_squirrel_season_nolock)[2,] # norm0
+dhat4_season_nolock
+dhat4_season_nolock_CI
+
+# dhat4 spring with vs without lockdown
+dhat4_spr_lockdown <- overlapEst(A = Squirrels_spr_lock$rad_time, 
+                                B = Squirrels_spr_nolock$rad_time, 
+                                kmax = 50, type = "Dhat4")
+
+boot_squirrel_spr_lockdown <- overlap::bootstrap(A = Squirrels_spr_lock$rad_time, 
+                                                B = Squirrels_spr_nolock$rad_time, 
+                                                kmax = 50, nb = 1000, type = "Dhat4") 
+
+dhat4_spr_lockdown_CI <- bootCI(dhat4_season_lock, boot_squirrel_season_lock)[2,] # norm0
+dhat4_spr_lockdown
+dhat4_spr_lockdown_CI
+
+# dhat4 autumn with vs without lockdown
+dhat4_aut_lockdown <- overlapEst(A = Squirrels_aut_lock$rad_time, 
+                                B = Squirrels_aut_nolock$rad_time, 
+                                kmax = 50, type = "Dhat4")
+
+boot_squirrel_aut_lockdown <- overlap::bootstrap(A = Squirrels_aut_lock$rad_time, 
+                                                B = Squirrels_aut_nolock$rad_time, 
+                                                kmax = 50, nb = 1000, type = "Dhat4") 
+
+dhat4_aut_lockdown_CI <- bootCI(dhat4_season_nolock, boot_squirrel_season_nolock)[2,] # norm0
+dhat4_aut_lockdown
+dhat4_aut_lockdown_CI
+```
+
+```{r fig.height=6}
+plot_spr_lock <- densityPlot(Squirrels_spr_lock$rad_time, rug = TRUE)
+plot_aut_lock <- densityPlot(Squirrels_aut_lock$rad_time, rug = TRUE)
+#plot_season_lock <- left_join(x = plot_spr_lock, y = plot_aut_lock, by = "x")
+
+plot_spr_nolock <- densityPlot(Squirrels_spr_nolock$rad_time, rug = TRUE)
+plot_aut_nolock <- densityPlot(Squirrels_aut_nolock$rad_time, rug = TRUE)
+#plot_season_nolock <- left_join(x = plot_spr_nolock, y = plot_aut_nolock, by = "x")
+
+
+plot_spr_lockdown <- left_join(x = plot_spr_nolock, y = plot_spr_lock, by = "x", suffix = c(".nolock", ".lock"))
+plot_aut_lockdown <- left_join(x = plot_aut_nolock, y = plot_aut_lock, by = "x", suffix = c(".nolock", ".lock"))
+```
+
+
+```{r fig.height=6}
+ggplot(data = plot_spr_lockdown) +
+  geom_area(mapping = aes(x = x, y = pmin(y.nolock,y.lock)),
+            fill = col_lock[1]) +
+    geom_line(mapping = aes(x = x, y = y.nolock), colour = col_lock[1], size = 2) + 
+  geom_line(mapping = aes(x = x, y = y.lock), colour = col_lock[2], size = 2) + 
+  scale_x_continuous(
+    limits = c(0,23),
+    breaks = seq(0, 21, by = 3),
+    expand = c(.001, .001)) +
+  scale_y_continuous(
+    limits = c(0, 0.2),
+    breaks = seq(0, 0.2, by = 0.1),
+    expand = c(.001, .001)) +
+  labs(x = "Hour of the day",
+       y = "Activity overlap"#, 
+      #title = "Activity patterns of squirrels during spring with lockdown () and without lockdown ()"
+       ) #+
+ #annotate("text", x = 20, y = 0.14, size = 6, label = "Dhat4 = 0.65")
+
+# ggsave(filename = here::here("plots",
+#                              "03_daily_activity",
+#                              "overlap",
+#                              "squirrels_spr_lockdown.png"),
+#         width = 85,
+#         height = 85,
+#         units = "mm",
+#        dpi = 300)
+```
+
+
+```{r fig.height=6}
+ggplot(data = plot_aut_lockdown) +
+  geom_area(mapping = aes(x = x, y = pmin(y.nolock,y.lock)),
+            fill = col_lock[1]) +
+    geom_line(mapping = aes(x = x, y = y.nolock), colour = col_lock[1], size = 2) + 
+  geom_line(mapping = aes(x = x, y = y.lock), colour = col_lock[2], size = 2) + 
+  scale_x_continuous(
+    limits = c(0,23),
+    breaks = seq(0, 21, by = 3),
+    expand = c(.001, .001)) +
+  scale_y_continuous(
+    limits = c(0, 0.2),
+    breaks = seq(0, 0.2, by = 0.1),
+    expand = c(.001, .001)) +
+  labs(x = "Hour of the day",
+       y = "Activity overlap"#, 
+       #title = "Activity patterns of squirrels during autumn with lockdown () and without lockdown ()"
+       ) #+
+  #annotate("text", x = 20, y = 0.14, size = 6, label = "Dhat4 = 0.78")
+
+# ggsave(filename = here::here("plots",
+#                              "03_daily_activity",
+#                              "overlap",
+#                              "squirrels_aut_lockdown.png"),
+#         width = 85,
+#         height = 85,
+#         units = "mm",
+#        dpi = 300)
+```
+
+#### Dogs
+```{r}
+# Filtering
+Squirrels_dogs_spr_lock <- Squirrels_spr_lock %>%
+  filter(dogs_binary == "1") 
+
+Squirrels_nodogs_spr_lock <- Squirrels_spr_lock %>%
+  filter(dogs_binary == "0") 
+
+Squirrels_dogs_aut_lock  <- Squirrels_aut_lock %>%
+  filter(dogs_binary == "1")
+
+Squirrels_nodogs_aut_lock  <- Squirrels_aut_lock %>%
+  filter(dogs_binary == "0")
+
+Squirrels_dogs_spr_nolock  <- Squirrels_spr_nolock %>%
+  filter(dogs_binary == "1") 
+
+Squirrels_nodogs_spr_nolock  <- Squirrels_spr_nolock %>%
+  filter(dogs_binary == "0") 
+
+Squirrels_dogs_aut_nolock  <- Squirrels_aut_nolock %>%
+  filter(dogs_binary == "1")
+
+Squirrels_nodogs_aut_nolock  <- Squirrels_aut_nolock %>%
+  filter(dogs_binary == "0")
 ```
 
 ```{r}
-overlapEst(A = CT_species_interest[CT_species_interest$Species == "Squirrel" & CT_species_interest$garden_type == "garden", ]$radtime, 
-           B = CT_species_interest[CT_species_interest$Species == "Squirrel" & CT_species_interest$garden_type == "allotment", ]$radtime, 
-           kmax = 3, 
-           type = "all")
+# dhat4 lockdown spring with vs without dogs
+dhat4_spr_lock_dogs <- overlapEst(A = Squirrels_dogs_spr_lock$rad_time, 
+                                B = Squirrels_nodogs_spr_lock$rad_time, 
+                                kmax = 50, type = "Dhat4")
+
+boot_spr_lock_dogs <- overlap::bootstrap(A = Squirrels_dogs_spr_lock$rad_time, 
+                                                B = Squirrels_nodogs_spr_lock$rad_time, 
+                                                kmax = 50, nb = 1000, type = "Dhat4") 
+
+dhat4_spr_lock_dogs_CI <- bootCI(dhat4_spr_lock_dogs, boot_spr_lock_dogs)[2,] # norm0
+dhat4_spr_lock_dogs
+dhat4_spr_lock_dogs_CI
+
+# dhat4 lockdown autumn with vs without dogs
+dhat4_aut_lock_dogs <- overlapEst(A = Squirrels_dogs_aut_lock$rad_time, 
+                                B = Squirrels_nodogs_aut_lock$rad_time, 
+                                kmax = 50, type = "Dhat4")
+
+boot_aut_lock_dogs <- overlap::bootstrap(A = Squirrels_dogs_aut_lock$rad_time, 
+                                                B = Squirrels_nodogs_aut_lock$rad_time, 
+                                                kmax = 50, nb = 1000, type = "Dhat4") 
+
+dhat4_aut_lock_dogs_CI <- bootCI(dhat4_aut_lock_dogs, boot_aut_lock_dogs)[2,] # norm0
+dhat4_aut_lock_dogs
+dhat4_aut_lock_dogs_CI
+
+# dhat4 no lockdown spring with vs without dogs
+dhat4_spr_nolock_dogs <- overlapEst(A = Squirrels_dogs_spr_nolock$rad_time, 
+                                B = Squirrels_nodogs_spr_nolock$rad_time, 
+                                kmax = 50, type = "Dhat4")
+
+boot_spr_nolock_dogs <- overlap::bootstrap(A = Squirrels_dogs_spr_nolock$rad_time, 
+                                                B = Squirrels_nodogs_spr_nolock$rad_time, 
+                                                kmax = 50, nb = 1000, type = "Dhat4") 
+
+dhat4_spr_nolock_dogs_CI <- bootCI(dhat4_spr_nolock_dogs, boot_spr_nolock_dogs)[2,] # norm0
+dhat4_spr_nolock_dogs
+dhat4_spr_nolock_dogs_CI
+
+# dhat4 no lockdown autumn with vs without dogs
+dhat4_aut_nolock_dogs <- overlapEst(A = Squirrels_dogs_aut_nolock$rad_time, 
+                                B = Squirrels_nodogs_aut_nolock$rad_time, 
+                                kmax = 50, type = "Dhat4")
+
+boot_aut_nolock_dogs <- overlap::bootstrap(A = Squirrels_dogs_aut_nolock$rad_time, 
+                                                B = Squirrels_nodogs_aut_nolock$rad_time, 
+                                                kmax = 50, nb = 1000, type = "Dhat4") 
+
+dhat4_aut_nolock_dogs_CI <- bootCI(dhat4_aut_nolock_dogs, boot_aut_nolock_dogs)[2,] # norm0
+dhat4_aut_nolock_dogs
+dhat4_aut_nolock_dogs_CI
 ```
 
-Mean activity time
+
+```{r fig.height=6, include=FALSE}
+# plot lockdown spring with vs without dogs
+plot_spr_lock_withdogs <- densityPlot(Squirrels_dogs_spr_lock$rad_time, rug = TRUE)
+plot_spr_lock_nodogs <- densityPlot(Squirrels_nodogs_spr_lock$rad_time, rug = TRUE)
+plot_spr_lock_dogs <- left_join(x = plot_spr_lock_withdogs, y = plot_spr_lock_nodogs, by = "x")
+
+# plot lockdown autumn with vs without dogs
+plot_aut_lock_withdogs <- densityPlot(Squirrels_dogs_aut_lock$rad_time, rug = TRUE)
+plot_aut_lock_nodogs <- densityPlot(Squirrels_nodogs_aut_lock$rad_time, rug = TRUE)
+plot_aut_lock_dogs <- left_join(x = plot_aut_lock_withdogs, y = plot_aut_lock_nodogs, by = "x")
+
+# plot no nolockdown spring with vs without dogs
+plot_spr_nolock_withdogs <- densityPlot(Squirrels_dogs_spr_nolock$rad_time, rug = TRUE)
+plot_spr_nolock_nodogs <- densityPlot(Squirrels_nodogs_spr_nolock$rad_time, rug = TRUE)
+plot_spr_nolock_dogs <- left_join(x = plot_spr_nolock_withdogs, y = plot_spr_nolock_nodogs, by = "x")
+
+# plot no nolockdown autumn with vs without dogs
+plot_aut_nolock_withdogs <- densityPlot(Squirrels_dogs_aut_nolock$rad_time, rug = TRUE)
+plot_aut_nolock_nodogs <- densityPlot(Squirrels_nodogs_aut_nolock$rad_time, rug = TRUE)
+plot_aut_nolock_dogs <- left_join(x = plot_aut_nolock_withdogs, y = plot_aut_nolock_nodogs, by = "x")
+```
+
+
+```{r fig.height=6}
+ggplot(data = plot_spr_lock_dogs) +
+  geom_area(mapping = aes(x = x, y = pmin(y.x,y.y)),
+            fill = "#E4CAA5") +
+    geom_line(mapping = aes(x = x, y = y.y), colour = "#E4CAA5", size = 2) +
+  geom_line(mapping = aes(x = x, y = y.x), colour = "#4D6476", size = 2) + 
+  scale_x_continuous(
+    limits = c(0,23),
+    breaks = seq(0, 21, by = 3),
+    expand = c(.001, .001)) +
+  scale_y_continuous(
+    limits = c(0, 0.16),
+    breaks = seq(0, 0.15, by = 0.05),
+    expand = c(.01, .001)) +
+  labs(x = "Hour of the day",
+       y = "Density", 
+       title = "Activity patterns of squirrels with lockdown during spring with dogs () and without dogs ()") +
+  annotate("text", x = 20, y = 0.14, size = 6, label = "Dhat4 = ")
+
+ggplot(data = plot_aut_lock_dogs) +
+  geom_area(mapping = aes(x = x, y = pmin(y.x,y.y)),
+            fill = "#E4CAA5") +
+    geom_line(mapping = aes(x = x, y = y.y), colour = "#E4CAA5", size = 2) +
+  geom_line(mapping = aes(x = x, y = y.x), colour = "#4D6476", size = 2) + 
+  scale_x_continuous(
+    limits = c(0,23),
+    breaks = seq(0, 21, by = 3),
+    expand = c(.001, .001)) +
+  scale_y_continuous(
+    limits = c(0, 0.16),
+    breaks = seq(0, 0.15, by = 0.05),
+    expand = c(.01, .001)) +
+  labs(x = "Hour of the day",
+       y = "Density", 
+       title = "Activity patterns of squirrels with lockdown during autumn with dogs () and without dogs ()") +
+  annotate("text", x = 20, y = 0.14, size = 6, label = "Dhat4 = ")
+
+ggplot(data = plot_spr_nolock_dogs) +
+  geom_area(mapping = aes(x = x, y = pmin(y.x,y.y)),
+            fill = "#E4CAA5") +
+    geom_line(mapping = aes(x = x, y = y.y), colour = "#E4CAA5", size = 2) +
+  geom_line(mapping = aes(x = x, y = y.x), colour = "#4D6476", size = 2) + 
+  scale_x_continuous(
+    limits = c(0,23),
+    breaks = seq(0, 21, by = 3),
+    expand = c(.001, .001)) +
+  scale_y_continuous(
+    limits = c(0, 0.16),
+    breaks = seq(0, 0.15, by = 0.05),
+    expand = c(.01, .001)) +
+  labs(x = "Hour of the day",
+       y = "Density", 
+       title = "Activity patterns of squirrels without lockdown during spring with dogs () and without dogs ()") +
+  annotate("text", x = 20, y = 0.14, size = 6, label = "Dhat4 = ")
+
+ggplot(data = plot_aut_nolock_dogs) +
+  geom_area(mapping = aes(x = x, y = pmin(y.x,y.y)),
+            fill = "#E4CAA5") +
+    geom_line(mapping = aes(x = x, y = y.y), colour = "#E4CAA5", size = 2) +
+  geom_line(mapping = aes(x = x, y = y.x), colour = "#4D6476", size = 2) + 
+  scale_x_continuous(
+    limits = c(0,23),
+    breaks = seq(0, 21, by = 3),
+    expand = c(.001, .001)) +
+  scale_y_continuous(
+    limits = c(0, 0.16),
+    breaks = seq(0, 0.15, by = 0.05),
+    expand = c(.01, .001)) +
+  labs(x = "Hour of the day",
+       y = "Density", 
+       title = "Activity patterns of squirrels without lockdown during spring with dogs () and without dogs ()") +
+  annotate("text", x = 20, y = 0.14, size = 6, label = "Dhat4 = ")
+```
+
+#### Cats
 ```{r}
-CT_species_interest %>%
-  filter(Species == "Squirrel") %>%
-  group_by(garden_type) %>%
-  dplyr::summarise(mean_act_time = hms::hms(seconds_to_period(mean(Time))))
+# Filtering
+Squirrels_cats_spr_lock <- Squirrels_spr_lock %>%
+  filter(cats_cam_binary == "1") 
+
+Squirrels_nocats_spr_lock <- Squirrels_spr_lock %>%
+  filter(cats_cam_binary == "0") 
+
+Squirrels_cats_aut_lock  <- Squirrels_aut_lock %>%
+  filter(cats_cam_binary == "1")
+
+Squirrels_nocats_aut_lock  <- Squirrels_aut_lock %>%
+  filter(cats_cam_binary == "0")
+
+Squirrels_cats_spr_nolock  <- Squirrels_spr_nolock %>%
+  filter(cats_cam_binary == "1") 
+
+Squirrels_nocats_spr_nolock  <- Squirrels_spr_nolock %>%
+  filter(cats_cam_binary == "0") 
+
+Squirrels_cats_aut_nolock  <- Squirrels_aut_nolock %>%
+  filter(cats_cam_binary == "1")
+
+Squirrels_nocats_aut_nolock  <- Squirrels_aut_nolock %>%
+  filter(cats_cam_binary == "0")
 ```
 
-
-## Dogs
 ```{r}
-activityOverlap(recordTable = CT_species_interest[CT_species_interest$Species == "Squirrel", ], 
-                speciesA = "0", 
-                speciesB = "1", 
-                speciesCol = "dogs_binary", 
-                overlapEstimator = "Dhat4")
+# dhat4 lockdown spring with vs without cats
+dhat4_spr_lock_cats <- overlapEst(A = Squirrels_cats_spr_lock$rad_time, 
+                                  B = Squirrels_nocats_spr_lock$rad_time, 
+                                  kmax = 50, type = "Dhat4")
+
+boot_spr_lock_cats <- overlap::bootstrap(A = Squirrels_cats_spr_lock$rad_time, 
+                                         B = Squirrels_nocats_spr_lock$rad_time, 
+                                         kmax = 50, nb = 1000, type = "Dhat4") 
+
+dhat4_spr_lock_cats_CI <- bootCI(dhat4_spr_lock_cats, boot_spr_lock_cats)[2,] # norm0
+dhat4_spr_lock_cats
+dhat4_spr_lock_cats_CI
+
+# dhat4 lockdown autumn with vs without cats
+dhat4_aut_lock_cats <- overlapEst(A = Squirrels_cats_aut_lock$rad_time, 
+                                  B = Squirrels_nocats_aut_lock$rad_time, 
+                                  kmax = 50, type = "Dhat4")
+
+boot_aut_lock_cats <- overlap::bootstrap(A = Squirrels_cats_aut_lock$rad_time, 
+                                         B = Squirrels_nocats_aut_lock$rad_time, 
+                                         kmax = 50, nb = 1000, type = "Dhat4") 
+
+dhat4_aut_lock_cats_CI <- bootCI(dhat4_aut_lock_cats, boot_aut_lock_cats)[2,] # norm0
+dhat4_aut_lock_cats
+dhat4_aut_lock_cats_CI
+
+# dhat4 no lockdown spring with vs without cats
+dhat4_spr_nolock_cats <- overlapEst(A = Squirrels_cats_spr_nolock$rad_time, 
+                                    B = Squirrels_nocats_spr_nolock$rad_time, 
+                                    kmax = 50, type = "Dhat4")
+
+boot_spr_nolock_cats <- overlap::bootstrap(A = Squirrels_cats_spr_nolock$rad_time, 
+                                           B = Squirrels_nocats_spr_nolock$rad_time, 
+                                           kmax = 50, nb = 1000, type = "Dhat4") 
+
+dhat4_spr_nolock_cats_CI <- bootCI(dhat4_spr_nolock_cats, boot_spr_nolock_cats)[2,] # norm0
+dhat4_spr_nolock_cats
+dhat4_spr_nolock_cats_CI
+
+# dhat4 no lockdown autumn with vs without cats
+dhat4_aut_nolock_cats <- overlapEst(A = Squirrels_cats_aut_nolock$rad_time, 
+                                    B = Squirrels_nocats_aut_nolock$rad_time, 
+                                    kmax = 50, type = "Dhat4")
+
+boot_aut_nolock_cats <- overlap::bootstrap(A = Squirrels_cats_aut_nolock$rad_time, 
+                                           B = Squirrels_nocats_aut_nolock$rad_time, 
+                                           kmax = 50, nb = 1000, type = "Dhat4") 
+
+dhat4_aut_nolock_cats_CI <- bootCI(dhat4_aut_nolock_cats, boot_aut_nolock_cats)[2,] # norm0
+dhat4_aut_nolock_cats
+dhat4_aut_nolock_cats_CI
 ```
 
-## Cats
+```{r fig.height=6, include=FALSE}
+# plot lockdown spring with vs without cats
+plot_spr_lock_withcats <- densityPlot(Squirrels_cats_spr_lock$rad_time, rug = TRUE)
+plot_spr_lock_nocats <- densityPlot(Squirrels_nocats_spr_lock$rad_time, rug = TRUE)
+plot_spr_lock_cats <- left_join(x = plot_spr_lock_withcats, y = plot_spr_lock_nocats, by = "x")
+
+# plot lockdown autumn with vs without cats
+plot_aut_lock_withcats <- densityPlot(Squirrels_cats_aut_lock$rad_time, rug = TRUE)
+plot_aut_lock_nocats <- densityPlot(Squirrels_nocats_aut_lock$rad_time, rug = TRUE)
+plot_aut_lock_cats <- left_join(x = plot_aut_lock_withcats, y = plot_aut_lock_nocats, by = "x")
+
+# plot no nolockdown spring with vs without cats
+plot_spr_nolock_withcats <- densityPlot(Squirrels_cats_spr_nolock$rad_time, rug = TRUE)
+plot_spr_nolock_nocats <- densityPlot(Squirrels_nocats_spr_nolock$rad_time, rug = TRUE)
+plot_spr_nolock_cats <- left_join(x = plot_spr_nolock_withcats, y = plot_spr_nolock_nocats, by = "x")
+
+# plot no nolockdown autumn with vs without cats
+plot_aut_nolock_withcats <- densityPlot(Squirrels_cats_aut_nolock$rad_time, rug = TRUE)
+plot_aut_nolock_nocats <- densityPlot(Squirrels_nocats_aut_nolock$rad_time, rug = TRUE)
+plot_aut_nolock_cats <- left_join(x = plot_aut_nolock_withcats, y = plot_aut_nolock_nocats, by = "x")
+```
+
+
+```{r fig.height=6}
+ggplot(data = plot_spr_lock_cats) +
+  geom_area(mapping = aes(x = x, y = pmin(y.x,y.y)),
+            fill = "#E4CAA5") +
+    geom_line(mapping = aes(x = x, y = y.y), colour = "#E4CAA5", size = 2) +
+  geom_line(mapping = aes(x = x, y = y.x), colour = "#4D6476", size = 2) + 
+  scale_x_continuous(
+    limits = c(0,23),
+    breaks = seq(0, 21, by = 3),
+    expand = c(.001, .001)) +
+  scale_y_continuous(
+    limits = c(0, 0.16),
+    breaks = seq(0, 0.15, by = 0.05),
+    expand = c(.01, .001)) +
+  labs(x = "Hour of the day",
+       y = "Density", 
+       title = "Activity patterns of squirrels with lockdown during spring with cats () and without cats ()") +
+  annotate("text", x = 20, y = 0.14, size = 6, label = "Dhat4 = ")
+
+ggplot(data = plot_aut_lock_cats) +
+  geom_area(mapping = aes(x = x, y = pmin(y.x,y.y)),
+            fill = "#E4CAA5") +
+    geom_line(mapping = aes(x = x, y = y.y), colour = "#E4CAA5", size = 2) +
+  geom_line(mapping = aes(x = x, y = y.x), colour = "#4D6476", size = 2) + 
+  scale_x_continuous(
+    limits = c(0,23),
+    breaks = seq(0, 21, by = 3),
+    expand = c(.001, .001)) +
+  scale_y_continuous(
+    limits = c(0, 0.16),
+    breaks = seq(0, 0.15, by = 0.05),
+    expand = c(.01, .001)) +
+  labs(x = "Hour of the day",
+       y = "Density", 
+       title = "Activity patterns of squirrels with lockdown during autumn with cats () and without cats ()") +
+  annotate("text", x = 20, y = 0.14, size = 6, label = "Dhat4 = ")
+
+ggplot(data = plot_spr_nolock_cats) +
+  geom_area(mapping = aes(x = x, y = pmin(y.x,y.y)),
+            fill = "#E4CAA5") +
+    geom_line(mapping = aes(x = x, y = y.y), colour = "#E4CAA5", size = 2) +
+  geom_line(mapping = aes(x = x, y = y.x), colour = "#4D6476", size = 2) + 
+  scale_x_continuous(
+    limits = c(0,23),
+    breaks = seq(0, 21, by = 3),
+    expand = c(.001, .001)) +
+  scale_y_continuous(
+    limits = c(0, 0.16),
+    breaks = seq(0, 0.15, by = 0.05),
+    expand = c(.01, .001)) +
+  labs(x = "Hour of the day",
+       y = "Density", 
+       title = "Activity patterns of squirrels without lockdown during spring with cats () and without cats ()") +
+  annotate("text", x = 20, y = 0.14, size = 6, label = "Dhat4 = ")
+
+ggplot(data = plot_aut_nolock_cats) +
+  geom_area(mapping = aes(x = x, y = pmin(y.x,y.y)),
+            fill = "#E4CAA5") +
+    geom_line(mapping = aes(x = x, y = y.y), colour = "#E4CAA5", size = 2) +
+  geom_line(mapping = aes(x = x, y = y.x), colour = "#4D6476", size = 2) + 
+  scale_x_continuous(
+    limits = c(0,23),
+    breaks = seq(0, 21, by = 3),
+    expand = c(.001, .001)) +
+  scale_y_continuous(
+    limits = c(0, 0.16),
+    breaks = seq(0, 0.15, by = 0.05),
+    expand = c(.01, .001)) +
+  labs(x = "Hour of the day",
+       y = "Density", 
+       title = "Activity patterns of squirrels without lockdown during spring with cats () and without cats ()") +
+  annotate("text", x = 20, y = 0.14, size = 6, label = "Dhat4 = ")
+```
+
+
+#### Martens
 ```{r}
-activityOverlap(recordTable = CT_species_interest, 
-                speciesA = "Squirrel", 
-                speciesB = "Cat", 
-                speciesCol = "Species", 
-                overlapEstimator = "Dhat4")
+# Filtering
+Squirrels_martens_spr_lock <- Squirrels_spr_lock %>%
+  filter(marten_cam_binary == "1") 
+
+Squirrels_nomartens_spr_lock <- Squirrels_spr_lock %>%
+  filter(marten_cam_binary == "0") 
+
+Squirrels_martens_aut_lock  <- Squirrels_aut_lock %>%
+  filter(marten_cam_binary == "1")
+
+Squirrels_nomartens_aut_lock  <- Squirrels_aut_lock %>%
+  filter(marten_cam_binary == "0")
+
+Squirrels_martens_spr_nolock  <- Squirrels_spr_nolock %>%
+  filter(marten_cam_binary == "1") 
+
+Squirrels_nomartens_spr_nolock  <- Squirrels_spr_nolock %>%
+  filter(marten_cam_binary == "0") 
+
+Squirrels_martens_aut_nolock  <- Squirrels_aut_nolock %>%
+  filter(marten_cam_binary == "1")
+
+Squirrels_nomartens_aut_nolock  <- Squirrels_aut_nolock %>%
+  filter(marten_cam_binary == "0")
 ```
 
-## Martens
 ```{r}
-activityOverlap(recordTable = CT_species_interest, 
-                speciesA = "Squirrel", 
-                speciesB = "Marten", 
-                speciesCol = "Species", 
-                overlapEstimator = "Dhat4")
+# dhat4 lockdown spring with vs without martens
+dhat4_spr_lock_martens <- overlapEst(A = Squirrels_martens_spr_lock$rad_time, 
+                                  B = Squirrels_nomartens_spr_lock$rad_time, 
+                                  kmax = 50, type = "Dhat4")
+
+boot_spr_lock_martens <- overlap::bootstrap(A = Squirrels_martens_spr_lock$rad_time, 
+                                         B = Squirrels_nomartens_spr_lock$rad_time, 
+                                         kmax = 50, nb = 1000, type = "Dhat4") 
+
+dhat4_spr_lock_martens_CI <- bootCI(dhat4_spr_lock_martens, boot_spr_lock_martens)[2,] # norm0
+dhat4_spr_lock_martens
+dhat4_spr_lock_martens_CI
+
+# dhat4 lockdown autumn with vs without martens
+dhat4_aut_lock_martens <- overlapEst(A = Squirrels_martens_aut_lock$rad_time, 
+                                  B = Squirrels_nomartens_aut_lock$rad_time, 
+                                  kmax = 50, type = "Dhat4")
+
+boot_aut_lock_martens <- overlap::bootstrap(A = Squirrels_martens_aut_lock$rad_time, 
+                                         B = Squirrels_nomartens_aut_lock$rad_time, 
+                                         kmax = 50, nb = 1000, type = "Dhat4") 
+
+dhat4_aut_lock_martens_CI <- bootCI(dhat4_aut_lock_martens, boot_aut_lock_martens)[2,] # norm0
+dhat4_aut_lock_martens
+dhat4_aut_lock_martens_CI
+
+# dhat4 no lockdown spring with vs without martens
+dhat4_spr_nolock_martens <- overlapEst(A = Squirrels_martens_spr_nolock$rad_time, 
+                                    B = Squirrels_nomartens_spr_nolock$rad_time, 
+                                    kmax = 50, type = "Dhat4")
+
+boot_spr_nolock_martens <- overlap::bootstrap(A = Squirrels_martens_spr_nolock$rad_time, 
+                                           B = Squirrels_nomartens_spr_nolock$rad_time, 
+                                           kmax = 50, nb = 1000, type = "Dhat4") 
+
+dhat4_spr_nolock_martens_CI <- bootCI(dhat4_spr_nolock_martens, boot_spr_nolock_martens)[2,] # norm0
+dhat4_spr_nolock_martens
+dhat4_spr_nolock_martens_CI
+
+# dhat4 no lockdown autumn with vs without martens
+dhat4_aut_nolock_martens <- overlapEst(A = Squirrels_martens_aut_nolock$rad_time, 
+                                    B = Squirrels_nomartens_aut_nolock$rad_time, 
+                                    kmax = 50, type = "Dhat4")
+
+boot_aut_nolock_martens <- overlap::bootstrap(A = Squirrels_martens_aut_nolock$rad_time, 
+                                           B = Squirrels_nomartens_aut_nolock$rad_time, 
+                                           kmax = 50, nb = 1000, type = "Dhat4") 
+
+dhat4_aut_nolock_martens_CI <- bootCI(dhat4_aut_nolock_martens, boot_aut_nolock_martens)[2,] # norm0
+dhat4_aut_nolock_martens
+dhat4_aut_nolock_martens_CI
 ```
 
+```{r fig.height=6, include=FALSE}
+# plot lockdown spring with vs without martens
+plot_spr_lock_withmartens <- densityPlot(Squirrels_martens_spr_lock$rad_time, rug = TRUE)
+plot_spr_lock_nomartens <- densityPlot(Squirrels_nomartens_spr_lock$rad_time, rug = TRUE)
+plot_spr_lock_martens <- left_join(x = plot_spr_lock_withmartens, y = plot_spr_lock_nomartens, by = "x")
+
+# plot lockdown autumn with vs without martens
+plot_aut_lock_withmartens <- densityPlot(Squirrels_martens_aut_lock$rad_time, rug = TRUE)
+plot_aut_lock_nomartens <- densityPlot(Squirrels_nomartens_aut_lock$rad_time, rug = TRUE)
+plot_aut_lock_martens <- left_join(x = plot_aut_lock_withmartens, y = plot_aut_lock_nomartens, by = "x")
+
+# plot no nolockdown spring with vs without martens
+plot_spr_nolock_withmartens <- densityPlot(Squirrels_martens_spr_nolock$rad_time, rug = TRUE)
+plot_spr_nolock_nomartens <- densityPlot(Squirrels_nomartens_spr_nolock$rad_time, rug = TRUE)
+plot_spr_nolock_martens <- left_join(x = plot_spr_nolock_withmartens, y = plot_spr_nolock_nomartens, by = "x")
+
+# plot no nolockdown autumn with vs without martens
+plot_aut_nolock_withmartens <- densityPlot(Squirrels_martens_aut_nolock$rad_time, rug = TRUE)
+plot_aut_nolock_nomartens <- densityPlot(Squirrels_nomartens_aut_nolock$rad_time, rug = TRUE)
+plot_aut_nolock_martens <- left_join(x = plot_aut_nolock_withmartens, y = plot_aut_nolock_nomartens, by = "x")
+```
+
+
+```{r fig.height=6}
+ggplot(data = plot_spr_lock_martens) +
+  geom_area(mapping = aes(x = x, y = pmin(y.x,y.y)),
+            fill = "#E4CAA5") +
+    geom_line(mapping = aes(x = x, y = y.y), colour = "#E4CAA5", size = 2) +
+  geom_line(mapping = aes(x = x, y = y.x), colour = "#4D6476", size = 2) + 
+  scale_x_continuous(
+    limits = c(0,23),
+    breaks = seq(0, 21, by = 3),
+    expand = c(.001, .001)) +
+  scale_y_continuous(
+    limits = c(0, 0.16),
+    breaks = seq(0, 0.15, by = 0.05),
+    expand = c(.01, .001)) +
+  labs(x = "Hour of the day",
+       y = "Density", 
+       title = "Activity patterns of squirrels with lockdown during spring with martens () and without martens ()") +
+  annotate("text", x = 20, y = 0.14, size = 6, label = "Dhat4 = ")
+
+ggplot(data = plot_aut_lock_martens) +
+  geom_area(mapping = aes(x = x, y = pmin(y.x,y.y)),
+            fill = "#E4CAA5") +
+    geom_line(mapping = aes(x = x, y = y.y), colour = "#E4CAA5", size = 2) +
+  geom_line(mapping = aes(x = x, y = y.x), colour = "#4D6476", size = 2) + 
+  scale_x_continuous(
+    limits = c(0,23),
+    breaks = seq(0, 21, by = 3),
+    expand = c(.001, .001)) +
+  scale_y_continuous(
+    limits = c(0, 0.16),
+    breaks = seq(0, 0.15, by = 0.05),
+    expand = c(.01, .001)) +
+  labs(x = "Hour of the day",
+       y = "Density", 
+       title = "Activity patterns of squirrels with lockdown during autumn with martens () and without martens ()") +
+  annotate("text", x = 20, y = 0.14, size = 6, label = "Dhat4 = ")
+
+ggplot(data = plot_spr_nolock_martens) +
+  geom_area(mapping = aes(x = x, y = pmin(y.x,y.y)),
+            fill = "#E4CAA5") +
+    geom_line(mapping = aes(x = x, y = y.y), colour = "#E4CAA5", size = 2) +
+  geom_line(mapping = aes(x = x, y = y.x), colour = "#4D6476", size = 2) + 
+  scale_x_continuous(
+    limits = c(0,23),
+    breaks = seq(0, 21, by = 3),
+    expand = c(.001, .001)) +
+  scale_y_continuous(
+    limits = c(0, 0.16),
+    breaks = seq(0, 0.15, by = 0.05),
+    expand = c(.01, .001)) +
+  labs(x = "Hour of the day",
+       y = "Density", 
+       title = "Activity patterns of squirrels without lockdown during spring with martens () and without martens ()") +
+  annotate("text", x = 20, y = 0.14, size = 6, label = "Dhat4 = ")
+
+ggplot(data = plot_aut_nolock_martens) +
+  geom_area(mapping = aes(x = x, y = pmin(y.x,y.y)),
+            fill = "#E4CAA5") +
+    geom_line(mapping = aes(x = x, y = y.y), colour = "#E4CAA5", size = 2) +
+  geom_line(mapping = aes(x = x, y = y.x), colour = "#4D6476", size = 2) + 
+  scale_x_continuous(
+    limits = c(0,23),
+    breaks = seq(0, 21, by = 3),
+    expand = c(.001, .001)) +
+  scale_y_continuous(
+    limits = c(0, 0.16),
+    breaks = seq(0, 0.15, by = 0.05),
+    expand = c(.01, .001)) +
+  labs(x = "Hour of the day",
+       y = "Density", 
+       title = "Activity patterns of squirrels without lockdown during spring with martens () and without martens ()") +
+  annotate("text", x = 20, y = 0.14, size = 6, label = "Dhat4 = ")
+```
+
+#### Save data
+```{r}
+# # Dogs
+# saveRDS(object = boot_spr_lock_dogs,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "boot_spr_lock_dogs_20240907.RDS"))
+# 
+# saveRDS(object = boot_aut_lock_dogs,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "boot_aut_lock_dogs_20240907.RDS"))
+# 
+# saveRDS(object = boot_spr_nolock_dogs,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "boot_spr_nolock_dogs_20240907.RDS"))
+# 
+# saveRDS(object = boot_aut_nolock_dogs,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "boot_aut_nolock_dogs_20240907.RDS"))
+# 
+# # Cats
+# saveRDS(object = boot_spr_lock_cats,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "boot_spr_lock_cats_20240907.RDS"))
+# 
+# saveRDS(object = boot_aut_lock_cats,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "boot_aut_lock_cats_20240907.RDS"))
+# 
+# saveRDS(object = boot_spr_nolock_cats,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "boot_spr_nolock_cats_20240907.RDS"))
+# 
+# saveRDS(object = boot_aut_nolock_cats,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "boot_aut_nolock_cats_20240907.RDS"))
+# 
+# # Martens
+# saveRDS(object = boot_spr_lock_martens,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "boot_spr_lock_martens_20240907.RDS"))
+# 
+# saveRDS(object = boot_aut_lock_martens,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "boot_aut_lock_martens_20240907.RDS"))
+# 
+# saveRDS(object = boot_spr_nolock_martens,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "boot_spr_nolock_martens_20240907.RDS"))
+# 
+# saveRDS(object = boot_aut_nolock_martens,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "boot_aut_nolock_martens_20240907.RDS"))
+```
+
+
+## Cats & Squirrels
+```{r}
+cats <-  CT_species_interest %>%
+  filter(Species == "Cat")
+
+plot_cats <- densityPlot(cats$rad_time, rug = TRUE)
+plot_cats_sq <- left_join(x = plot_squirrels, y = plot_cats, by = "x", suffix = c(".squ", ".cat"))
+```
+
+```{r}
+ggplot(data = plot_cats_sq) + # , colour = Season
+  geom_area(mapping = aes(x = x, y = pmin(y.squ,y.cat)),
+            fill = "#d96b1c"
+  ) +
+  geom_line(mapping = aes(x = x, y = y.squ), colour = "black", size = 2) +  
+  geom_line(mapping = aes(x = x, y = y.cat), colour = "#d96b1c", size = 2) +  
+  scale_x_continuous(
+    limits = c(0,23),
+    breaks = seq(0, 21, by = 3),
+    expand = c(.001, .001)) +
+  scale_y_continuous(
+    limits = c(0, 0.2),
+    breaks = seq(0, 0.2, by = 0.1),
+    expand = c(.001, .001)) +
+  labs(x = "Hour of the day",
+       y = "Activity overlap", 
+       #title = "Activity patterns of cats and squirrels"
+       ) 
+
+# ggsave(filename = here::here("plots",
+#                              "03_daily_activity",
+#                              "overlap",
+#                              "squirrels_cats.png"),
+#         width = 85,
+#         height = 85,
+#         units = "mm",
+#        dpi = 300)
+```
+
+### Season
+```{r}
+cats_spring <- CT_species_interest %>%
+  filter(Species == "Cat") %>%
+  filter(Season == "spring") 
+
+cats_autumn <- CT_species_interest %>%
+  filter(Species == "Cat") %>%
+  filter(Season == "autumn") 
+
+
+# Calculate dhat
+dhat4_cat_squirrel_spring <- overlapEst(A = Squirrels_spring$rad_time, B = cats_spring$rad_time, kmax = 50, type = "Dhat4")
+dhat4_cat_squirrel_autumn <- overlapEst(A = Squirrels_autumn$rad_time, B = cats_autumn$rad_time, kmax = 50, type = "Dhat4")
+
+# We are doing bootstrap to get CI, nb has to be at least 1000, better 10000
+boot_cat_squirrel_spring <- overlap::bootstrap(A = Squirrels_spring$rad_time, 
+                                               B = cats_spring$rad_time, 
+                                               kmax = 50, nb = 1000, type = "Dhat4") 
+dhat4_cat_squirrel_spring_CI <- bootCI(dhat4_cat_squirrel_spring, boot_cat_squirrel_spring)[2,]
+
+boot_cat_squirrel_autumn <- overlap::bootstrap(A = Squirrels_autumn$rad_time, 
+                                               B = cats_autumn$rad_time, 
+                                               kmax = 50, nb = 1000, type = "Dhat4") 
+dhat4_cat_squirrel_autumn_CI <- bootCI(dhat4_cat_squirrel_autumn, boot_cat_squirrel_autumn)[2,]
+
+# Show values
+dhat4_cat_squirrel_spring
+dhat4_cat_squirrel_spring_CI
+
+dhat4_cat_squirrel_autumn
+dhat4_cat_squirrel_autumn_CI
+```
+
+```{r}
+#plot_spring_sq <- densityPlot(Squirrels_spring$rad_time, rug = TRUE)
+plot_spring_cat <- densityPlot(cats_spring$rad_time, rug = TRUE)
+plot_spring_sq_cat <- left_join(x = plot_spring_sq, y = plot_spring_cat, by = "x")
+
+#plot_autumn_sq <- densityPlot(Squirrels_autumn$rad_time, rug = TRUE)
+plot_autumn_cat <- densityPlot(cats_autumn$rad_time, rug = TRUE)
+plot_autumn_sq_cat <- left_join(x = plot_autumn_sq, y = plot_autumn_cat, by = "x")
+
+ggplot(data = plot_spring_sq_cat) +
+  geom_area(mapping = aes(x = x, y = pmin(y.x,y.y)),
+            fill = "#E4CAA5") +
+    geom_line(mapping = aes(x = x, y = y.y), colour = "#E4CAA5", size = 2) +
+  geom_line(mapping = aes(x = x, y = y.x), colour = "#4D6476", size = 2) + 
+  scale_x_continuous(
+    limits = c(0,23),
+    breaks = seq(0, 21, by = 3),
+    expand = c(.001, .001)) +
+  scale_y_continuous(
+    limits = c(0, 0.20),
+    breaks = seq(0, 0.20, by = 0.05),
+    expand = c(.01, .001)) +
+  labs(x = "Hour of the day",
+       y = "Density", 
+       title = "Activity patterns of squirrels () and cats () in spring") +
+  annotate("text", x = 20, y = 0.18, size = 6, label = "Dhat4 = 0.38")
+
+ggplot(data = plot_autumn_sq_cat) +
+  geom_area(mapping = aes(x = x, y = pmin(y.x,y.y)),
+            fill = "#E4CAA5") +
+    geom_line(mapping = aes(x = x, y = y.y), colour = "#E4CAA5", size = 2) +
+  geom_line(mapping = aes(x = x, y = y.x), colour = "#4D6476", size = 2) + 
+  scale_x_continuous(
+    limits = c(0,23),
+    breaks = seq(0, 21, by = 3),
+    expand = c(.001, .001)) +
+  scale_y_continuous(
+    limits = c(0, 0.20),
+    breaks = seq(0, 0.20, by = 0.05),
+    expand = c(.01, .001)) +
+  labs(x = "Hour of the day",
+       y = "Density", 
+       title = "Activity patterns of squirrels () and cats () in autumn") +
+  annotate("text", x = 20, y = 0.18, size = 6, label = "Dhat4 = 0.52")
+```
+
+### Season - only cats
+```{r}
+# Calculate dhat
+dhat4_cat_season <- overlapEst(A = cats_spring$rad_time, B = cats_autumn$rad_time, kmax = 50, type = "Dhat4")
+
+# We are doing bootstrap to get CI, nb has to be at least 1000, better 10000
+boot_cat_season <- overlap::bootstrap(A = cats_spring$rad_time, 
+                                         B = cats_autumn$rad_time, 
+                                         kmax = 50, nb = 1000, type = "Dhat4") 
+dhat4_cat_season_CI <- bootCI(dhat4_cat_season, boot_cat_season)[2,]
+
+# Show values
+dhat4_cat_season
+dhat4_cat_season_CI
+```
+
+```{r fig.height=6}
+plot_season_cat <- left_join(x = plot_spring_cat, y = plot_autumn_cat, by = "x")
+
+ggplot(data = plot_season_cat) +
+  geom_area(mapping = aes(x = x, y = pmin(y.x,y.y)),
+            fill = "#E4CAA5") +
+    geom_line(mapping = aes(x = x, y = y.y), colour = "#E4CAA5", size = 2) +
+  geom_line(mapping = aes(x = x, y = y.x), colour = "#4D6476", size = 2) + 
+  scale_x_continuous(
+    limits = c(0,23),
+    breaks = seq(0, 21, by = 3),
+    expand = c(.001, .001)) +
+  scale_y_continuous(
+    limits = c(0, 0.15),
+    breaks = seq(0, 0.15, by = 0.05),
+    expand = c(.01, .001)) +
+  labs(x = "Hour of the day",
+       y = "Density", 
+       title = "Activity patterns of cats during spring () and autumn ()") +
+  annotate("text", x = 20, y = 0.14, size = 6, label = "Dhat4 = ")
+
+# ggsave(filename = here::here("plots",
+#                              "03_daily_activity",
+#                              "overlap",
+#                              "cats_season.png"),
+#         # width = 1200*1.5,
+#         # height = 1200,
+#         # units = "px",
+#        dpi = 300)
+```
+
+## Martens & Squirrels
+```{r}
+martens <-  CT_species_interest %>%
+  filter(Species == "Marten")
+
+plot_martens <- densityPlot(martens$rad_time, rug = TRUE)
+plot_martens_sq <- left_join(x = plot_squirrels, y = plot_martens, by = "x", suffix = c(".squ", ".marten"))
+```
+
+```{r}
+ggplot(data = plot_martens_sq) + # , colour = Season
+  geom_area(mapping = aes(x = x, y = pmin(y.squ,y.marten)),
+            fill = "#871338"
+  ) +
+  geom_line(mapping = aes(x = x, y = y.squ), colour = "black", size = 2) +  
+  geom_line(mapping = aes(x = x, y = y.marten), colour = "#871338", size = 2) +  
+  scale_x_continuous(
+    limits = c(0,23),
+    breaks = seq(0, 21, by = 3),
+    expand = c(.001, .001)) +
+  scale_y_continuous(
+    limits = c(0, 0.2),
+    breaks = seq(0, 0.2, by = 0.1),
+    expand = c(.001, .001)) +
+  labs(x = "Hour of the day",
+       y = "Activity overlap") # , title = "Activity patterns of martens and squirrels"
+
+# ggsave(filename = here::here("plots",
+#                              "03_daily_activity",
+#                              "overlap",
+#                              "squirrels_martens.png"),
+#         width = 85,
+#         height = 85,
+#         units = "mm",
+#        dpi = 300)
+```
+### Season
+```{r}
+martens_spring <- CT_species_interest %>%
+  filter(Species == "Marten") %>%
+  filter(Season == "spring") 
+
+martens_autumn <- CT_species_interest %>%
+  filter(Species == "Marten") %>%
+  filter(Season == "autumn") 
+
+
+# Calculate dhat
+dhat4_marten_squirrel_spring <- overlapEst(A = Squirrels_spring$rad_time, B = martens_spring$rad_time, kmax = 50, type = "Dhat4")
+dhat4_marten_squirrel_autumn <- overlapEst(A = Squirrels_autumn$rad_time, B = martens_autumn$rad_time, kmax = 50, type = "Dhat4")
+
+# We are doing bootstrap to get CI, nb has to be at least 1000, better 10000
+boot_marten_squirrel_spring <- overlap::bootstrap(A = Squirrels_spring$rad_time, 
+                                               B = martens_spring$rad_time, 
+                                               kmax = 50, nb = 1000, type = "Dhat4") 
+dhat4_marten_squirrel_spring_CI <- bootCI(dhat4_marten_squirrel_spring, boot_marten_squirrel_spring)[2,]
+
+boot_marten_squirrel_autumn <- overlap::bootstrap(A = Squirrels_autumn$rad_time, 
+                                               B = martens_autumn$rad_time, 
+                                               kmax = 50, nb = 1000, type = "Dhat4") 
+dhat4_marten_squirrel_autumn_CI <- bootCI(dhat4_marten_squirrel_autumn, boot_marten_squirrel_autumn)[2,]
+
+# Show values
+dhat4_marten_squirrel_spring
+dhat4_marten_squirrel_spring_CI
+
+dhat4_marten_squirrel_autumn
+dhat4_marten_squirrel_autumn_CI
+```
+
+```{r}
+#plot_spring_sq <- densityPlot(Squirrels_spring$rad_time, rug = TRUE)
+plot_spring_marten <- densityPlot(martens_spring$rad_time, rug = TRUE)
+plot_spring_sq_marten <- left_join(x = plot_spring_sq, y = plot_spring_marten, by = "x")
+
+#plot_autumn_sq <- densityPlot(Squirrels_autumn$rad_time, rug = TRUE)
+plot_autumn_marten <- densityPlot(martens_autumn$rad_time, rug = TRUE)
+plot_autumn_sq_marten <- left_join(x = plot_autumn_sq, y = plot_autumn_marten, by = "x")
+```
+
+
+```{r}
+ggplot(data = plot_spring_sq_marten) +
+  geom_area(mapping = aes(x = x, y = pmin(y.x,y.y)),
+            fill = "#E4CAA5") +
+    geom_line(mapping = aes(x = x, y = y.y), colour = "#E4CAA5", size = 2) +
+  geom_line(mapping = aes(x = x, y = y.x), colour = "#4D6476", size = 2) + 
+  scale_x_continuous(
+    limits = c(0,23),
+    breaks = seq(0, 21, by = 3),
+    expand = c(.001, .001)) +
+  scale_y_continuous(
+    limits = c(0, 0.20),
+    breaks = seq(0, 0.20, by = 0.05),
+    expand = c(.01, .001)) +
+  labs(x = "Hour of the day",
+       y = "Density", 
+       title = "Activity patterns of squirrels () and martens () in spring") +
+  annotate("text", x = 20, y = 0.18, size = 6, label = "Dhat4 = 0.03")
+
+ggplot(data = plot_autumn_sq_marten) +
+  geom_area(mapping = aes(x = x, y = pmin(y.x,y.y)),
+            fill = "#E4CAA5") +
+  geom_line(mapping = aes(x = x, y = y.y), colour = "#E4CAA5", size = 2) +
+  geom_line(mapping = aes(x = x, y = y.x), colour = "#4D6476", size = 2) + 
+  scale_x_continuous(
+    limits = c(0,23),
+    breaks = seq(0, 21, by = 3),
+    expand = c(.001, .001)) +
+  scale_y_continuous(
+    limits = c(0, 0.20),
+    breaks = seq(0, 0.20, by = 0.05),
+    expand = c(.01, .001)) +
+  labs(x = "Hour of the day",
+       y = "Density", 
+       title = "Activity patterns of squirrels () and martens () in autumn") +
+  annotate("text", x = 20, y = 0.18, size = 6, label = "Dhat4 = 0.02")
+```
+
+```{r}
+# with raw data
+ggplot(data = plot_autumn_sq_marten) +
+  geom_line(mapping = aes(x = x, y = y.y), colour = "#E4CAA5", size = 2) +
+  geom_line(mapping = aes(x = x, y = y.x), colour = "#4D6476", size = 2) + 
+  scale_x_continuous(
+    limits = c(0,23),
+    breaks = seq(0, 21, by = 3),
+    expand = c(.001, .001)) +
+  scale_y_continuous(
+    limits = c(-0.005, 0.20),
+    breaks = seq(0, 0.20, by = 0.05),
+    expand = c(.01, .001)) +
+  #geom_rug(mapping = aes(x = x, y = y.y), sides="b", colour = "#E4CAA5") + 
+  #geom_rug(mapping = aes(x = x), sides="b", colour = "#E4CAA5") #+
+  geom_rug(data = Squirrels_autumn, 
+           mapping = aes(x = hour(Time), y = 0.05), 
+           sides = "b", 
+           colour = "#4D6476", 
+           position = "jitter", 
+           length = unit(0.03, "npc")) + 
+  geom_rug(data = martens_autumn, 
+           mapping = aes(x = hour(Time), y = 0.05), 
+           sides = "b", 
+           colour = "#E4CAA5", 
+           position = "jitter", 
+           length = unit(0.03, "npc"))
+
+```
+
+### Season - only martens
+```{r}
+# Calculate dhat
+dhat4_marten_season <- overlapEst(A = martens_spring$rad_time, B = martens_autumn$rad_time, kmax = 50, type = "Dhat4")
+
+# We are doing bootstrap to get CI, nb has to be at least 1000, better 10000
+boot_marten_season <- overlap::bootstrap(A = martens_spring$rad_time, 
+                                         B = martens_autumn$rad_time, 
+                                         kmax = 50, nb = 1000, type = "Dhat4") 
+dhat4_marten_season_CI <- bootCI(dhat4_marten_season, boot_marten_season)[2,]
+
+# Show values
+dhat4_marten_season
+dhat4_marten_season_CI
+```
+
+```{r fig.height=6}
+plot_season_marten <- left_join(x = plot_spring_marten, y = plot_autumn_marten, by = "x")
+
+ggplot(data = plot_season_marten) +
+  geom_area(mapping = aes(x = x, y = pmin(y.x,y.y)),
+            fill = "#E4CAA5") +
+    geom_line(mapping = aes(x = x, y = y.y), colour = "#E4CAA5", size = 2) +
+  geom_line(mapping = aes(x = x, y = y.x), colour = "#4D6476", size = 2) + 
+  scale_x_continuous(
+    limits = c(0,23),
+    breaks = seq(0, 21, by = 3),
+    expand = c(.001, .001)) +
+  scale_y_continuous(
+    limits = c(0, 0.15),
+    breaks = seq(0, 0.15, by = 0.05),
+    expand = c(.01, .001)) +
+  labs(x = "Hour of the day",
+       y = "Density", 
+       title = "Activity patterns of martens during spring (420) and autumn (295)") +
+  annotate("text", x = 20, y = 0.14, size = 6, label = "Dhat4 = 0.64")
+
+# ggsave(filename = here::here("plots",
+#                              "03_daily_activity",
+#                              "overlap",
+#                              "martens_season.png"),
+#         # width = 1200*1.5,
+#         # height = 1200,
+#         # units = "px",
+#        dpi = 300)
+```
+
+# Plot for all overlaps
+We want to create a plot for all overlap values
+Therefore we create a table at first where we save all necessary values
+
+## Overlap table
+```{r}
+dhat4_table <- tibble(
+  variable = character(),
+  min_CI = numeric(),
+  mean_overlap = numeric(),
+  max_CI = numeric()
+)
+#  season
+dhat4_table[1,1] <- "Season"
+dhat4_table[1,3] <- dhat4_season
+dhat4_table[1,2] <- dhat4_season_CI[1] 
+dhat4_table[1,4] <- dhat4_season_CI[2] 
+#  lockdown
+dhat4_table[2,1] <- "Lockdown"
+dhat4_table[2,3] <- dhat4_lock
+dhat4_table[2,2] <- dhat4_lock_CI[1] 
+dhat4_table[2,4] <- dhat4_lock_CI[2]
+#  lockdown season
+dhat4_table[3,1] <- "Lock_Season"
+dhat4_table[3,3] <- dhat4_season_lock
+dhat4_table[3,2] <- dhat4_season_lock_CI[1] 
+dhat4_table[3,4] <- dhat4_season_lock_CI[2]
+#  no lockdown season
+dhat4_table[4,1] <- "NoLock_Season"
+dhat4_table[4,3] <- dhat4_season_nolock
+dhat4_table[4,2] <- dhat4_season_nolock_CI[1] 
+dhat4_table[4,4] <- dhat4_season_nolock_CI[2]
+# lockdown spring dogs
+dhat4_table[5,1] <- "Lock_Spr_dog"
+dhat4_table[5,3] <- dhat4_spr_lock_dogs
+dhat4_table[5,2] <- dhat4_spr_lock_dogs_CI[1] 
+dhat4_table[5,4] <- dhat4_spr_lock_dogs_CI[2]
+# lockdown autumn dogs
+dhat4_table[6,1] <- "Lock_Aut_dog"
+dhat4_table[6,3] <- dhat4_aut_lock_dogs
+dhat4_table[6,2] <- dhat4_aut_lock_dogs_CI[1] 
+dhat4_table[6,4] <- dhat4_aut_lock_dogs_CI[2]
+# no lockdown spring dogs
+dhat4_table[7,1] <- "NoLock_Spr_dog"
+dhat4_table[7,3] <- dhat4_spr_nolock_dogs
+dhat4_table[7,2] <- dhat4_spr_nolock_dogs_CI[1] 
+dhat4_table[7,4] <- dhat4_spr_nolock_dogs_CI[2]
+# no lockdown autumn dogs
+dhat4_table[8,1] <- "NoLock_aut_dog"
+dhat4_table[8,3] <- dhat4_aut_nolock_dogs
+dhat4_table[8,2] <- dhat4_aut_nolock_dogs_CI[1] 
+dhat4_table[8,4] <- dhat4_aut_nolock_dogs_CI[2]
+# lockdown spring cats
+dhat4_table[9,1] <- "Lock_Spr_cat"
+dhat4_table[9,3] <- dhat4_spr_lock_cats
+dhat4_table[9,2] <- dhat4_spr_lock_cats_CI[1] 
+dhat4_table[9,4] <- dhat4_spr_lock_cats_CI[2]
+# lockdown autumn cats
+dhat4_table[10,1] <- "Lock_Aut_cat"
+dhat4_table[10,3] <- dhat4_aut_lock_cats
+dhat4_table[10,2] <- dhat4_aut_lock_cats_CI[1] 
+dhat4_table[10,4] <- dhat4_aut_lock_cats_CI[2]
+# no lockdown spring cats
+dhat4_table[11,1] <- "NoLock_Spr_cat"
+dhat4_table[11,3] <- dhat4_spr_nolock_cats
+dhat4_table[11,2] <- dhat4_spr_nolock_cats_CI[1] 
+dhat4_table[11,4] <- dhat4_spr_nolock_cats_CI[2]
+# no lockdown autumn cats
+dhat4_table[12,1] <- "NoLock_aut_cat"
+dhat4_table[12,3] <- dhat4_aut_nolock_cats
+dhat4_table[12,2] <- dhat4_aut_nolock_cats_CI[1] 
+dhat4_table[12,4] <- dhat4_aut_nolock_cats_CI[2]
+# lockdown spring martens
+dhat4_table[13,1] <- "Lock_Spr_marten"
+dhat4_table[13,3] <- dhat4_spr_lock_martens
+dhat4_table[13,2] <- dhat4_spr_lock_martens_CI[1] 
+dhat4_table[13,4] <- dhat4_spr_lock_martens_CI[2]
+# lockdown autumn martens
+dhat4_table[14,1] <- "Lock_Aut_marten"
+dhat4_table[14,3] <- dhat4_aut_lock_martens
+dhat4_table[14,2] <- dhat4_aut_lock_martens_CI[1] 
+dhat4_table[14,4] <- dhat4_aut_lock_martens_CI[2]
+# no lockdown spring martens
+dhat4_table[15,1] <- "NoLock_Spr_marten"
+dhat4_table[15,3] <- dhat4_spr_nolock_martens
+dhat4_table[15,2] <- dhat4_spr_nolock_martens_CI[1] 
+dhat4_table[15,4] <- dhat4_spr_nolock_martens_CI[2]
+# no lockdown autumn martens
+dhat4_table[16,1] <- "NoLock_Aut_marten"
+dhat4_table[16,3] <- dhat4_aut_nolock_martens
+dhat4_table[16,2] <- dhat4_aut_nolock_martens_CI[1] 
+dhat4_table[16,4] <- dhat4_aut_nolock_martens_CI[2]
+
+dhat4_table$variable <- factor(dhat4_table$variable, 
+                               levels = c("Lock_Aut_marten","Lock_Spr_marten", 
+                                          "Lock_Aut_cat","Lock_Spr_cat", 
+                                          "Lock_Aut_dog","Lock_Spr_dog",
+                                          "Lock_Season",
+                                          "NoLock_Aut_marten","NoLock_Spr_marten", 
+                                          "NoLock_aut_cat","NoLock_Spr_cat", 
+                                          "NoLock_aut_dog","NoLock_Spr_dog", 
+                                          "NoLock_Season",
+                                          "Lockdown", "Season"))
+levels(dhat4_table$variable)
+```
+
+
+```{r}
+dhat4_tab_short <- dhat4_table[5:16, ]
+dhat4_tab_short <- droplevels(dhat4_tab_short)
+# Groups for lockdown
+dhat4_tab_short$group_lock <- factor(x = c(#"Lockdown", "No Lockdown", 
+                                           "Lockdown", "Lockdown", 
+                                           "No Lockdown", "No Lockdown", 
+                                           "Lockdown", "Lockdown", 
+                                           "No Lockdown", "No Lockdown",
+                                           "Lockdown", "Lockdown", 
+                                           "No Lockdown", "No Lockdown"), 
+                                 levels = c("No Lockdown", "Lockdown"))
+# Groups per season
+dhat4_tab_short$group_season <- factor(x = c(#"both", "both", 
+                                             "Spring", "Autumn",
+                                             "Spring", "Autumn",
+                                             "Spring", "Autumn",
+                                             "Spring", "Autumn",
+                                             "Spring", "Autumn",
+                                             "Spring", "Autumn"), 
+                                       levels = c("Spring", "Autumn")) #"both", 
+
+# Groups per animal
+dhat4_tab_short$group_ani <- factor(x = c(#"without", "without",
+                                          "Dogs", "Dogs", "Dogs", "Dogs", 
+                                          "Cats", "Cats", "Cats", "Cats", 
+                                          "Martens", "Martens","Martens","Martens") , 
+                                    levels = c("Dogs", "Cats", "Martens")) # "without", 
+levels(dhat4_tab_short$group_ani)
+
+dhat4_tab_short$group_plot <- factor(x = c(#"1","1",
+                                           "2","5","2","5",
+                                           "3","6","3","6",
+                                           "4","7","4","7"), 
+                                     levels = c("2","3","4","5","6","7")) # "1",
+```
+
+### Save table
+```{r}
+# # save the table as csv
+# write_csv(x = dhat4_tab_short,
+#           file = here::here("output",
+#                             "data-proc",
+#                             "02_daily_activity",
+#                             "dhat4_tab_short_20240323.csv"),
+#           na = "NA")
+
+# # Load table
+# dhat4_tab_short <- read.csv(file = here::here("output",
+#                                       "data-proc",
+#                                       "02_daily_activity",
+#                                       "dhat4_tab_short_20240323.csv"),
+#                              colClasses = c("factor", "numeric",
+#                                             "numeric", "numeric",
+#                                             "factor", "factor",
+#                                             "factor", "factor"))
+# dhat4_tab_short$group_season <- factor(dhat4_tab_short$group_season, levels = c("Spring", "Autumn")) 
+# dhat4_tab_short$group_lock <- factor(dhat4_tab_short$group_lock, levels = c("No Lockdown", "Lockdown")) 
+# # Remove rows without animals
+# #dhat4_tab_short <- dhat4_tab_short[c(3:14), ]
+```
+
+## Overlap plot
+```{r}
+# Plot preparation
+strip <- strip_themed(text_x = elem_list_text(colour = col_season,
+                                              face = c("bold", "bold"),
+                                              size = c(10, 10),
+                                              family = c("Roboto","Roboto")),
+                      text_y = elem_list_text(colour = col_lock,
+                                              face = c("bold", "bold"),
+                                              size = c(10, 10),
+                                              family = c("Roboto","Roboto")),
+                      background_x = elem_list_rect(fill = "white"),
+                      background_y = elem_list_rect(fill = "white"))
+```
+
+
+```{r}
+# Plot setup
+ggplot(data = dhat4_tab_short, 
+       mapping = aes(y = mean_overlap, x = group_plot,  
+                     ymin = min_CI, ymax = max_CI,
+                     colour = group_ani, shape = group_ani, size = group_ani)) +
+  # Geoms
+  geom_errorbar(width = 0.4, linewidth = 1) +
+  geom_point() + # size = 3
+  # Manual settings for points, colour, axis
+  scale_y_continuous(
+    limits = c(0, 1.1),
+    breaks = seq(0, 1, by = 0.5),
+    expand = c(.001, .001)) + 
+  scale_color_manual(values = col_animals, 
+                     name = "Animals", 
+                     breaks = c("Dogs", "Cats", "Martens")) + 
+  scale_shape_manual(values = c(15,16,17), 
+                     name = "Animals", 
+                     breaks = c("Dogs", "Cats", "Martens")) + 
+  scale_size_manual(values = c(3,3,3)) + 
+  # labels and theme
+  labs(y = "Mean overlap", 
+       x = "Animals", 
+       colour = "Animals") + 
+  theme(panel.spacing.x = unit(x = 0, units = "lines"),
+        panel.spacing.y = unit(x = 0.0, units = "lines"),
+        axis.text.x = element_text(angle = 10),
+        #legend.position = "top", #c(0.08,0.63), 
+        #legend.title = element_text(size = 12),
+        #legend.margin = margin(0,0,0,0),
+        #legend.box.margin = margin(0,-10,-10,-10),
+        #legend.key =  element_rect(fill = NA, colour = NA)
+        ) + # element_blank()) +
+  # Facets
+  facet_grid2(cols = vars(group_season), 
+              rows = vars(group_lock), 
+              scales = "free_x", 
+              drop = TRUE, 
+              space = "free", 
+              strip = strip) + 
+  scale_x_discrete(
+    labels = c("Dogs", "Cats", "Martens")) #+ 
+  #guides(size = "none", colour = guide_legend(override.aes = list(size = 3)))
+
+# # Save the plot
+# ggsave(filename = here::here("plots",
+#                              "03_daily_activity",
+#                              "overlap",
+#                              "dhat4_all3.tiff"),
+#        width = 85,
+#        height = 85,
+#        units = "mm",
+#        dpi = 300)
+```
+
+
+## Anova
+Here we test whether the differences between the overlap values are statistically significant
+
+### Spring 2019 (no lockdown)
+```{r overlap table}
+# Create a list of the bootstrap vectors and the respective species name
+species_list <- list(dogs = boot_spr_nolock_dogs, 
+                     cats = boot_spr_nolock_cats, 
+                     martens = boot_spr_nolock_martens)
+
+# Create a table 
+overlap_spr_2019 <- 
+  map2(.x = names(species_list), .y = species_list, ~ tibble(species = .x, dhat = .y)) %>%
+  bind_rows() %>%
+  mutate(species = as.factor(species)) %>%
+  mutate(species = fct_relevel(species, "dogs", "cats", "martens"))
+
+skim(overlap_spr_2019)
+```
+
+
+```{r overlap plot redo}
+# Redo the plot
+overlap_spr_2019 %>%
+  group_by(species) %>%
+  summarise(mean = mean(dhat),
+            sd = sd(dhat)) %>% 
+  ggplot(aes(x = species, y = mean)) +
+  geom_point() +
+  # geom_errorbar(aes(ymin = mean - (2*sd), ymax = mean + (2*sd)), width = 0.2)
+  geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd), width = 0.2) +
+  ylim(c(0, 1))
+```
+
+
+```{r overlap plot redo}
+# create a linear model for the anova
+overlap_spr19_lm <- lm(formula = dhat ~ species, data = overlap_spr_2019)
+# anova
+overlap_spr19_av <- aov(overlap_spr19_lm)
+# Summary
+summary(overlap_spr19_av)
+# Tukey Test for significant differences between the categories
+TukeyHSD(overlap_spr19_av) 
+```
+
+### Autumn 2019 (no lockdown)
+```{r overlap table}
+# Create a list of the bootstrap vectors and the respective species name
+species_list <- list(dogs = boot_aut_nolock_dogs, 
+                     cats = boot_aut_nolock_cats, 
+                     martens = boot_aut_nolock_martens)
+
+# Create a table 
+overlap_aut_2019 <- 
+  map2(.x = names(species_list), .y = species_list, ~ tibble(species = .x, dhat = .y)) %>%
+  bind_rows() %>%
+  mutate(species = as.factor(species)) %>%
+  mutate(species = fct_relevel(species, "dogs", "cats", "martens"))
+
+skim(overlap_aut_2019)
+```
+
+
+```{r overlap plot redo}
+# Redo the plot
+overlap_aut_2019 %>%
+  group_by(species) %>%
+  summarise(mean = mean(dhat),
+            sd = sd(dhat)) %>% 
+  ggplot(aes(x = species, y = mean)) +
+  geom_point() +
+  # geom_errorbar(aes(ymin = mean - (2*sd), ymax = mean + (2*sd)), width = 0.2)
+  geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd), width = 0.2) +
+  ylim(c(0, 1))
+```
+
+
+```{r overlap plot redo}
+# create a linear model for the anova
+overlap_aut19_lm <- lm(formula = dhat ~ species, data = overlap_aut_2019)
+# anova
+overlap_aut19_av <- aov(overlap_aut19_lm)
+# Summary
+summary(overlap_aut19_av)
+# Tukey Test for significant differences between the categories
+TukeyHSD(overlap_aut19_av) 
+```
+
+### Spring 2020 (lockdown)
+```{r testing something remove later}
+# boot_spr_lock_dogs
+# boot_spr_lock_cats
+# boot_spr_lock_martens
+
+# test_dog <- data.frame(dhat = boot_aut_lock_dogs, species = "dogs")
+# test_cat <- data.frame(dhat = boot_aut_lock_cats, species = "cats")
+# test_marten <- data.frame(dhat = boot_aut_lock_martens, species = "martens")
+# 
+# test_df <- rbind(test_dog, test_cat, test_marten)
+# 
+# test_df %>% 
+#   mutate(species = as.factor(species)) %>% 
+#   mutate(species = fct_relevel(species, "dogs", "cats", "martens")) %>% 
+#   group_by(species) %>% 
+#   summarise(mean = mean(dhat),
+#             sd = sd(dhat)) %>% 
+#   ggplot(aes(x = species, y = mean)) +
+#   geom_point() +
+#   # geom_errorbar(aes(ymin = mean - (2*sd), ymax = mean + (2*sd)), width = 0.2)
+#   geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd), width = 0.2) +
+#   ylim(c(0, 1))
+# 
+# 
+# 
+# overlap_glm <- glm(formula = dhat ~ species, family = "gaussian", data = test_df)
+# overlap_lm <- lm(formula = dhat ~ species, data = test_df)
+# 
+# overlap_av <- aov(overlap_lm)
+# 
+# summary(overlap_glm)
+# car::Anova(overlap_glm)
+# tuckey
+# 
+# TukeyHSD(overlap_av)
+```
+
+
+```{r overlap table}
+# Create a list of the bootstrap vectors and the respective species name
+species_list <- list(dogs = boot_spr_lock_dogs, cats = boot_spr_lock_cats, martens = boot_spr_lock_martens)
+
+# Create a table 
+overlap_spr_2020 <- 
+  map2(.x = names(species_list), .y = species_list, ~ tibble(species = .x, dhat = .y)) %>%
+  bind_rows() %>%
+  mutate(species = as.factor(species)) %>%
+  mutate(species = fct_relevel(species, "dogs", "cats", "martens"))
+
+skim(overlap_spr_2020)
+```
+
+
+```{r overlap plot redo}
+# Redo the plot
+overlap_spr_2020 %>%
+  group_by(species) %>%
+  summarise(mean = mean(dhat),
+            sd = sd(dhat)) %>% 
+  ggplot(aes(x = species, y = mean)) +
+  geom_point() +
+  # geom_errorbar(aes(ymin = mean - (2*sd), ymax = mean + (2*sd)), width = 0.2)
+  geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd), width = 0.2) +
+  ylim(c(0, 1))
+```
+
+
+```{r overlap plot redo}
+# create a linear model for the anova
+overlap_spr20_lm <- lm(formula = dhat ~ species, data = overlap_spr_2020)
+# anova
+overlap_spr20_av <- aov(overlap_spr20_lm)
+# Summary
+summary(overlap_spr20_av)
+# Tukey Test for significant differences between the categories
+TukeyHSD(overlap_spr20_av) # add to the supplement coloumns: diff (CI) | p value
+
+plot(TukeyHSD(overlap_spr20_av) , col = "brown")
+
+```
+
+### Autumn 2020 (lockdown)
+```{r overlap table}
+# Create a list of the bootstrap vectors and the respective species name
+species_list <- list(dogs = boot_aut_lock_dogs, cats = boot_aut_lock_cats, martens = boot_aut_lock_martens)
+
+# Create a table 
+overlap_aut_2020 <- 
+  map2(.x = names(species_list), .y = species_list, ~ tibble(species = .x, dhat = .y)) %>%
+  bind_rows() %>%
+  mutate(species = as.factor(species)) %>%
+  mutate(species = fct_relevel(species, "dogs", "cats", "martens"))
+
+skim(overlap_aut_2020)
+```
+
+
+```{r overlap plot redo}
+# Redo the plot
+overlap_aut_2020 %>%
+  group_by(species) %>%
+  summarise(mean = mean(dhat),
+            sd = sd(dhat)) %>% 
+  ggplot(aes(x = species, y = mean)) +
+  geom_point() +
+  # geom_errorbar(aes(ymin = mean - (2*sd), ymax = mean + (2*sd)), width = 0.2)
+  geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd), width = 0.2) +
+  ylim(c(0, 1))
+```
+
+
+```{r overlap plot redo}
+# create a linear model for the anova
+overlap_aut20_lm <- lm(formula = dhat ~ species, data = overlap_aut_2020)
+# anova
+overlap_aut20_av <- aov(overlap_aut20_lm)
+# Summary
+summary(overlap_aut20_av)
+# Tukey Test for significant differences between the categories
+TukeyHSD(overlap_aut20_av) 
+```
+### Save tables
+```{r}
+# saveRDS(object = overlap_spr_2019,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "overlap_spr_2019_20240907.RDS"))
+# 
+# saveRDS(object = overlap_aut_2019,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "overlap_aut_2019_20240907.RDS"))
+# 
+# saveRDS(object = overlap_spr_2020,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "overlap_spr_2020_20240907.RDS"))
+# 
+# saveRDS(object = overlap_aut_2020,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "overlap_aut_2020_20240907.RDS"))
+```
 
 ***
 

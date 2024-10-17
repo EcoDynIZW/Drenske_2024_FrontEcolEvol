@@ -1,0 +1,12 @@
+Name,n_param,AICc,delta_AICc,AICc_weight,R2_Nagelkerke
+env_gard_pred_mod,12,1325.388,0,0.596,0.128
+env_mod,8,1327.038,1.65,0.261,0.084
+env_dog_mod,10,1328.249,2.862,0.143,0.097
+catmarten_mod,6,1583.701,258.313,0,0.137
+imp_gard_pred_mod,9,1586.183,260.795,0,0.151
+gard_pred_mod,8,1586.992,261.604,0,0.14
+imp_mod,5,1589.766,264.379,0,0.107
+season_lock_mod,4,1589.92,264.533,0,0.099
+imp_dog_mod,7,1593.046,267.659,0,0.11
+dog_mod,6,1593.461,268.074,0,0.101
+null_mod,2,1611.55,286.163,0,0

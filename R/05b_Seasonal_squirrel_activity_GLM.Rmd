@@ -1,27 +1,39 @@
 ---
 title: "Your Project: Data Preparation" ## name of your project and analysis step
 description: |
-    The aim of this study is...
+    The aim of the study is to investigate the influence of altered environmental urban parameters and direct human disturbance expressed by the lockdown together with animal predator risk parameters on the general activity of squirrels
 author:
-    ## author information; single arguemnts can be deleted if not needed
-    - name: "John Smith"
-      url: https://izw-berlin.de/en/john-smith-en.html  
+    - name: "Sinah Drenske"
+      affiliation: Leibniz Institute for Zoo and Wildlife Research, Technical University Berlin
+      affiliation_url: https://izw-berlin.de/en/
+      orcid_id: 0000-0002-2247-6507
+    - name: "Julie Louvrier"
       affiliation: Leibniz Institute for Zoo and Wildlife Research
       affiliation_url: https://izw-berlin.de/en/
-      orcid_id: 0000-0000-0000-0000
-    - name: "Jane Doe"
-      url: https://janedoe.com
+      orcid_id: 0000-0003-1252-1746
+    - name: "Marius Grabow"
+      affiliation: Leibniz Institute for Zoo and Wildlife Research, Technical University Berlin
+      affiliation_url: https://izw-berlin.de/en/
+      orcid_id: 0000-0003-0702-9642
+    - name: "Conny Landgraf"
       affiliation: Leibniz Institute for Zoo and Wildlife Research
       affiliation_url: https://izw-berlin.de/en/
-    ## add more authors with the same intendation and styling if needed 
-    ## a new author always starts with a hyphen!
+      #orcid_id: 0000-0000-0000-0000
+    - name: "Stephanie Kramer-Schadt"
+      affiliation: Leibniz Institute for Zoo and Wildlife Research, Technical University Berlin
+      affiliation_url: https://izw-berlin.de/en/
+      orcid_id: 0000-0002-9269-4446
+    - name: "Aimara Planillo"
+      affiliation: Leibniz Institute for Zoo and Wildlife Research
+      affiliation_url: https://izw-berlin.de/en/
+      orcid_id: 0000-0001-6763-9923
 date: "`r Sys.Date()`"
 output: 
     distill::distill_article:
         highlight: kate      ## styling of code
         code_folding: false  ## if `true` you can expand and shrink code chunks
         toc: true            ## if `true` adds a table of content
-        toc_depth: 2         ## level to be displayed in the table of content
+        toc_depth: 4         ## level to be displayed in the table of content
 ---
 
 ```{r setup, include=FALSE}
@@ -30,54 +42,96 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE,
 Sys.setlocale("LC_TIME", "C")
 ```
 
-* **Research question:**
-* **Study area:**
-* **Data:** 
-
+* **Research question:** Which risk effects increase or decrease the overall activity of red squirrels in urban gardens?  
+* **Study area:** Berlin 2019-2020 
+* **Data:** Detection histories of squirrels, martens and cats from 4 seasons (spring 2019, autumn 2019, spring 2020, autumn 2020), already filtered as in Louvrier et al. 2021 + environmental information on camera stations. 
 
 # Setup
 
 ```{r packages}
-# install the package librarian, it loads and installs (if necessary) the specified packages from CRAN, GitHub or Bioconductor
-# it will not update already installed packages
-
-#devtools::install_github("DesiQuintans/librarian")
-librarian::shelf(update_all = FALSE,
-                 #camtrapR,
-                 bayestestR, 
-                 DHARMa,
-                 easystats / easystats, 
-                 effects,
-                 extrafont, 
-                 ggeffects,
-                 #ggplot2, 
-                 ggpubr, 
-                 here, 
-                 insight,
-                 performance, 
-                 plyr,
-                 rstanarm, 
-                 stringr, 
-                 tidyverse, 
-                 )
+#remotes::install_github("EcoDynIZW/d6")
+d6::simple_load(c("bayestestR",
+                  "broom",
+                  "colorspace",
+                  "cowplot", 
+                  #"DHARMa",
+                  "easystats/easystats", 
+                  "effects",
+                  "extrafont", 
+                  "ggeffects",
+                  #ggplot2, 
+                  #ggpubr, 
+                  "here", 
+                  "insight",
+                  #"lme4",
+                  "logspline",
+                  "MASS",
+                  #"modelsummary",
+                  "MuMIn",
+                  "performance", 
+                  "plyr",
+                  "rstanarm", 
+                  "stringr", 
+                  "tidyverse"
+))
 ```
 
+## Plot setup
+Set theme for ggplots
+```{r theme}
+theme_set(
+  theme(
+    legend.position = "none",
+    panel.grid = element_blank(),
+    panel.background = element_rect(fill = "white"),
+    panel.border = element_rect(colour = "black", fill = NA, linewidth = 1),
+    plot.margin = margin(6, 10, 4, 4),
+    axis.ticks = element_line(colour = "black", linewidth = 1.5),
+    axis.ticks.length = unit(0.2, "cm"),
+    title = element_text(family = "Zilla Slab", size = 15), # axis
+    axis.text = element_text(family = "Roboto", size = rel(0.87)))) # axis ticks
 
-# Data
-```{r Data}
-# CT squirrels per station
-CT_squirrels_station <- readRDS(here::here("output",
-                                           "data-proc",
-                                           "all_seasons",
-                                           "CT_squirrels_per_station_20230223.RDS"))
+
+# my_theme <- theme(
+#     legend.position = "none",
+#     panel.grid = element_blank(),
+#     panel.background = element_rect(fill = "white"),
+#     panel.border = element_rect(colour = "black", fill = NA, linewidth = 1),
+#     plot.margin = margin(6, 10, 4, 4),
+#     axis.ticks = element_line(colour = "black", linewidth = 1.5),
+#     axis.ticks.length = unit(0.2, "cm"), 
+#     title = element_text(family = "Zilla Slab", size = 15),
+#     axis.text = element_text(family = "Roboto", size = rel(0.87)))
 ```
 
 Palettes
 ```{r palette}
-# darkdarkblue beige greyblue brown red
-pal_5 <- c("#303B4A", "#E4CAA5", "#4D6476", "#837461", "#C83649") # 
-pal_3 <- c("#E4CAA5", "#4D6476", "#837461")
-pal_2 <- c("#E4CAA5", "#4D6476")
+# darkdarkblue beige greyblue brown | red
+#pal_5 <- c("#303B4A", "#E4CAA5", "#4D6476", "#837461", "#C83649", "#574a3a") #  
+pal_5 <- c("#574a3a", "#1D2F51", "#75768f", "#8F84AD", "#201B24") # Imp, Noise, Pop dens, Distance to city border, Garden size
+#pal_3 <- c("#E4CAA5", "#4D6476", "#837461")
+col_season <- c("#a83a0a", "#93a143") # autumn, spring, 
+col_lock <- c("#E4CAA5", "#4D6476") # no lockdown, lockdown
+col_dogs <- c("#6d328c", "#36b3a6") # no dogs, dogs old: "#52144f", 
+col_cats <- c("#5784c2", "#d96b1c") # no cats, cats old: "#303B4A", 
+col_martens <- c("#155926", "#871338") # no martens, martens old: "#11451e", 
+col_imp <- c("#837461", "#574a3a", "#919189")
+col_animals <- c("#36b3a6", "#d96b1c", "#871338") # dogs, cats, martens
+```
+
+
+```{r palette}
+# # darkdarkblue beige greyblue brown | red
+# #pal_5 <- c("#303B4A", "#E4CAA5", "#4D6476", "#837461", "#C83649", "#574a3a") #  
+# pal_5 <- c("#574a3a", "#1D2F51", "#75768f", "#8F84AD", "#201B24") # Imp, Noise, Pop dens, Distance to city border, Garden size
+# #pal_3 <- c("#E4CAA5", "#4D6476", "#837461")
+# col_season <- c("#a83a0a", "#93a143") # autumn, spring
+# col_lock <- c("#E4CAA5", "#4D6476") # no lockdown, lockdown
+# col_dogs <- c("#36b3a6","#52144f") # no dogs, dogs
+# col_cats <- c("#d96b1c", "#303B4A") # no cats, cats
+# col_martens <- c("#871338", "#11451e") # no martens, martens
+# col_imp <- c("#837461", "#574a3a", "#919189")
+
 ```
 
 Fonts
@@ -85,6 +139,869 @@ Fonts
 #font_import()
 loadfonts(device = "win")
 fonts()
+```
+
+# Data
+```{r Data}
+# CT squirrels per station
+CT_squirrels_station <- readRDS(here::here("output",
+                                           "data-proc",
+                                           "01_overall_activity",
+                                           "CT_squirrels_per_station_20230305.RDS"))
+```
+
+set the seed
+```{r seed}
+set.seed(20200604)
+```
+
+# Frequentist approach 
+Histogram to show how many stations have taken a certain number of squirrel photos per phase
+
+```{r}
+table(CT_squirrels_station$sum_pic)
+
+CT_squirrels_station %>%
+  ggplot(mapping = aes(x = sum_pic)) + 
+  geom_histogram(stat = "bin", position = "identity", fill = "#303B4A", bins = 90) +
+  scale_y_continuous(
+    limits = c(0, 350),
+    breaks = seq(0, 350, by = 50),
+    expand = c(.008, .001)) +
+  scale_x_continuous(limits = c(-1, 90),
+                     breaks = seq(0, 90, by = 10),
+                     expand = c(.008, .001)) +
+  labs(x = "Number of squirrel pictures per station", y = "Number of stations") #+ 
+  #my_theme
+
+# Zero inflated - we will use negative binomial distribution
+
+# # Save the plot
+# ggsave(filename = here::here("plots",
+#                              "02_overall_activity",
+#                              "squirrel_pics_per_station.png"),
+#        width = 1200*1.5,
+#        height = 1200,
+#        units = "px",
+#        dpi = 300)
+```
+
+## Model formulation
+### Null + seasonal models
+```{r include=FALSE}
+# Null model
+#?glm.nb from the package MASS
+null_mod <- glm.nb(formula = sum_pic ~ 1, 
+                   data = CT_squirrels_station)
+
+# Null model with Season and lockdown
+season_lock_mod <- glm.nb(formula = sum_pic ~ 1 + Season + lockdown, 
+                          data = CT_squirrels_station)
+```
+
+
+### Full models
+```{r message=FALSE}
+# Full model with explanatory variables of urban and garden level
+env_gard_pred_mod <- glm.nb(formula = sum_pic ~ scale(imperviousness_2018) + scale(noise_2017) + 
+                              scale(pop_2019) + scale(distance_to_border) +
+                              scale(garden_size) + dogs_binary + 
+                              cats_cam_binary + marten_cam_binary +
+                              Season + lockdown,
+                            data = CT_squirrels_station)
+
+imp_gard_pred_mod <- glm.nb(formula = sum_pic ~ scale(imperviousness_2018) + 
+                              scale(garden_size) + dogs_binary + 
+                              cats_cam_binary + marten_cam_binary +
+                              Season + lockdown,
+                            data = CT_squirrels_station)
+
+env_dog_mod <- glm.nb(formula = sum_pic ~ scale(imperviousness_2018) + scale(noise_2017) + 
+                        scale(pop_2019) + scale(distance_to_border) +
+                        scale(garden_size) + dogs_binary + 
+                        Season + lockdown,
+                      data = CT_squirrels_station)
+
+imp_dog_mod <- glm.nb(formula = sum_pic ~ scale(imperviousness_2018) + 
+                        scale(garden_size) + dogs_binary + 
+                        Season + lockdown,
+                      data = CT_squirrels_station)
+```
+
+### Urban models
+```{r message=FALSE}
+env_mod <- glm.nb(formula = sum_pic ~ scale(imperviousness_2018) + scale(noise_2017) + 
+                    scale(pop_2019) + scale(distance_to_border) +
+                    Season + lockdown,
+                  data = CT_squirrels_station)
+
+imp_mod <- glm.nb(formula = sum_pic ~ scale(imperviousness_2018) + 
+                    Season + lockdown,
+                  data = CT_squirrels_station)
+```
+
+### Garden models
+```{r message=FALSE}
+# Urban model with explanatory variables of garden level
+
+gard_pred_mod <- glm.nb(formula = sum_pic ~ scale(garden_size) + dogs_binary + 
+                          cats_cam_binary + marten_cam_binary +
+                          Season + lockdown,
+                        data = CT_squirrels_station)
+
+dog_mod  <- glm.nb(formula = sum_pic ~ scale(garden_size) + dogs_binary + 
+                     Season + lockdown,
+                   data = CT_squirrels_station)
+```
+
+### Predators
+```{r}
+catmarten_mod <- glm.nb(formula = sum_pic ~ cats_cam_binary + marten_cam_binary +
+                          Season + lockdown,
+                        data = CT_squirrels_station)
+```
+
+### Save models
+```{r}
+# # 1 Null model
+# saveRDS(object = null_mod, 
+#         file = here::here("output", 
+#                           "data-proc", 
+#                           "01_overall_activity", 
+#                           "null_mod_20240201.RDS"))
+# # 2 season lockdown
+# saveRDS(object = season_lock_mod, 
+#         file = here::here("output", 
+#                           "data-proc", 
+#                           "01_overall_activity", 
+#                           "season_lock_mod_20240201.RDS"))
+# # 3 
+# saveRDS(object = env_gard_pred_mod, 
+#         file = here::here("output", 
+#                           "data-proc", 
+#                           "01_overall_activity", 
+#                           "env_gard_pred_mod_20240201.RDS"))
+# # 4 
+# saveRDS(object = imp_gard_pred_mod, 
+#         file = here::here("output", 
+#                           "data-proc", 
+#                           "01_overall_activity", 
+#                           "imp_gard_pred_mod_20240201.RDS"))
+# # 5
+# saveRDS(object = env_dog_mod, 
+#         file = here::here("output", 
+#                           "data-proc", 
+#                           "01_overall_activity", 
+#                           "env_dog_mod_20240201.RDS"))
+# # 6
+# saveRDS(object = imp_dog_mod, 
+#         file = here::here("output", 
+#                           "data-proc", 
+#                           "01_overall_activity", 
+#                           "imp_dog_mod_20240201.RDS"))
+# # 7
+# saveRDS(object = env_mod, 
+#         file = here::here("output", 
+#                           "data-proc", 
+#                           "01_overall_activity", 
+#                           "env_mod_20240201.RDS"))
+# # 8
+# saveRDS(object = imp_mod, 
+#         file = here::here("output", 
+#                           "data-proc", 
+#                           "01_overall_activity", 
+#                           "imp_mod_20240201.RDS"))
+# # 9
+# saveRDS(object = gard_pred_mod, 
+#         file = here::here("output", 
+#                           "data-proc", 
+#                           "01_overall_activity", 
+#                           "gard_pred_mod_20240201.RDS"))
+# # 10
+# saveRDS(object = dog_mod, 
+#         file = here::here("output", 
+#                           "data-proc", 
+#                           "01_overall_activity", 
+#                           "dog_mod_20240201.RDS"))
+# # 11
+# saveRDS(object = catmarten_mod, 
+#         file = here::here("output", 
+#                           "data-proc", 
+#                           "01_overall_activity", 
+#                           "catmarten_mod_20240201.RDS"))
+```
+
+### Read models 
+```{r}
+# 1 null
+null_mod <- readRDS(file = here::here("output",
+                                      "data-proc",
+                                      "01_overall_activity",
+                                      "null_mod_20240201.RDS"))
+# 2 season lockdown
+season_lock_mod <- readRDS(file = here::here("output",
+                                             "data-proc",
+                                             "01_overall_activity",
+                                             "season_lock_mod_20240201.RDS"))
+# 3
+env_gard_pred_mod <- readRDS(file = here::here("output",
+                                               "data-proc",
+                                               "01_overall_activity",
+                                               "env_gard_pred_mod_20240201.RDS"))
+# 4
+imp_gard_pred_mod <- readRDS(file = here::here("output",
+                                               "data-proc",
+                                               "01_overall_activity",
+                                               "imp_gard_pred_mod_20240201.RDS"))
+# 5
+env_dog_mod <- readRDS(file = here::here("output",
+                                         "data-proc",
+                                         "01_overall_activity",
+                                         "env_dog_mod_20240201.RDS"))
+# 6
+imp_dog_mod <- readRDS(file = here::here("output",
+                                         "data-proc",
+                                         "01_overall_activity",
+                                         "imp_dog_mod_20240201.RDS"))
+# 7
+env_mod <- readRDS(file = here::here("output",
+                                     "data-proc",
+                                     "01_overall_activity",
+                                     "env_mod_20240201.RDS"))
+# 8
+imp_mod <- readRDS(file = here::here("output",
+                                     "data-proc",
+                                     "01_overall_activity",
+                                     "imp_mod_20240201.RDS"))
+# 9
+gard_pred_mod <- readRDS(file = here::here("output",
+                                           "data-proc",
+                                           "01_overall_activity",
+                                           "gard_pred_mod_20240201.RDS"))
+# 10
+dog_mod <- readRDS(file = here::here("output",
+                                     "data-proc",
+                                     "01_overall_activity",
+                                     "dog_mod_20240201.RDS"))
+# 11
+catmarten_mod <- readRDS(file = here::here("output",
+                                           "data-proc",
+                                           "01_overall_activity",
+                                           "catmarten_mod_20240201.RDS"))
+```
+
+## Model comparison
+```{r}
+# Create a list with all models
+model_list <- list(null_mod = null_mod, 
+                   season_lock_mod = season_lock_mod, 
+                   env_gard_pred_mod = env_gard_pred_mod, 
+                   imp_gard_pred_mod = imp_gard_pred_mod, 
+                   env_dog_mod = env_dog_mod, 
+                   imp_dog_mod = imp_dog_mod, 
+                   env_mod = env_mod, 
+                   imp_mod = imp_mod, 
+                   gard_pred_mod = gard_pred_mod, 
+                   dog_mod = dog_mod, 
+                   catmarten_mod = catmarten_mod)
+
+mod_sel <- AICc(null_mod, 
+                season_lock_mod, 
+                env_gard_pred_mod, 
+                imp_gard_pred_mod, 
+                env_dog_mod, 
+                imp_dog_mod, 
+                env_mod, 
+                imp_mod, 
+                gard_pred_mod, 
+                dog_mod, 
+                catmarten_mod)
+
+value_AICcweights <- Weights(mod_sel)
+
+value_R2 <- model_list %>%
+  lapply(r2_nagelkerke) %>%
+  unlist()
+#r2_nagelkerke(model_list)
+
+mod_sel <- mod_sel %>%
+  mutate(AICc_weight = value_AICcweights, R2_Nagelkerke = value_R2) %>%
+  arrange(AICc) %>%
+  mutate(delta_AICc = AICc - AICc[1]) %>%
+  mutate(across(where(is.numeric), round, digits = 3)) %>% 
+  select(df, AICc, delta_AICc, AICc_weight, R2_Nagelkerke) %>% 
+  rename(n_param = df) %>%
+  rownames_to_column(var = "Name")
+
+
+
+# # save the table as csv
+# write_csv(x = mod_sel,
+#           file = here::here("output",
+#                             "data-proc",
+#                             "01_overall_activity",
+#                             "mod_sel_20240411.csv"),
+#           na = "NA")
+
+# Load table
+mod_sel <- read.csv(file = here::here("output",
+                                      "data-proc",
+                                      "01_overall_activity",
+                                      "mod_sel_20240411.csv"))
+```
+
+```{r}
+# # Old version
+# # Create a table for comparing model performance
+# mod_sel <- compare_performance(model_list, metrics = c("AIC", "AICc", "R2"))
+# 
+# # Calculate the AICc with the MuMin package (For some reason, the calculation with the previous function does not work for all models)
+# value_AICc <- model_list %>%
+#   lapply(AICc) %>%
+#   unlist()
+# 
+# value_AICweights <- Weights(value_AICc)
+# 
+# # Add the calculated value, calculate the difference between the lowest AIC and the other AICs and put the model with the lowest AIC in the first row
+# mod_sel <- mod_sel %>%
+#   mutate(AICc = value_AICc, AIC_weight = value_AICweights) %>%
+#   arrange(AIC) %>%
+#   mutate(delta_AIC = AIC - AIC[1]) %>%
+#   mutate(across(where(is.numeric), round, digits = 3)) %>% 
+#   select(Name, AIC, delta_AIC, AICc, AIC_weight, R2_Nagelkerke) 
+```
+
+
+```{r}
+#### REMOVE LATER
+#test <- MuMIn::model.sel(model_list, rank = "AIC", extra = "AICc")
+
+# mod_sel <- model_list %>%
+#   map(.f = glance) %>%
+#   map(.f = mutate, across(everything(), as.numeric)) %>% # we have to change the column types otherwise it will not work
+#   list_rbind(names_to = "model_name")
+# 
+# mod_sel
+# 
+# # Calculate Nagelkerkes Pseudo R2
+# r2_all_models <- c(r2_nagelkerke(null_mod), 
+#                    r2_nagelkerke(season_lock_mod), 
+#                    r2_nagelkerke(env_gard_pred_mod), 
+#                    r2_nagelkerke(imp_gard_pred_mod),
+#                    r2_nagelkerke(env_dog_mod), 
+#                    r2_nagelkerke(imp_dog_mod), 
+#                    r2_nagelkerke(env_mod),
+#                    r2_nagelkerke(imp_mod), 
+#                    r2_nagelkerke(gard_pred_mod),
+#                    r2_nagelkerke(dog_mod), 
+#                    r2_nagelkerke(catmarten_mod))
+# r2_all_models <- round(r2_all_models, digits = 5)
+# 
+# mod_sel <- mod_sel %>%
+#   mutate(pseudo_r2 =  r2_all_models) %>%
+#   arrange(AIC) %>%
+#   mutate(delta_AIC = AIC - AIC[1]) %>%
+#  # arrange(desc(WAIC)) %>%
+#   relocate(delta_AIC, .after = AIC)
+# 
+# mod_sel
+# 
+#### REMOVE LATER
+# temp_1 <- map(model_list, glance)
+# temp_2 <- map(temp_1, mutate, across(everything(), as.numeric)) 
+# mod_sel <- list_rbind(temp_2, names_to = "model_name")
+# mod_sel
+#test3 <- lapply(model_list, glance)
+# other solution
+#test7 <- do.call(what = rbind, args = test5)
+```
+
+
+
+
+### Closer look at the best model(s)
+#### Model summaries
+```{r}
+best_model_sum <- tidy(env_gard_pred_mod, conf.int = TRUE) %>%
+  dplyr::rename(Predictors = term,
+         Estimate = estimate,
+         SE = std.error,
+         T_statistic = statistic,
+         p = p.value) %>%
+  dplyr::mutate(across(.cols = c(2:7), 
+                       .fns =  as.numeric)) %>%
+  dplyr::mutate(across(where(is.numeric), round, digits = 3))
+
+# Rename the predictors
+best_model_sum[1,1] <- "Intercept"
+best_model_sum[2,1] <- "Imperviousness"
+best_model_sum[3,1] <- "Noise"
+best_model_sum[4,1] <- "Population density"
+best_model_sum[5,1] <- "Distance to city border"
+best_model_sum[6,1] <- "Garden size"
+best_model_sum[7,1] <- "Dogs: yes"
+best_model_sum[8,1] <- "Cats on cams: yes"
+best_model_sum[9,1] <- "Martens on cams: yes"
+best_model_sum[10,1] <- "Season: spring"
+best_model_sum[11,1] <- "Lockdown: yes"
+
+best_model_sum
+
+# # save the table as csv
+# write_csv(x = best_model_sum,
+#           file = here::here("output",
+#                             "data-proc",
+#                             "01_overall_activity",
+#                             "best_model_sum_20240214.csv"),
+#           na = "NA")
+# 
+# Load table
+best_model_sum <- read.csv(file = here::here("output",
+                                      "data-proc",
+                                      "01_overall_activity",
+                                      "best_model_sum_20240214.csv"))
+```
+
+
+```{r}
+best2_model_sum <- tidy(env_mod, conf.int = TRUE) %>%
+  dplyr::rename(Predictors = term,
+         Estimate = estimate,
+         SE = std.error,
+         T_statistic = statistic,
+         p = p.value) %>%
+  dplyr::mutate(across(.cols = c(2:7), 
+                       .fns =  as.numeric)) %>%
+  dplyr::mutate(across(where(is.numeric), round, digits = 3))
+
+# Rename the predictors
+best2_model_sum[1,1] <- "Intercept"
+best2_model_sum[2,1] <- "Imperviousness"
+best2_model_sum[3,1] <- "Noise"
+best2_model_sum[4,1] <- "Population density"
+best2_model_sum[5,1] <- "Distance to city border"
+best2_model_sum[6,1] <- "Season: spring"
+best2_model_sum[7,1] <- "Lockdown: yes"
+
+best2_model_sum
+
+# # save the table as csv
+# write_csv(x = best2_model_sum,
+#           file = here::here("output",
+#                             "data-proc",
+#                             "01_overall_activity",
+#                             "best2_model_sum_20240221.csv"),
+#           na = "NA")
+# # 
+# Load table
+best2_model_sum <- read.csv(file = here::here("output",
+                                              "data-proc",
+                                              "01_overall_activity",
+                                              "best2_model_sum_20240221.csv"))
+```
+
+
+```{r}
+best3_model_sum <- tidy(env_dog_mod, conf.int = TRUE) %>%
+  dplyr::rename(Predictors = term,
+         Estimate = estimate,
+         SE = std.error,
+         T_statistic = statistic,
+         p = p.value) %>%
+  dplyr::mutate(across(.cols = c(2:7), 
+                       .fns =  as.numeric)) %>%
+  dplyr::mutate(across(where(is.numeric), round, digits = 3))
+
+# Rename the predictors
+best3_model_sum[1,1] <- "Intercept"
+best3_model_sum[2,1] <- "Imperviousness"
+best3_model_sum[3,1] <- "Noise"
+best3_model_sum[4,1] <- "Population density"
+best3_model_sum[5,1] <- "Distance to city border"
+best3_model_sum[6,1] <- "Garden size"
+best3_model_sum[7,1] <- "Dogs: yes"
+best3_model_sum[8,1] <- "Season: spring"
+best3_model_sum[9,1] <- "Lockdown: yes"
+
+best3_model_sum
+
+# # save the table as csv
+# write_csv(x = best3_model_sum,
+#           file = here::here("output",
+#                             "data-proc",
+#                             "01_overall_activity",
+#                             "best3_model_sum_20240221.csv"),
+#           na = "NA")
+# 
+# Load table
+best3_model_sum <- read.csv(file = here::here("output",
+                                              "data-proc",
+                                              "01_overall_activity",
+                                              "best3_model_sum_20240221.csv"))
+```
+
+
+```{r}
+binned_residuals(env_gard_pred_mod)
+plot(binned_residuals(env_gard_pred_mod))
+```
+
+```{r}
+check_autocorrelation(env_gard_pred_mod)
+
+check_outliers(env_gard_pred_mod)
+
+# check_model(env_gard_pred_mod)
+
+plot(env_gard_pred_mod) # it is fine
+```
+
+#### Prediction plots
+Create tables for estimated marginal means
+```{r}
+pred_season <- ggemmeans(env_gard_pred_mod, terms = "Season")
+pred_lock <- ggemmeans(env_gard_pred_mod, terms = "lockdown")                    
+pred_imp <- ggemmeans(env_gard_pred_mod, terms = "imperviousness_2018")
+pred_noise <- ggemmeans(env_gard_pred_mod, terms = "noise_2017")
+pred_pop <- ggemmeans(env_gard_pred_mod, terms = "pop_2019")
+pred_border <- ggemmeans(env_gard_pred_mod, terms = "distance_to_border")
+pred_size <- ggemmeans(env_gard_pred_mod, terms = "garden_size")
+pred_dogs <- ggemmeans(env_gard_pred_mod, terms = "dogs_binary")
+pred_cats <- ggemmeans(env_gard_pred_mod, terms = "cats_cam_binary")
+pred_martens <- ggemmeans(env_gard_pred_mod, terms = "marten_cam_binary")
+```
+
+```{r}
+plot_imp <- 
+  ggplot(data = pred_imp, mapping = aes(x = x, y = predicted)) + 
+  geom_line(linewidth = 2, colour = pal_5[1]) + 
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.15, fill = darken(pal_5[1], 0.3)) + 
+  scale_y_continuous(
+    limits = c(0, 20),
+    breaks = seq(0, 20, by = 10),
+    expand = c(.001, .001)) + 
+  scale_x_continuous(
+    limits = c(0, 100),
+    breaks = seq(0, 100, by = 50),
+    expand = c(.001, .001)) + 
+  labs(y = "", x = "Imperviousness [%]", title = NULL) #+ #y = "Number of pictures per station"
+
+plot_imp
+
+# # Save the plot
+# ggsave(filename = here::here("plots",
+#                              "02_seasonal_activity",
+#                              "GLM_prediction_imperviousness.tiff"),
+#        width = 85,
+#        height = 85,
+#        units = "mm",
+#        dpi = 300)
+```
+
+```{r}
+# pred_imp <- plot(x = ggemmeans(env_gard_pred_mod, terms = "imperviousness_2018"), 
+#                  #show_data = TRUE, 
+#                  line_size = 2,
+#                  dot_size = 2, 
+#                  colors = pal_5[1]) + 
+#   scale_y_continuous(
+#     limits = c(0, 20),
+#     breaks = seq(0, 20, by = 10),
+#     expand = c(.001, .001)) +
+#   scale_x_continuous(expand = c(.001, .001)) + 
+#   labs(y = "", x = "Imperviousness [%]", title = NULL) + #y = "Number of pictures per station"
+#   my_theme
+# 
+# pred_imp
+
+
+
+```
+
+```{r}
+plot_noise <- 
+ggplot(data = pred_noise, mapping = aes(x = x, y = predicted)) + 
+  geom_line(linewidth = 2, colour = pal_5[2]) + 
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.15, fill = darken(pal_5[2], 0.3)) + 
+  scale_y_continuous(
+    limits = c(0, 20),
+    breaks = seq(0, 20, by = 10),
+    expand = c(.001, .001)) + 
+   scale_x_continuous(
+    limits = c(30, 80),
+    breaks = seq(30, 80, by = 25),
+    expand = c(.001, .001)) + 
+  labs(y = "", x = "Noise [dB]", title = NULL)
+
+plot_noise
+
+# # Save the plot
+# ggsave(filename = here::here("plots",
+#                              "02_seasonal_activity",
+#                              "GLM_prediction_noise.tiff"),
+#        width = 85,
+#        height = 85,
+#        units = "mm",
+#        dpi = 300)
+```
+
+```{r}
+plot_pop <- 
+ggplot(data = pred_pop, mapping = aes(x = x, y = predicted)) + 
+  geom_line(linewidth = 2, colour = pal_5[3]) + 
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.15, fill = darken(pal_5[3], 0.3)) + 
+  scale_y_continuous(
+    limits = c(0, 110),
+    breaks = seq(0, 110, by = 50),
+    expand = c(.001, .001)) + 
+   scale_x_continuous(
+     breaks = seq(0, 700, by = 200),
+     expand = c(.001, .001)) + 
+  labs(y = "", x = "Population density per ha", title = NULL)
+
+plot_pop
+
+# # Save the plot
+# ggsave(filename = here::here("plots",
+#                              "02_seasonal_activity",
+#                              "GLM_prediction_pop_density.tiff"),
+#        width = 85,
+#        height = 85,
+#        units = "mm",
+#        dpi = 300)
+```
+
+```{r}
+plot_border <- 
+ggplot(data = pred_border, mapping = aes(x = x, y = predicted)) + 
+  geom_line(linewidth = 2, colour = pal_5[4]) + 
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.15, fill = darken(pal_5[4], 0.3)) + 
+  scale_y_continuous(
+    limits = c(0, 20),
+    breaks = seq(0, 20, by = 10),
+    expand = c(.001, .001)) + 
+   scale_x_continuous(
+     breaks = seq(0, 11500, by = 5000),
+     expand = c(.001, .001)) + 
+  labs(y = "", x = "Distance to city border [m]", title = NULL)
+
+plot_border
+
+# # Save the plot
+# ggsave(filename = here::here("plots",
+#                              "02_seasonal_activity",
+#                              "GLM_prediction_border.tiff"),
+#        width = 85,
+#        height = 85,
+#        units = "mm",
+#        dpi = 300)
+```
+```{r}
+plot_size <- 
+  ggplot(data = pred_size, mapping = aes(x = x, y = predicted)) + 
+  geom_line(linewidth = 2, colour = pal_5[5]) + 
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.15, fill = darken(pal_5[5], 0.3)) + 
+  scale_y_continuous(
+    limits = c(0, 50),
+    breaks = seq(0, 50, by = 25),
+    expand = c(.001, .001)) + 
+  scale_x_continuous(
+    breaks = seq(0, 5000, by = 2500),
+    expand = c(.001, .001)) + 
+  labs(y = "", x = bquote("Garden size [" * m^2 * "]"), title = NULL)
+
+plot_size
+
+# # Save the plot
+# ggsave(filename = here::here("plots",
+#                              "02_seasonal_activity",
+#                              "GLM_prediction_garden_size.tiff"),
+#        width = 85,
+#        height = 85,
+#        units = "mm",
+#        dpi = 300)
+```
+
+
+```{r}
+plot_dogs <- 
+ggplot(data = pred_dogs, mapping = aes(x = x, y = predicted)) + 
+  geom_pointrange(mapping = aes(ymin = conf.low, ymax = conf.high), 
+                  size = 1, linewidth = 2, 
+                  colour = col_dogs) + # alpha = 0.15, 
+  scale_y_continuous(
+    limits = c(0, 20),
+    breaks = seq(0, 20, by = 10),
+    expand = c(.001, .001)) +
+  scale_x_discrete(
+    breaks = seq(0, 1),
+    labels = c("No", "Yes"),
+    expand = c(.1, .2)) + 
+  labs(y = "", x = "Dogs", title = NULL)
+
+plot_dogs
+
+# # Save the plot
+# ggsave(filename = here::here("plots",
+#                              "02_seasonal_activity",
+#                              "GLM_prediction_dogs.tiff"),
+#        width = 85,
+#        height = 85,
+#        units = "mm",
+#        dpi = 300)
+```
+
+```{r}
+plot_cats <- 
+ggplot(data = pred_cats, mapping = aes(x = x, y = predicted)) + 
+  geom_pointrange(mapping = aes(ymin = conf.low, ymax = conf.high), 
+                  size = 1, linewidth = 2, 
+                  colour = col_cats) + # alpha = 0.15, 
+  scale_y_continuous(
+    limits = c(0, 20),
+    breaks = seq(0, 20, by = 10),
+    expand = c(.001, .001)) +
+  scale_x_discrete(
+    breaks = seq(0, 1),
+    labels = c("No", "Yes"),
+    expand = c(.1, .2)) + 
+  labs(y = "", x = "Cats", title = NULL)
+
+plot_cats
+
+# # Save the plot
+# ggsave(filename = here::here("plots",
+#                              "02_seasonal_activity",
+#                              "GLM_prediction_cats_binary.tiff"),
+#        width = 85,
+#        height = 85,
+#        units = "mm",
+#        dpi = 300)
+```
+
+```{r}
+plot_martens <- 
+ggplot(data = pred_martens, mapping = aes(x = x, y = predicted)) + 
+  geom_pointrange(mapping = aes(ymin = conf.low, ymax = conf.high), 
+                  size = 1, linewidth = 2, 
+                  colour = col_martens) + # alpha = 0.15, 
+  scale_y_continuous(
+    limits = c(0, 20),
+    breaks = seq(0, 20, by = 10),
+    expand = c(.001, .001)) +
+  scale_x_discrete(
+    breaks = seq(0, 1),
+    labels = c("No", "Yes"),
+    expand = c(.1, .2)) + 
+  labs(y = "", x = "Martens", title = NULL)
+
+plot_martens
+
+# # Save the plot
+# ggsave(filename = here::here("plots",
+#                              "02_seasonal_activity",
+#                              "GLM_prediction_martens_binary.tiff"),
+#        width = 85,
+#        height = 85,
+#        units = "mm",
+#        dpi = 300)
+```
+
+```{r}
+plot_season <- 
+ggplot(data = pred_season, mapping = aes(x = x, y = predicted)) + 
+  geom_pointrange(mapping = aes(ymin = conf.low, ymax = conf.high), 
+                  size = 1, linewidth = 2, 
+                  colour = col_season) + # alpha = 0.15, 
+  scale_y_continuous(
+    limits = c(0, 20),
+    breaks = seq(0, 20, by = 10),
+    expand = c(.001, .001)) +
+  scale_x_discrete(
+    #breaks = seq(1, 2),
+    labels = c("Autumn", "Spring"),
+    expand = c(.1, .2)) + 
+  labs(y = "", x = "Season", title = NULL)
+
+plot_season
+
+# # Save the plot
+# ggsave(filename = here::here("plots",
+#                              "02_seasonal_activity",
+#                              "GLM_prediction_season.tiff"),
+#        width = 85,
+#        height = 85,
+#        units = "mm",
+#        dpi = 300)
+```
+
+```{r}
+plot_lock <-
+  ggplot(data = pred_lock, mapping = aes(x = x, y = predicted)) + 
+  geom_pointrange(mapping = aes(ymin = conf.low, ymax = conf.high), 
+                  size = 1, linewidth = 2, 
+                  colour = col_lock) + # alpha = 0.15, 
+  scale_y_continuous(
+    limits = c(0, 20),
+    breaks = seq(0, 20, by = 10),
+    expand = c(.001, .001)) +
+  scale_x_discrete(
+    breaks = seq(0, 1),
+    labels = c("No", "Yes"),
+    expand = c(.1, .2)) + 
+  labs(y = "", x = "Lockdown", title = NULL)
+
+plot_lock
+
+# # Save the plot
+# ggsave(filename = here::here("plots",
+#                              "02_seasonal_activity",
+#                              "GLM_prediction_lockdown.tiff"),
+#        width = 85,
+#        height = 85,
+#        units = "mm",
+#        dpi = 300)
+```
+
+##### Build one figure for all plots
+```{r}
+# change position of figure labels or remove them
+ggdraw(xlim = c(0, 1), ylim = c(0, 2.5)) + 
+  # 1st row
+  draw_plot(plot_imp, x = 0, y = 2.0, width = .5, height = .5) + 
+  draw_plot(plot_noise, x = .5, y = 2.0, width = .5, height = .5) + 
+  # 2nd
+  draw_plot(plot_pop, x = 0, y = 1.5, width = .5, height = 0.5) + 
+  draw_plot(plot_border, x = .5, y = 1.5, width = .5, height = .5) +
+  # 3rd
+  draw_plot(plot_size, x = 0, y = 1.0, width = .5, height = .5) + 
+  draw_plot(plot_dogs, x = .5, y = 1.0, width = .5, height = .5) + 
+  # 4th
+  draw_plot(plot_cats, x = 0, y = 0.5, width = .5, height = 0.5) + 
+  draw_plot(plot_martens, x = .5, y = 0.5, width = .5, height = .5) +
+  # 5th
+  draw_plot(plot_season, x = 0, y = 0, width = .5, height = 0.5) + 
+  draw_plot(plot_lock, x = .5, y = 0, width = .5, height = .5) +
+  # labels
+  draw_label("Number of pictures per station", 
+             x =  0, y = 1.3, vjust = 1.5, angle = 90, 
+             fontfamily = "Zilla Slab", color = "black") + 
+  draw_label("Number of pictures per station", 
+             x =  0.5, y = 1.3, vjust = 1.5, angle = 90, 
+             fontfamily = "Zilla Slab", color = "black") + 
+  draw_plot_label(label = c("A", "B", "C", "D", "E", "F", "G", "H", "I", "J"), size = 13,
+                  x = c(0.08, 0.58, 0.09, 0.58,0.08, 0.58, 0.08, 0.58, 0.09, 0.58), 
+                  y = c(2.48, 2.48, 1.98, 1.98, 1.48, 1.48, 0.98, 0.98, 0.48, 0.48), 
+                  family = "Roboto", colour = "black")
+
+# # Save the plot
+# ggsave(filename = here::here("plots",
+#                              "02_seasonal_activity",
+#                              "GLM_prediction_arrange.tiff"),
+#        width = 180,
+#        height = 200,
+#        units = "mm",
+#        dpi = 300)
 ```
 
 # Bayesian approach
@@ -101,16 +1018,16 @@ season_lock_bmod <- stan_glm.nb(formula = sum_pic ~ 1 + Season + lockdown,
 
 
 ## Full models
-```{r include=FALSE}
+```{r message=FALSE}
 # Full model with explanatory variables of urban and garden level
-env_pred_bmod <- stan_glm.nb(formula = sum_pic ~ scale(imperviousness_2018) + scale(noise_2017) + 
+env_gard_pred_bmod <- stan_glm.nb(formula = sum_pic ~ scale(imperviousness_2018) + scale(noise_2017) + 
                                scale(pop_2019) + scale(distance_to_border) +
                                scale(garden_size) + dogs_binary + 
                                cats_cam_binary + marten_cam_binary +
                                Season + lockdown,
                              data = CT_squirrels_station)
 
-imp_pred_bmod <- stan_glm.nb(formula = sum_pic ~ scale(imperviousness_2018) + 
+imp_gard_pred_bmod <- stan_glm.nb(formula = sum_pic ~ scale(imperviousness_2018) + 
                                scale(garden_size) + dogs_binary + 
                                cats_cam_binary + marten_cam_binary +
                                Season + lockdown,
@@ -129,7 +1046,7 @@ imp_dog_bmod <- stan_glm.nb(formula = sum_pic ~ scale(imperviousness_2018) +
 ```
 
 ## Urban models
-```{r}
+```{r message=FALSE}
 env_bmod <- stan_glm.nb(formula = sum_pic ~ scale(imperviousness_2018) + scale(noise_2017) + 
                           scale(pop_2019) + scale(distance_to_border) +
                           Season + lockdown,
@@ -141,10 +1058,10 @@ imp_bmod <- stan_glm.nb(formula = sum_pic ~ scale(imperviousness_2018) +
 ```
 
 ## Garden models
-```{r include=FALSE}
+```{r message=FALSE}
 # Urban model with explanatory variables of garden level
 
-pred_bmod <- stan_glm.nb(formula = sum_pic ~ scale(garden_size) + dogs_binary + 
+gard_pred_bmod <- stan_glm.nb(formula = sum_pic ~ scale(garden_size) + dogs_binary + 
                            cats_cam_binary + marten_cam_binary +
                            Season + lockdown,
                          data = CT_squirrels_station)
@@ -155,13 +1072,110 @@ dog_bmod  <- stan_glm.nb(formula = sum_pic ~ scale(garden_size) + dogs_binary +
 ```
 
 ## Predators
-```{r include=FALSE}
+```{r}
 catmarten_bmod <- stan_glm.nb(formula = sum_pic ~ cats_cam_binary + marten_cam_binary +
                            Season + lockdown,
                          data = CT_squirrels_station)
 ```
 
-## Overall comparison
+## Save models
+```{r}
+# # 1 Null model
+# saveRDS(object = null_bmod, 
+#         file = here::here("output", 
+#                           "data-proc", 
+#                           "01_overall_activity", 
+#                           paste0("null_bmod_", gsub("-", "_", Sys.Date()),".RDS")))
+# # 2 season lockdown
+# saveRDS(object = season_lock_bmod, 
+#         file = here::here("output", 
+#                           "data-proc", 
+#                           "01_overall_activity", 
+#                           paste0("season_lock_bmod_", gsub("-", "_", Sys.Date()),".RDS")))
+# # 3 
+# saveRDS(object = env_gard_pred_bmod, 
+#         file = here::here("output", 
+#                           "data-proc", 
+#                           "01_overall_activity", 
+#                           paste0("env_gard_pred_bmod_", gsub("-", "_", Sys.Date()),".RDS")))
+# # 4 
+# saveRDS(object = imp_gard_pred_bmod, 
+#         file = here::here("output", 
+#                           "data-proc", 
+#                           "01_overall_activity", 
+#                           paste0("imp_gard_pred_bmod_", gsub("-", "_", Sys.Date()),".RDS")))
+# # 5
+# saveRDS(object = env_dog_bmod, 
+#         file = here::here("output", 
+#                           "data-proc", 
+#                           "01_overall_activity", 
+#                           paste0("env_dog_bmod_", gsub("-", "_", Sys.Date()),".RDS")))
+# # 6
+# saveRDS(object = imp_dog_bmod, 
+#         file = here::here("output", 
+#                           "data-proc", 
+#                           "01_overall_activity", 
+#                           paste0("imp_dog_bmod_", gsub("-", "_", Sys.Date()),".RDS")))
+# # 7
+# saveRDS(object = env_bmod, 
+#         file = here::here("output", 
+#                           "data-proc", 
+#                           "01_overall_activity", 
+#                           paste0("env_bmod_", gsub("-", "_", Sys.Date()),".RDS")))
+# # 8
+# saveRDS(object = imp_bmod, 
+#         file = here::here("output", 
+#                           "data-proc", 
+#                           "01_overall_activity", 
+#                           paste0("imp_bmod_", gsub("-", "_", Sys.Date()),".RDS")))
+# # 9
+# saveRDS(object = gard_pred_bmod, 
+#         file = here::here("output", 
+#                           "data-proc", 
+#                           "01_overall_activity", 
+#                           paste0("gard_pred_bmod_", gsub("-", "_", Sys.Date()),".RDS")))
+# # 10
+# saveRDS(object = dog_bmod, 
+#         file = here::here("output", 
+#                           "data-proc", 
+#                           "01_overall_activity", 
+#                           paste0("dog_bmod_", gsub("-", "_", Sys.Date()),".RDS")))
+# # 11
+# saveRDS(object = catmarten_bmod, 
+#         file = here::here("output", 
+#                           "data-proc", 
+#                           "01_overall_activity", 
+#                           paste0("catmarten_bmod_", gsub("-", "_", Sys.Date()),".RDS")))
+```
+
+## Read models (if necessary)
+```{r}
+# # 1 null
+# null_bmod <- readRDS(here::here("output", "data-proc", "01_overall_activity", "null_bmod_2024_01_22.RDS"))
+# # 2 season lockdown
+# season_lock_bmod <- readRDS(here::here("output", "data-proc", "01_overall_activity", "season_lock_bmod_2024_01_22.RDS"))
+# # 3
+# env_gard_pred_bmod <- readRDS(here::here("output", "data-proc", "01_overall_activity", "env_gard_pred_bmod_2024_01_22.RDS"))
+# # 4
+# imp_gard_pred_bmod <- readRDS(here::here("output", "data-proc", "01_overall_activity", "imp_gard_pred_bmod_2024_01_22.RDS"))
+# # 5
+# env_dog_bmod <- readRDS(here::here("output", "data-proc", "01_overall_activity", "env_dog_bmod_2024_01_22.RDS"))
+# # 6
+# imp_dog_bmod <- readRDS(here::here("output", "data-proc", "01_overall_activity", "imp_dog_bmod_2024_01_22.RDS"))
+# # 7
+# env_bmod <- readRDS(here::here("output", "data-proc", "01_overall_activity", "env_bmod_2024_01_22.RDS"))
+# # 8
+# imp_bmod <- readRDS(here::here("output", "data-proc", "01_overall_activity", "imp_bmod_2024_01_22.RDS"))
+# # 9
+# gard_pred_bmod <- readRDS(here::here("output", "data-proc", "01_overall_activity", "gard_pred_bmod_2024_01_22.RDS"))
+# # 10
+# dog_bmod <- readRDS(here::here("output", "data-proc", "01_overall_activity", "dog_bmod_2024_01_22.RDS"))
+# # 11
+# catmarten_bmod <- readRDS(here::here("output", "data-proc", "01_overall_activity", "catmarten_bmod_2024_01_22.RDS"))
+```
+
+
+## Model comparison
 ### Parameters
 ```{r}
 # compare_parameters(null_mod_bayes, season_lock_mod_bayes, full_mod_bayes,
@@ -175,15 +1189,15 @@ describe_posterior(null_bmod, test = c("p_direction", "rope", "bayesfactor"), ci
 # Season + Lockdown
 describe_posterior(season_lock_bmod, test = c("p_direction", "rope", "bayesfactor"), ci_method = "HDI")
 # Full
-describe_posterior(env_pred_bmod, test = c("p_direction", "rope", "bayesfactor"), ci_method = "HDI")
-describe_posterior(imp_pred_bmod, test = c("p_direction", "rope", "bayesfactor"), ci_method = "HDI")
+describe_posterior(env_gard_pred_bmod, test = c("p_direction", "rope", "bayesfactor"), ci_method = "HDI")
+describe_posterior(imp_gard_pred_bmod, test = c("p_direction", "rope", "bayesfactor"), ci_method = "HDI")
 describe_posterior(env_dog_bmod, test = c("p_direction", "rope", "bayesfactor"), ci_method = "HDI")
 describe_posterior(imp_dog_bmod, test = c("p_direction", "rope", "bayesfactor"), ci_method = "HDI")
 # Urban
 describe_posterior(env_bmod, test = c("p_direction", "rope", "bayesfactor"), ci_method = "HDI")
 describe_posterior(imp_bmod, test = c("p_direction", "rope", "bayesfactor"), ci_method = "HDI")
 # Garden
-describe_posterior(pred_bmod, test = c("p_direction", "rope", "bayesfactor"), ci_method = "HDI")
+describe_posterior(gard_pred_bmod, test = c("p_direction", "rope", "bayesfactor"), ci_method = "HDI")
 describe_posterior(dog_bmod, test = c("p_direction", "rope", "bayesfactor"), ci_method = "HDI")
 # Predators
 describe_posterior(catmarten_bmod, test = c("p_direction", "rope", "bayesfactor"), ci_method = "HDI")
@@ -193,89 +1207,56 @@ describe_posterior(catmarten_bmod, test = c("p_direction", "rope", "bayesfactor"
 ```{r ROPE}
 # Plots of the significance: Region of Practical Equivalence (ROPE)
 # Null model
-plot(rope(null_bmod))+ 
+plot(rope(null_bmod)) + 
   scale_x_continuous(
-    limits = c(-5, 5),
-    breaks = seq(-5, 5, by = 1),
+    limits = c(-4, 4),
+    breaks = seq(-4, 4, by = 1),
     expand = c(.02, .001)) + 
-  theme_pubr() + 
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(), 
-        panel.background = element_rect(fill = "white"), 
-        plot.background = element_rect(fill = "white"),
-        panel.border = element_rect(colour = "black", fill = NA, linewidth = 2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2), 
-        axis.ticks.length = unit(0.25, "cm"), 
-        plot.margin = margin(6, 10, 4, 4)) + 
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_y_discrete(expand = c(0.25, 0.001))
+  scale_y_discrete(expand = c(0.05, 1))  +
+  scale_fill_manual(values = pal_2) + 
+  coord_cartesian(clip = "off") 
 
 # Seasonal model
 plot(rope(season_lock_bmod)) + 
   scale_x_continuous(
-    limits = c(-5, 5),
-    breaks = seq(-5, 5, by = 1),
+    limits = c(-4, 4),
+    breaks = seq(-4, 4, by = 1),
     expand = c(.02, .001)) +
-  theme_pubr() + 
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(), 
-        panel.background = element_rect(fill = "white"), 
-        plot.background = element_rect(fill = "white"),
-        panel.border = element_rect(colour = "black", fill = NA, linewidth = 2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2), 
-        axis.ticks.length = unit(0.25, "cm"), 
-        plot.margin = margin(6, 10, 4, 4)) + 
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_y_discrete(labels=c("Lockdown yes", "Season spring"), expand = c(1.1,0)) # expand = expansion(mult = 0.9),
+  scale_y_discrete(expand = c(0.05, 1),
+                   labels = c("reciprocal dispersion", "Lockdown = yes", 
+                              "Season = spring"))  +
+  scale_fill_manual(values = pal_2) + 
+  coord_cartesian(clip = "off")
 ```
 
 
 ```{r ROPE}
 # All predators all environmental covariates
-plot(rope(env_pred_bmod)) + 
+plot(rope(env_gard_pred_bmod)) + 
   scale_x_continuous(
-    limits = c(-5, 5),
-    breaks = seq(-5, 5, by = 1),
+    limits = c(-4, 4),
+    breaks = seq(-4, 4, by = 1),
     expand = c(.02, .001)) +
-  theme_pubr() + 
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(), 
-        panel.background = element_rect(fill = "white"), 
-        plot.background = element_rect(fill = "white"),
-        panel.border = element_rect(colour = "black", fill = NA, linewidth = 2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2), 
-        axis.ticks.length = unit(0.25, "cm"), 
-        plot.margin = margin(6, 10, 4, 4)) + 
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_y_discrete(expand = c(0.15, 0.001), labels = c("reciprocal dispersion", "Lockdown = yes", "Season = spring", 
-                                                       "Marten on cams = yes", "Cats on cams = 1", "Dogs as pets = yes", 
-                                                       "Garden size", "Distance to city border", "Population density", "Noise", "Imperviousness")) + 
-  scale_fill_manual(values = pal_2) # c("#4D6476", "#E4CAA5")
-```
+  scale_y_discrete(expand = c(0.05, 1), labels = c("reciprocal dispersion", "Lockdown = yes", 
+                                                       "Season = spring", "Marten on cams = yes", 
+                                                       "Cats on cams = yes", "Dogs as pets = yes", 
+                                                       "Garden size", "Distance to city border", 
+                                                       "Population density", "Noise", "Imperviousness")) + 
+  scale_fill_manual(values = pal_2) + 
+  coord_cartesian(clip = "off")
 
-
-```{r ROPE}
 # All predators and imperviousness
-plot(rope(imp_pred_bmod)) + 
+plot(rope(imp_gard_pred_bmod)) + 
   scale_x_continuous(
-    limits = c(-5, 5),
-    breaks = seq(-5, 5, by = 1),
+    limits = c(-4, 4),
+    breaks = seq(-4, 4, by = 1),
     expand = c(.02, .001)) +
-  theme_pubr() + 
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(), 
-        panel.background = element_rect(fill = "white"), 
-        plot.background = element_rect(fill = "white"),
-        panel.border = element_rect(colour = "black", fill = NA, linewidth = 2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2), 
-        axis.ticks.length = unit(0.25, "cm"), 
-        plot.margin = margin(6, 10, 4, 4)) + 
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_y_discrete(expand = c(0.25, 0.001))
+  scale_y_discrete(expand = c(0.05, 1), labels = c("reciprocal dispersion", "Lockdown = yes", 
+                                                       "Season = spring", "Marten on cams = yes", 
+                                                       "Cats on cams = yes", "Dogs as pets = yes", 
+                                                       "Garden size", "Imperviousness")) + 
+  scale_fill_manual(values = pal_2) + 
+  coord_cartesian(clip = "off")
 ```
 
 
@@ -283,43 +1264,27 @@ plot(rope(imp_pred_bmod)) +
 # Dogs all environmental covariates
 plot(rope(env_dog_bmod)) + 
   scale_x_continuous(
-    limits = c(-5, 5),
-    breaks = seq(-5, 5, by = 1),
+    limits = c(-4, 4),
+    breaks = seq(-4, 4, by = 1),
     expand = c(.02, .001)) +
-  theme_pubr() + 
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(), 
-        panel.background = element_rect(fill = "white"), 
-        plot.background = element_rect(fill = "white"),
-        panel.border = element_rect(colour = "black", fill = NA, linewidth = 2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2), 
-        axis.ticks.length = unit(0.25, "cm"), 
-        plot.margin = margin(6, 10, 4, 4)) + 
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_y_discrete(expand = c(0.25, 0.001))
-```
+  scale_y_discrete(expand = c(0.05, 1), labels = c("reciprocal dispersion", "Lockdown = yes", 
+                                                       "Season = spring", "Dogs as pets = yes", 
+                                                       "Garden size", "Distance to city border", 
+                                                       "Population density", "Noise", "Imperviousness")) + 
+  scale_fill_manual(values = pal_2) + 
+  coord_cartesian(clip = "off")
 
-
-```{r ROPE}
 # Dogs and imperviousness
 plot(rope(imp_dog_bmod)) + 
   scale_x_continuous(
-    limits = c(-5, 5),
-    breaks = seq(-5, 5, by = 1),
+    limits = c(-4, 4),
+    breaks = seq(-4, 4, by = 1),
     expand = c(.02, .001)) +
-  theme_pubr() + 
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(), 
-        panel.background = element_rect(fill = "white"), 
-        plot.background = element_rect(fill = "white"),
-        panel.border = element_rect(colour = "black", fill = NA, linewidth = 2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2), 
-        axis.ticks.length = unit(0.25, "cm"), 
-        plot.margin = margin(6, 10, 4, 4)) + 
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_y_discrete(expand = c(0.25, 0.001))
+  scale_y_discrete(expand = c(0.05, 1), labels = c("reciprocal dispersion", "Lockdown = yes",
+                                                       "Season = spring", "Dogs as pets = yes",
+                                                       "Garden size", "Imperviousness")) +
+  scale_fill_manual(values = pal_2) + 
+  coord_cartesian(clip = "off")
 ```
 
 
@@ -327,115 +1292,101 @@ plot(rope(imp_dog_bmod)) +
 # Urban model: all environmental covariates
 plot(rope(env_bmod)) + 
   scale_x_continuous(
-    limits = c(-5, 5),
-    breaks = seq(-5, 5, by = 1),
+    limits = c(-4, 4),
+    breaks = seq(-4, 4, by = 1),
     expand = c(.02, .001)) + 
-  theme_pubr() + 
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(), 
-        panel.background = element_rect(fill = "white"), 
-        plot.background = element_rect(fill = "white"),
-        panel.border = element_rect(colour = "black", fill = NA, linewidth = 2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2), 
-        axis.ticks.length = unit(0.25, "cm"), 
-        plot.margin = margin(6, 10, 4, 4)) + 
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_y_discrete(expand = c(0.25, 0.001))
+  scale_y_discrete(expand = c(0.05, 1), labels = c("reciprocal dispersion", "Lockdown = yes", 
+                                                       "Season = spring", "Distance to city border", 
+                                                       "Population density", "Noise", "Imperviousness")) + 
+  scale_fill_manual(values = pal_2) + 
+  coord_cartesian(clip = "off")
+
+# Urban model imperviousness
+plot(rope(imp_bmod)) + 
+  scale_x_continuous(
+    limits = c(-4, 4),
+    breaks = seq(-4, 4, by = 1),
+    expand = c(.02, .001)) +   
+  scale_y_discrete(expand = c(0.05, 1), labels = c("reciprocal dispersion", "Lockdown = yes", 
+                                                       "Season = spring", "Imperviousness")) + 
+  scale_fill_manual(values = pal_2) + 
+  coord_cartesian(clip = "off")
 ```
 
 
 ```{r ROPE}
-# Urban model imperviousness
-plot(rope(imp_bmod)) + 
-  scale_x_continuous(
-    limits = c(-5, 5),
-    breaks = seq(-5, 5, by = 1),
-    expand = c(.02, .001)) + 
-  theme_pubr() + 
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(), 
-        panel.background = element_rect(fill = "white"), 
-        plot.background = element_rect(fill = "white"),
-        panel.border = element_rect(colour = "black", fill = NA, linewidth = 2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2), 
-        axis.ticks.length = unit(0.25, "cm"), 
-        plot.margin = margin(6, 10, 4, 4)) + 
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_y_discrete(expand = c(0.25, 0.001))
-
 # Garden model: all predators
-plot(rope(pred_bmod)) + 
+plot(rope(gard_pred_bmod)) + 
   scale_x_continuous(
-    limits = c(-5, 5),
-    breaks = seq(-5, 5, by = 1),
+    limits = c(-4, 4),
+    breaks = seq(-4, 4, by = 1),
     expand = c(.02, .001)) +
-  theme_pubr() + 
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(), 
-        panel.background = element_rect(fill = "white"), 
-        plot.background = element_rect(fill = "white"),
-        panel.border = element_rect(colour = "black", fill = NA, linewidth = 2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2), 
-        axis.ticks.length = unit(0.25, "cm"), 
-        plot.margin = margin(6, 10, 4, 4)) + 
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_y_discrete(expand = c(0.25, 0.001))
+  scale_y_discrete(expand = c(0.05, 1), labels = c("reciprocal dispersion", "Lockdown = yes", 
+                                                       "Season = spring", "Marten on cams = yes", 
+                                                       "Cats on cams = yes", "Dogs as pets = yes", 
+                                                       "Garden size")) + 
+  scale_fill_manual(values = pal_2) + 
+  coord_cartesian(clip = "off")
 
 # Garden model: dogs
 plot(rope(dog_bmod)) + 
   scale_x_continuous(
-    limits = c(-5, 5),
-    breaks = seq(-5, 5, by = 1),
+    limits = c(-4, 4),
+    breaks = seq(-4, 4, by = 1),
     expand = c(.02, .001)) +
-  theme_pubr() + 
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.y = element_blank(), 
-        panel.background = element_rect(fill = "white"), 
-        plot.background = element_rect(fill = "white"),
-        panel.border = element_rect(colour = "black", fill = NA, linewidth = 2), 
-        axis.ticks = element_line(colour = "black", linewidth = 2), 
-        axis.ticks.length = unit(0.25, "cm"), 
-        plot.margin = margin(6, 10, 4, 4)) + 
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_y_discrete(expand = c(0.25, 0.001))
+  scale_y_discrete(expand = c(0.05, 1), labels = c("reciprocal dispersion", "Lockdown = yes", 
+                                                       "Season = spring", "Dogs as pets = yes", 
+                                                       "Garden size")) + 
+  scale_fill_manual(values = pal_2) + 
+  coord_cartesian(clip = "off")
+
+# Predators
+plot(rope(catmarten_bmod)) + 
+  scale_x_continuous(
+    limits = c(-4, 4),
+    breaks = seq(-4, 4, by = 1),
+    expand = c(.02, .001)) +
+  scale_y_discrete(expand = c(0.05, 1), labels = c("reciprocal dispersion", "Lockdown = yes",
+                                                       "Season = spring", "Martens in garden = yes",
+                                                       "Cats in garden = yes")) +
+  scale_fill_manual(values = pal_2) + 
+  coord_cartesian(clip = "off")
 ```
 
 
 ### Performance
 Plot of the model performance for different parameters
 ```{r}
-plot(compare_performance(null_bmod, season_lock_bmod, env_pred_bmod, imp_pred_bmod, 
-                    env_dog_bmod, imp_dog_bmod, env_bmod, imp_bmod, 
-                    pred_bmod, dog_bmod))
+plot(compare_performance(null_bmod, season_lock_bmod, env_gard_pred_bmod, imp_gard_pred_bmod, 
+                         env_dog_bmod, imp_dog_bmod, env_bmod, imp_bmod, 
+                         gard_pred_bmod, dog_bmod, catmarten_bmod))
 ```
+
 Build a table for model comparison
 ```{r}
 # compare all models
 full_compare_bayes <- as_tibble(
   compare_performance(
-    null_bmod, season_lock_bmod, env_pred_bmod, imp_pred_bmod, 
+    null_bmod, season_lock_bmod, env_gard_pred_bmod, imp_gard_pred_bmod, 
     env_dog_bmod, imp_dog_bmod, env_bmod, imp_bmod, 
-    pred_bmod, dog_bmod, catmarten_bmod))
+    gard_pred_bmod, dog_bmod, catmarten_bmod))
 ```
 
 Calculate McFaddens Pseudo R2
 ```{r}
 mcf_r2_all_models <- c(r2_mcfadden(null_bmod)$R2_adjusted, 
                        r2_mcfadden(season_lock_bmod)$R2_adjusted, 
-                       r2_mcfadden(env_pred_bmod)$R2_adjusted, 
-                       r2_mcfadden(imp_pred_bmod)$R2_adjusted,
+                       r2_mcfadden(env_gard_pred_bmod)$R2_adjusted, 
+                       r2_mcfadden(imp_gard_pred_bmod)$R2_adjusted,
                        r2_mcfadden(env_dog_bmod)$R2_adjusted, 
                        r2_mcfadden(imp_dog_bmod)$R2_adjusted, 
                        r2_mcfadden(env_bmod)$R2_adjusted,
                        r2_mcfadden(imp_bmod)$R2_adjusted, 
-                       r2_mcfadden(pred_bmod)$R2_adjusted,
+                       r2_mcfadden(gard_pred_bmod)$R2_adjusted,
                        r2_mcfadden(dog_bmod)$R2_adjusted, 
                        r2_mcfadden(catmarten_bmod)$R2_adjusted)
 ```
+
 #### Full table
 ```{r}
 full_compare_bayes <- full_compare_bayes %>%
@@ -446,51 +1397,69 @@ full_compare_bayes <- full_compare_bayes %>%
   relocate(delta_WAIC, .after = WAIC_wt)
 
 full_compare_bayes
+
+# save the table as csv
+# write_csv(x = full_compare_bayes,
+#           file = here::here("output",
+#                             "data-proc",
+#                             "01_overall_activity",
+#                             "full_compare_bayes_20240122.csv"),
+#           na = "NA")
+
+# # Load table
+# full_compare_bayes <- read.csv(file = here::here("output",
+#                                                  "data-proc",
+#                                                  "01_overall_activity",
+#                                                  "full_compare_bayes_20230313.csv"))
 ```
+
 
 ### Prediction plots
 ```{r}
-plot(ggpredict(env_pred_bmod))
+# All predators all environmental covariates
+plot(rope(env_gard_pred_bmod)) + 
+  scale_x_continuous(
+    limits = c(-4, 4),
+    breaks = seq(-4, 4, by = 1),
+    expand = c(.02, .001)) +
+  scale_y_discrete(expand = c(0.05, 1), labels = c("reciprocal dispersion", "Lockdown = yes", 
+                                                       "Season = spring", "Marten on cams = yes", 
+                                                       "Cats on cams = yes", "Dogs as pets = yes", 
+                                                       "Garden size", "Distance to city border", 
+                                                       "Population density", "Noise", "Imperviousness")) + 
+  scale_fill_manual(values = pal_2) + 
+  coord_cartesian(clip = "off")
+
+```
+
+```{r}
+summary(env_gard_pred_bmod)
+```
+
+
+```{r}
+plot(ggpredict(env_gard_pred_bmod))
 ```
 
 All environmental variables and all predators
 ```{r}
-ggplot(data = env_var, mapping = aes(x = project_phase, fill = dogs_binary)) + #y = n, 
-  geom_bar(position = "dodge") + 
-  scale_y_continuous(
-    limits = c(0, 600),
-    breaks = seq(0, 600, by = 100),
-    expand = c(.001, .001)) + 
-  labs(title = "Dogs vs Project phase", x = "Project phase") + 
-  theme_pubr() + 
-  theme(legend.position = "none", 
-        panel.border = element_rect(colour = "black", fill = NA, linewidth = 2), 
-        axis.ticks = element_line(colour = "black", linewidth = 1.5),
-        axis.ticks.length = unit(0.2, "cm"),
-        plot.margin = margin(6, 10, 4, 4)) +
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11) + 
-  scale_colour_manual(values = pal_2, guide = "none") +
-  scale_fill_manual(values = pal_2, guide = "none") + 
-  scale_x_discrete(expand = c(0.2, 0.001))
-```
-
-```{r}
-plot(ggpredict(env_pred_bmod, terms = "imperviousness_2018"), line.size = 1) + 
+plot(ggpredict(env_gard_pred_bmod, terms = "imperviousness_2018"), line.size = 1) + 
   scale_y_continuous(
     limits = c(0, 25),
     breaks = seq(0, 25, by = 5),
-    expand = c(.001, .001)) + 
+    expand = c(.001, .001)) +
   scale_x_continuous(expand = c(.001, .001)) + 
   labs(y = "Number of pictures per station", x = "Imperviousness", title = "Predicted number of pictures") + 
-  theme_pubr() + 
-  theme(legend.position = "none", 
-        panel.border = element_rect(colour = "black", fill = NA, linewidth = 2), 
-        axis.ticks = element_line(colour = "black", linewidth = 1.5),
-        axis.ticks.length = unit(0.2, "cm"),
-        plot.margin = margin(6, 10, 4, 4)) +
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11)
+  theme(
+    legend.position = "none",
+    panel.grid = element_blank(),
+    panel.background = element_rect(fill = "white"),
+    panel.border = element_rect(colour = "black", fill = NA, linewidth = 1),
+    plot.margin = margin(6, 10, 4, 4),
+    axis.ticks = element_line(colour = "black", linewidth = 1.5),
+    axis.ticks.length = unit(0.2, "cm"), 
+    title = element_text(family = "Zilla Slab", size = 15),
+    axis.text = element_text(family = "Roboto", size = rel(0.87)))
 ```
 
 All environmental variables without predators

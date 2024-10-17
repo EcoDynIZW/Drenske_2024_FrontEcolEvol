@@ -1,21 +1,32 @@
-
 ---
 title: "Your Project: Data Preparation" ## name of your project and analysis step
 description: |
-    The aim of this study is...
+    The aim of the study is to investigate the influence of altered environmental urban parameters and direct human disturbance expressed by the lockdown together with animal predator risk parameters on the general activity of squirrels
 author:
-    ## author information; single arguemnts can be deleted if not needed
-    - name: "John Smith"
-      url: https://izw-berlin.de/en/john-smith-en.html  
+    - name: "Sinah Drenske"
+      affiliation: Leibniz Institute for Zoo and Wildlife Research, Technical University Berlin
+      affiliation_url: https://izw-berlin.de/en/
+      orcid_id: 0000-0002-2247-6507
+    - name: "Julie Louvrier"
       affiliation: Leibniz Institute for Zoo and Wildlife Research
       affiliation_url: https://izw-berlin.de/en/
-      orcid_id: 0000-0000-0000-0000
-    - name: "Jane Doe"
-      url: https://janedoe.com
+      orcid_id: 0000-0003-1252-1746
+    - name: "Marius Grabow"
+      affiliation: Leibniz Institute for Zoo and Wildlife Research, Technical University Berlin
+      affiliation_url: https://izw-berlin.de/en/
+      orcid_id: 0000-0003-0702-9642
+    - name: "Conny Landgraf"
       affiliation: Leibniz Institute for Zoo and Wildlife Research
       affiliation_url: https://izw-berlin.de/en/
-    ## add more authors with the same intendation and styling if needed 
-    ## a new author always starts with a hyphen!
+      #orcid_id: 0000-0000-0000-0000
+    - name: "Stephanie Kramer-Schadt"
+      affiliation: Leibniz Institute for Zoo and Wildlife Research, Technical University Berlin
+      affiliation_url: https://izw-berlin.de/en/
+      orcid_id: 0000-0002-9269-4446
+    - name: "Aimara Planillo"
+      affiliation: Leibniz Institute for Zoo and Wildlife Research
+      affiliation_url: https://izw-berlin.de/en/
+      orcid_id: 0000-0001-6763-9923
 date: "`r Sys.Date()`"
 output: 
     distill::distill_article:
@@ -31,398 +42,3389 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE,
 Sys.setlocale("LC_TIME", "C")
 ```
 
-* **Research question:**
-* **Study area:**
-* **Data:** 
+* **Research question:** How do urban conditions affect the daily activity patterns of squirrels?
+* **Study area:** Berlin 2019-2020 
+* **Data:** Detection histories of squirrels, martens and cats from 4 seasons (spring 2019, autumn 2019, spring 2020, autumn 2020), already filtered as in Louvrier et al. 2021 + environmental information on camera stations. 
 
 
 # Setup
 
 ```{r packages}
-# install the package librarian, it loads and installs (if necessary) the specified packages from CRAN, GitHub or Bioconductor
-# it will not update already installed packages
-
-#devtools::install_github("DesiQuintans/librarian")
-librarian::shelf(update_all = FALSE,
-                 #camtrapR,
-                 bayestestR, 
-                 DHARMa,
-                 easystats / easystats, 
-                 effects,
-                 extrafont, 
-                 ggeffects,
-                 #ggplot2, 
-                 ggpubr, 
-                 here, 
-                 insight,
-                 lme4, 
-                 performance, 
-                 plyr,
-                 rstanarm, 
-                 stringr, 
-                 tidyverse, 
-                 )
+#remotes::install_github("EcoDynIZW/d6")
+d6::simple_load(c("bayestestR",
+                  "broom.mixed", 
+                  "car",
+                  "colorspace",
+                  "cowplot",
+                  "DHARMa",
+                  "easystats/easystats", 
+                  "effects",
+                  "extrafont", 
+                  "ggeffects",
+                  "here", 
+                  "insight",
+                  "lme4", 
+                  "MuMIn",
+                  "performance", 
+                  "rstanarm", 
+                 # "sjPlot",
+                  "sjstats",
+                  "stringr", 
+                  "tidyverse"
+))
 ```
 
+## Plot setup
+Set theme for ggplots: theme_set does not work with plots from the ggeffects package, therefore saved here as a variable
+```{r theme}
+theme_set(
+  theme(
+    legend.position = "none",
+    panel.grid = element_blank(),
+    panel.background = element_rect(fill = "white"),
+    panel.border = element_rect(colour = "black", fill = NA, linewidth = 1),
+    plot.margin = margin(6, 10, 4, 4),
+    axis.ticks = element_line(colour = "black", linewidth = 1.5),
+    axis.ticks.length = unit(0.2, "cm"),
+    title = element_text(family = "Zilla Slab", size = 15), # axis
+    axis.text = element_text(family = "Roboto", size = rel(0.87)))) # axis ticks
+```
+
+Palettes
+```{r palette}
+# darkdarkblue beige greyblue brown | red
+#pal_5 <- c("#303B4A", "#E4CAA5", "#4D6476", "#837461", "#C83649", "#574a3a") #  
+pal_5 <- c("#574a3a", "#1D2F51", "#75768f", "#8F84AD", "#201B24") # Imp, Noise, Pop dens, Distance to city border, Garden size
+#pal_3 <- c("#E4CAA5", "#4D6476", "#837461")
+col_season <- c("#a83a0a", "#93a143") # autumn, spring, 
+col_lock <- c("#E4CAA5", "#4D6476") # no lockdown, lockdown
+col_dogs <- c("#6d328c", "#36b3a6") # no dogs, dogs old: "#52144f", 
+col_dogs2 <- c("#36b3a6", "#6d328c") # dogs, no dogs old: "#52144f", 
+col_cats <- c("#d96b1c", "#303B4A") # no cats, cats old: "#5784c2",  
+col_martens <- c("#871338", "#155926") # no martens, martens old: "#11451e", 
+col_imp <- c("#837461", "#574a3a", "#919189")
+col_imp2 <- c("#837461", "#483C32", "#919189")
+
+col_animals <- c("#36b3a6", "#d96b1c", "#871338") # dogs, cats, martens
+```
+
+Labels
+```{r labels}
+lock_labs <- c("lockdown = yes", "lockdown = no")
+names(lock_labs) <- c("1", "0")
+
+imp_labs <- c("imperviousness = 22.56", "imperviousness = 38.46", "imperviousness = 54.36")
+names(imp_labs) <- c("22.56", "38.46", "54.36")
+```
+
+Fonts
+```{r load fonts, message=FALSE, include=FALSE}
+#font_import()
+loadfonts(device = "win")
+fonts()
+```
 
 # Data
 
 ```{r data}
 CT_squirrel_predators_hour <- readRDS(here::here("output",
-                                            "data-proc",
-                                            "all_seasons",
-                                            "CT_squirrel_left_join_20230228.RDS"))
+                                                 "data-proc",
+                                                 "02_daily_activity",
+                                                 "CT_squirrel_predators_hour_20230316.RDS"))
 
-# CT_squirrel_full_join <- readRDS(here::here("output",
-#                                             "data-proc",
-#                                             "all_seasons",
-#                                             "CT_squirrel_full_join_20230223.RDS"))
+CT_squirrel_martens_hour_station <- readRDS(here::here("output",
+                                                       "data-proc",
+                                                       "02_daily_activity",
+                                                       "CT_squirrel_martens_hour_station_20230823.RDS"))
+
+CT_squirrel_cats_hour_station <- readRDS(here::here("output",
+                                                    "data-proc",
+                                                    "02_daily_activity",
+                                                    "CT_squirrel_cats_hour_station_20230823.RDS"))
 ```
 
+
+set the seed
+```{r seed}
+set.seed(20200604)
+```
+
+# Environmental model
+This examines the effect of the hour of the day on squirrel activity in relation to environmental variables.
 ```{r}
+# Count the distinct values per column 
+# E.g. How many stations were used? 170
+# Or how many hours of the day were used? 13 (5-17)
+sapply(CT_squirrel_predators_hour, n_distinct)
+```
+
+
+```{r}
+table(CT_squirrel_predators_hour$squirrel_sum_hour)
+
 CT_squirrel_predators_hour %>%
-  #group_by(Species, hour_day) %>%
-  #dplyr::summarize(n_hour = sum(squirrel_sum_hour), sd_hour = sd(squirrel_sum_hour)) %>%
-  #ungroup() %>%
-  #complete(hour_day = c(0:23), fill = list(n_hour = 0, sd_hour = 0))  %>%
   ggplot(mapping = aes(x = squirrel_sum_hour)) + 
-  geom_histogram(stat = "bin", position = "identity", fill = "#303B4A") +
+  geom_histogram(stat = "bin", position = "identity", fill = "#303B4A", bins = 22) +
   scale_y_continuous(
     limits = c(0, 1700),
     breaks = seq(0, 1700, by = 100),
     expand = c(.008, .001)) +
-  scale_x_continuous(limits = c(-1, 20),
-                     expand = c(.001, .001)) +
+  scale_x_continuous(limits = c(-0.5, 20.5),
+                     expand = c(0,0)) +
   labs(x = "Number of squirrel pictures per station") + 
-  theme_pubr() + 
-  theme(legend.position = "none", 
-        panel.border = element_rect(colour = "black", fill=NA, linewidth=2), 
-        axis.ticks = element_line(colour = "black", linewidth = 1.5),
-        axis.ticks.length = unit(0.2, "cm"),
-        plot.margin = margin(6, 10, 4, 4)) +
-  labs_pubr(base_family = "Zilla Slab", base_size = 15) + 
-  font(object = "xy.text", family = "Roboto", size = 11) 
+  my_theme
+
+# Zero inflated - we will use negative binomial distribution
+
+# # Save the plot
+# ggsave(filename = here::here("plots",
+#                              "03_daily_activity",
+#                              "glmm",
+#                              "ENV_squirrel_pics_per_station.png"),
+#        width = 1200*1.5,
+#        height = 1200,
+#        units = "px",
+#        dpi = 300)
 ```
 
-
-# Model
-set the seed
+## Linear models
+### Model formulation 
+build the models
 ```{r}
-set.seed(20200604)
+env00 <- glmer.nb(formula = squirrel_sum_hour ~ 1 + (1 | Station),   
+                  data = CT_squirrel_predators_hour, 
+                  control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+
+
+env01 <- glmer.nb(formula = squirrel_sum_hour ~ (poly(hour_day,4))*lockdown + Season + 
+                    scale(imperviousness_2018) + dogs_binary  + (1 | Station),   
+                  data = CT_squirrel_predators_hour, 
+                  control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+#my_opt01 <- allFit(env01)
+
+env02 <- glmer.nb(formula = squirrel_sum_hour ~ (poly(hour_day,4))*lockdown + Season + 
+                    (poly(hour_day,4))*scale(imperviousness_2018) + dogs_binary + (1 | Station),   
+                  data = CT_squirrel_predators_hour, 
+                  control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+
+
+env03 <- glmer.nb(formula = squirrel_sum_hour ~ (poly(hour_day,4))*lockdown + Season + 
+                    scale(imperviousness_2018) + (poly(hour_day,4))*dogs_binary + (1 | Station),   
+                  data = CT_squirrel_predators_hour, 
+                  control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+
+
+env04 <- glmer.nb(formula = squirrel_sum_hour ~ (poly(hour_day,4))*lockdown + Season + 
+                    (poly(hour_day,4))*scale(imperviousness_2018) + (poly(hour_day,4))*dogs_binary + (1 | Station),   
+                  data = CT_squirrel_predators_hour, 
+                  control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+
+
+env05 <- glmer.nb(formula = squirrel_sum_hour ~ (poly(hour_day,4))*(lockdown + Season + scale(imperviousness_2018) + 
+                                                                      dogs_binary) + (1 | Station),   
+                  data = CT_squirrel_predators_hour, 
+                  control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
 ```
 
 ```{r}
-# phase_3 <- CT_squirrel_left_join %>%
-#   filter(project_phase == 3)
-```
-
-```{r}
-# mod2 <- glmer(squirrel_sum_hour ~ (poly(hour_day,4) + scale(imperviousness_2018) + dogs_binary + cats_binary) + 
-#                      (1|Station), # cat_pics + marten_pics +  
-#                    data = phase_3, 
-#                    family = poisson(link = "log"))
-
-```
-
-
-```{r}
- # AT THE BEGINNING OF THE SCRIPT!!!!!!!!!!
-# mod1 <- stan_glmer(squirrel_sum_hour ~ (poly(hour_day,2) + scale(imperviousness_2018) + dogs_binary + cats_binary)*lockdown + 
-#                      (1|Station), # cat_pics + marten_pics +  
-#                    data = CT_squirrel_left_join, 
-#                    family = poisson(link = "log"))
+# # Old version
+# env00 <- glmer(formula = squirrel_sum_hour ~ 1 + (1 | Station),   
+#                data = CT_squirrel_predators_hour, 
+#                family = poisson(link = "log"))
 # 
-# mod1
 # 
-# mod2 <- glmer(squirrel_sum_hour ~ (poly(hour_day,3) + scale(imperviousness_2018) + dogs_binary + cats_binary + Season)*lockdown + 
-#                      (1|Station), # cat_pics + marten_pics +  
-#                    data = CT_squirrel_left_join, 
-#                    family = poisson(link = "log"))
-# mod1
-# mod2
+# env01 <- glmer(formula = squirrel_sum_hour ~ (poly(hour_day,4))*lockdown + Season + 
+#                  scale(imperviousness_2018) + dogs_binary  + (1 | Station),   
+#                data = CT_squirrel_predators_hour, 
+#                family = poisson(link = "log"))
+# 
+# 
+# env02 <- glmer(formula = squirrel_sum_hour ~ (poly(hour_day,4))*lockdown + Season + 
+#                  (poly(hour_day,4))*scale(imperviousness_2018) + dogs_binary + (1 | Station),   
+#                data = CT_squirrel_predators_hour, 
+#                family = poisson(link = "log"))
+# 
+# 
+# env03 <- glmer(formula = squirrel_sum_hour ~ (poly(hour_day,4))*lockdown + Season + 
+#                  scale(imperviousness_2018) + (poly(hour_day,4))*dogs_binary + (1 | Station),   
+#                data = CT_squirrel_predators_hour, 
+#                family = poisson(link = "log"))
+# 
+# 
+# env04 <- glmer(formula = squirrel_sum_hour ~ (poly(hour_day,4))*lockdown + Season + 
+#                  (poly(hour_day,4))*scale(imperviousness_2018) + (poly(hour_day,4))*dogs_binary + (1 | Station),   
+#                data = CT_squirrel_predators_hour, 
+#                family = poisson(link = "log"))
+# 
+# 
+# env05 <- glmer(formula = squirrel_sum_hour ~ (poly(hour_day,4))*(lockdown + Season + scale(imperviousness_2018) + 
+#                  dogs_binary) + (1 | Station),   
+#                data = CT_squirrel_predators_hour, 
+#                family = poisson(link = "log"))
+```
+
+#### Save models
+```{r}
+# saveRDS(object = env00,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "model_env00_20240207.RDS"))
+# 
+# saveRDS(object = env01,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "model_env01_20240207.RDS"))
+# 
+# saveRDS(object = env02,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "model_env02_20240207.RDS"))
+# 
+# saveRDS(object = env03,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "model_env03_20240207.RDS"))
+# 
+# saveRDS(object = env04,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "model_env04_20240207.RDS"))
+# 
+# saveRDS(object = env05,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "model_env05_20240207.RDS"))
+```
+
+#### Read models
+```{r}
+env00 <- readRDS(here::here("output",
+                            "data-proc",
+                            "02_daily_activity",
+                            "model_env00_20240207.RDS"))
+
+env01 <- readRDS(here::here("output",
+                            "data-proc",
+                            "02_daily_activity",
+                            "model_env01_20240207.RDS"))
+
+env02 <- readRDS(here::here("output",
+                            "data-proc",
+                            "02_daily_activity",
+                            "model_env02_20240207.RDS"))
+
+env03 <- readRDS(here::here("output",
+                            "data-proc",
+                            "02_daily_activity",
+                            "model_env03_20240207.RDS"))
+
+env04 <- readRDS(here::here("output",
+                            "data-proc",
+                            "02_daily_activity",
+                            "model_env04_20240207.RDS"))
+
+env05 <- readRDS(here::here("output",
+                            "data-proc",
+                            "02_daily_activity",
+                            "model_env05_20240207.RDS"))
+```
+
+### Model comparison
+```{r}
+# Create a list with all models
+env_model_list <- list(env00 = env00,
+                       env01 = env01,
+                       env02 = env02,
+                       env03 = env03,
+                       env04 = env04,
+                       env05 = env05)
+
+env_mod_sel <- AICc(env00,
+                    env01,
+                    env02,
+                    env03,
+                    env04,
+                    env05)
+
+env_AICc_w <- Weights(env_mod_sel)
+
+env_R2_list <- env_model_list %>%
+  lapply(r2_nakagawa) #%>%
+env_R2 <- do.call(rbind.data.frame, env_R2_list)
+# unlist()
+
+env_mod_sel <- env_mod_sel %>%
+  mutate(AICc_weight = env_AICc_w, R2_marginal = env_R2$R2_marginal, R2_conditional = env_R2$R2_conditional) %>%
+  arrange(AICc) %>%
+  mutate(delta_AICc = AICc - AICc[1]) %>%
+  mutate(across(where(is.numeric), round, digits = 3)) %>% 
+  select(df, AICc, delta_AICc, AICc_weight, R2_marginal, R2_conditional) %>% 
+  rename(n_param = df) %>%
+  rownames_to_column(var = "Name")
+
+# # save the table as csv
+# write_csv(x = env_mod_sel,
+#           file = here::here("output",
+#                             "data-proc",
+#                             "02_daily_activity",
+#                             "env_mod_sel_20240411.csv"),
+#           na = "NA")
+
+# Load table
+env_mod_sel <- read.csv(file = here::here("output",
+                                      "data-proc",
+                                      "02_daily_activity",
+                                      "env_mod_sel_20240411.csv"))
 ```
 
 ```{r}
-#CT_squirrel_left_join$hour_fac <- as.factor(CT_squirrel_left_join$hour_day)
+## OLD version
+# # Create a list with all models
+# env_model_list <- list(env00 = env00,
+#                        env01 = env01,
+#                        env02 = env02,
+#                        env03 = env03,
+#                        env04 = env04,
+#                        env05 = env05)
+# 
+# # Create a table for comparing model performance
+# env_mod_sel2 <- compare_performance(env_model_list, metrics = c("AIC", "AICc", "R2"))
+# 
+# # Calculate the difference between the lowest AIC and the other AICs and put the model with the lowest AIC in the first row
+# env_mod_sel2 <- env_mod_sel2 %>%
+#   arrange(AIC) %>%
+#   mutate(delta_AIC = AIC - AIC[1]) %>%
+#   mutate(across(where(is.numeric), round, digits = 3)) %>% 
+#   select(Name, AIC, delta_AIC, AICc, R2_marginal, R2_conditional)
+# 
+# 
+# # # save the table as csv
+# # write_csv(x = env_mod_sel,
+# #           file = here::here("output",
+# #                             "data-proc",
+# #                             "02_daily_activity",
+# #                             "env_mod_sel_20240209.csv"),
+# #           na = "NA")
+# # 
+# # Load table
+# # env_mod_sel <- read.csv(file = here::here("output",
+# #                                       "data-proc",
+# #                                       "02_daily_activity",
+# #                                       "env_mod_sel_20240209.csv"))
+```
+
+#### Closer look at the best model
+```{r}
+# Model summary
+env_sum <- tidy(env05, conf.int = FALSE) %>%
+  dplyr::rename(Predictors = term,
+         Estimate = estimate,
+         SE = std.error,
+         T_statistic = statistic,
+         p = p.value) %>%
+  dplyr::mutate(across(.cols = c(4:7), 
+                       .fns =  as.numeric)) %>%
+  dplyr::mutate(across(where(is.numeric), round, digits = 3))
+
+# # save the table as csv
+# write_csv(x = env_sum, 
+#           file = here::here("output",
+#                             "data-proc",
+#                             "02_daily_activity",
+#                             "env05_summary_20240606.csv"),
+#           na = "NA")
+
+# Load table
+env_sum <- read.csv(file = here::here("output",
+                                      "data-proc",
+                                      "02_daily_activity",
+                                      "env05_summary_20240606.csv"))
 ```
 
 ```{r}
-# mod3 <- glmer(squirrel_sum_hour ~ (hour_fac + scale(imperviousness_2018) + dogs_binary + cats_binary)*lockdown + 
-#                      (1|Station), # cat_pics + marten_pics +  
-#                    data = CT_squirrel_left_join, 
-#                    family = poisson)
+# table with model summary
+#summary(env05)
+ano_sum <- env05 %>%
+  car::Anova() %>%
+  rownames_to_column(var = "predictors") %>%
+  rename(Predictors = predictors,  
+         #Hello = Chisq#, bquote("Chi" * m^2)
+         p = "Pr(>Chisq)"
+         ) %>%
+  mutate(across(where(is.numeric), round, digits = 5)) 
 
+ano_sum
+
+# # save the table as csv
+# write_csv(x = ano_sum,
+#           file = here::here("output",
+#                             "data-proc",
+#                             "02_daily_activity",
+#                             "anova_summary_20240214.csv"),
+#           na = "NA")
+# # 
+# Load table
+ano_sum <- read.csv(file = here::here("output",
+                                      "data-proc",
+                                      "02_daily_activity",
+                                      "anova_summary_20240214.csv"))
 ```
 
 ```{r}
-#plot(allEffects(mod1))
+summary(env05)
+tidy(env05)
+glance(env05)
 ```
 
 
 ```{r}
-#plot(allEffects(mod2))
+check_model(env05)
+
+plot(check_collinearity(env05))
+check_collinearity(env05)
+
+plot(env05)
 ```
 
 ```{r}
-#plot(rope(mod1))
+binned_residuals(env05)
+plot(binned_residuals(env05))
+```
+
+#### Prediction plots
+Create tables for estimated marginal means
+```{r}
+pred_env_lock <- ggemmeans(env05, terms = c("hour_day", "lockdown"))
+pred_env_season  <- ggemmeans(env05, terms = c("hour_day", "Season"))
+pred_env_imp  <- ggemmeans(env05, terms = c("hour_day", "imperviousness_2018"))
+pred_env_dogs  <- ggemmeans(env05, terms = c("hour_day", "dogs_binary"))
 ```
 
 ```{r}
-# plot(ggpredict(mod1))
-# plot(ggpredict(mod2, terms = c("hour_day", "lockdown", "cats_binary"), ci = T))
-# plot(ggpredict(mod3, terms = c("hour_fac", "lockdown")))
-# plot(ggpredict(mod2, terms = c("hour_day", "imperviousness_2018", "lockdown")))
-# summary(mod2)
+plot_env_lock <- 
+  ggplot(data = pred_env_lock, 
+         mapping = aes(x = x, y = predicted, group = group, 
+                       colour = group, fill = group)) + 
+  geom_line(linewidth = 2) + 
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.15, colour = NA) + 
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 3),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = col_lock, labels = c("No", "Yes")) +
+  scale_fill_manual(values = darken(col_lock, 0.3)) +
+  labs(x = "Hour of the day",
+       y = "Predicted activity intensity", # 
+       colour = "Lockdown",
+       title = NULL) + 
+  coord_cartesian(ylim = c(0, 1.0), # Here we need coord_cartesian because the range of the SD is too big
+                  expand = FALSE) + 
+  theme(legend.position = c(0.82,0.86), 
+        plot.background = element_rect(fill = "transparent", colour = NA),
+        legend.background = element_blank(), 
+        legend.key = element_blank()) +
+  guides(group = "none", 
+         fill = "none")
+
+plot_env_lock
+
+# Save the plot
+ggsave(filename = here::here("plots",
+                             "03_daily_activity",
+                             "glmm",
+                             "ENV05_prediction_lockdown2.png"),
+       width = 1200,
+       height = 1200,
+       units = "px",
+       dpi = 300)
+```
+
+```{r}
+plot_env_season <- 
+  ggplot(data = pred_env_season, 
+         mapping = aes(x = x, y = predicted, group = group, 
+                       colour = group, fill = group)) + 
+  geom_line(linewidth = 2) + 
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.15, colour = NA) + 
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 3),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = col_season, labels = c("Autumn", "Spring")) +
+  scale_fill_manual(values = darken(col_season, 0.3)) +
+  labs(x = "Hour of the day",
+       y = "Predicted activity intensity", # 
+       colour = "Season",
+       title = NULL) + 
+  coord_cartesian(ylim = c(0, 1.0), # Here we need coord_cartesian because the range of the SD is too big
+                  expand = FALSE) +
+  theme(legend.position = c(0.85,0.86), 
+        plot.background = element_rect(fill = "transparent", colour = NA),
+        legend.background = element_blank(), 
+        legend.key = element_blank()) +
+  guides(group = "none", 
+         fill = "none")
+
+plot_env_season
+
+# Save the plot
+ggsave(filename = here::here("plots",
+                             "03_daily_activity",
+                             "glmm",
+                             "ENV05_prediction_season2.png"),
+       width = 1200,
+       height = 1200,
+       units = "px",
+       dpi = 300)
+```
+
+```{r}
+plot_env_imp <- 
+  ggplot(data = pred_env_imp, 
+         mapping = aes(x = x, y = predicted, group = group, 
+                       colour = group, fill = group)) + 
+  geom_line(linewidth = 2) + 
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.15, colour = NA) + 
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 3),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = col_imp2) +
+  scale_fill_manual(values = darken(col_imp2, 0.3)) +
+  labs(x = "Hour of the day",
+       y = "Predicted activity intensity", # 
+       colour = "Imperviousness [%]",
+       title = NULL) + 
+  coord_cartesian(ylim = c(0, 1.0), # Here we need coord_cartesian because the range of the SD is too big
+                  expand = FALSE) + 
+  theme(legend.position = c(0.7,0.82), 
+        plot.background = element_rect(fill = "transparent", colour = NA),
+        legend.background = element_blank(), 
+        legend.key = element_blank()) +
+  guides(group = "none", 
+         fill = "none")
+
+plot_env_imp
+
+# Save the plot
+ggsave(filename = here::here("plots",
+                             "03_daily_activity",
+                             "glmm",
+                             "ENV05_prediction_imp2.png"),
+       width = 1200,
+       height = 1200,
+       units = "px",
+       dpi = 300)
+```
+
+```{r}
+plot_env_dogs <- 
+  ggplot(data = pred_env_dogs, 
+         mapping = aes(x = x, y = predicted, group = group, 
+                       colour = group, fill = group)) + 
+  geom_line(linewidth = 2) + 
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.15, colour = NA) + 
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 3),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = col_dogs2, labels = c("No", "Yes")) +
+  scale_fill_manual(values = darken(col_dogs2, 0.3)) +
+  labs(x = "Hour of the day",
+       y = "Predicted activity intensity", #
+       colour = "Dog",
+       title = NULL) + 
+  coord_cartesian(ylim = c(0, 1.0), # Here we need coord_cartesian because the range of the SD is too big
+                  expand = FALSE) + 
+  theme(legend.position = c(0.85,0.86), 
+        plot.background = element_rect(fill = "transparent", colour = NA),
+        legend.background = element_blank(), 
+        legend.key = element_blank()) +
+  guides(group = "none", 
+         fill = "none")
+
+plot_env_dogs
+
+# Save the plot
+ggsave(filename = here::here("plots",
+                             "03_daily_activity",
+                             "glmm",
+                             "ENV05_prediction_dogs2.png"),
+       width = 1200,
+       height = 1200,
+       units = "px",
+       dpi = 300)
+```
+
+```{r}
+# # Hour of the day and lockdown
+# env_lock <-
+#   plot(ggemmeans(env05, terms = c("hour_day", "lockdown")),
+#        #show_data = TRUE,
+#        line_size = 2,
+#        #dot_size = 2,
+#   ) +
+#   # scale_y_continuous(
+#   #   limits = c(0, 1.00),
+#   #   breaks = seq(0, 1, by = 0.25),
+#   #   expand = c(.001, .001)) +
+#   scale_x_continuous(
+#     limits = c(5,17),
+#     breaks = seq(5, 17, by = 3),
+#     expand = c(.001, .001)) +
+#   scale_colour_manual(values = col_lock, labels = c("No", "Yes")) +
+#   scale_fill_manual(values = darken(col_lock, 0.3)) +
+#   labs(x = "Hour of the day",
+#        y = "Predicted activity density",
+#        colour = "Lockdown",
+#        title = NULL) +
+#   my_theme +
+#   theme(legend.position = c(0.85,0.88)) +
+#   coord_cartesian(ylim = c(0, 1.0), # Here we need coord_cartesian because the range of the SD is too big
+#                   expand = FALSE)
+# 
+# env_lock
+
+# # Save the plot
+# ggsave(filename = here::here("plots",
+#                              "03_daily_activity",
+#                              "glmm",
+#                              "ENV05_prediction_lockdown.png"),
+#        width = 1200,
+#        height = 1200,
+#        units = "px",
+#        dpi = 300)
 ```
 
 
 ```{r}
-# mod4 <- glmer(squirrel_sum_hour ~ (scale(poly(hour_day,4)) + scale(imperviousness_2018))*lockdown + Season + 
-#                      (1|Station),   
-#                    data = CT_squirrel_left_join, 
-#                    family = poisson(link = "log"))
+# # Hour of the day and Season
+# env_season <- 
+#   plot(ggemmeans(env05, terms = c("hour_day", "Season")), line.size = 2) + 
+#   # scale_y_continuous(
+#   #   limits = c(0, 1.00),
+#   #   breaks = seq(0, 1, by = 0.25),
+#   #   expand = c(.001, .001)) +
+#   scale_x_continuous(
+#     limits = c(5,17),
+#     breaks = seq(5, 17, by = 3),
+#     expand = c(.001, .001)) + 
+#   scale_colour_manual(values = col_season, labels = c("Autumn", "Spring")) + 
+#   scale_fill_manual(values = darken(col_season, 0.3)) +
+#   labs(x = "Hour of the day", 
+#        y = "Predicted activity density", 
+#        title = NULL) + 
+#   my_theme + 
+#   theme(legend.position = c(0.87,0.88)) +
+#   coord_cartesian(ylim = c(0, 1.0), # Here we need coord_cartesian because the range of the SD is too big
+#                   expand = FALSE)
+# 
+# env_season
 
-# mod4 <- glmer(squirrel_sum_hour ~ (poly(hour_day,4))*lockdown + Season + scale(imperviousness_2018)*poly(hour_day,4)
-#               + (1|Station),   
-#                    data = CT_squirrel_left_join, 
-#                    family = poisson(link = "log"))
+# # Save the plot
+# ggsave(filename = here::here("plots",
+#                              "03_daily_activity",
+#                              "glmm",
+#                              "ENV05_prediction_season.png"),
+#        width = 1200,
+#        height = 1200,
+#        units = "px",
+#        dpi = 300)
+```
 
-mod5 <- glmer(squirrel_sum_hour ~ (poly(hour_day,4))*lockdown + Season + scale(imperviousness_2018)*poly(hour_day,4) + 
-                dogs_binary*poly(hour_day,4) 
-                + (1|Station),   
-              data = CT_squirrel_predators_hour, 
-              family = poisson(link = "log"))
+
+```{r}
+# # Hour of the day and imperviousness
+# env_imp <- 
+#   plot(ggemmeans(env05, terms = c("hour_day", "imperviousness_2018")), line.size = 2) + 
+#   scale_y_continuous(
+#     limits = c(0, 1.0),
+#     breaks = seq(0, 1, by = 0.25),
+#     expand = c(.001, .001)) +
+#   scale_x_continuous(
+#     limits = c(5,17),
+#     breaks = seq(5, 17, by = 3),
+#     expand = c(.001, .001)) + 
+#   scale_colour_manual(values = col_imp) + 
+#   scale_fill_manual(values = darken(col_imp, 0.3)) +
+#   labs(x = "Hour of the day", 
+#        y = "Predicted activity density", 
+#        colour = "Impervious- \nness [%]",
+#        title = NULL) + 
+#   my_theme + 
+#   theme(legend.position = c(0.82,0.82))
+# 
+# env_imp
+
+# # Save the plot
+# ggsave(filename = here::here("plots",
+#                              "03_daily_activity",
+#                              "glmm",
+#                              "ENV05_prediction_imp.png"),
+#        width = 1200,
+#        height = 1200,
+#        units = "px",
+#        dpi = 300)
+```
+
+
+```{r}
+# # Hour of the day and dogs
+# env_dogs <- 
+#   plot(ggemmeans(env05, terms = c("hour_day", "dogs_binary")), line.size = 2) + 
+#   # scale_y_continuous(
+#   #   limits = c(0, 1.01),
+#   #   breaks = seq(0, 1, by = 0.25),
+#   #   expand = c(.001, .001)) +
+#   scale_x_continuous(
+#     limits = c(5,17),
+#     breaks = seq(5, 17, by = 3),
+#     expand = c(.001, .001)) + 
+#   scale_colour_manual(values = col_dogs, labels = c("No", "Yes")) + 
+#   scale_fill_manual(values = darken(col_dogs, 0.3)) +
+#   labs(x = "Hour of the day",
+#        y = "Predicted activity density", 
+#        colour = "Dog",
+#        title = NULL) + 
+#   my_theme +
+#   theme(legend.position = c(0.91,0.88)) + 
+#   coord_cartesian(ylim = c(0, 1.0), # Here we need coord_cartesian because the range of the SD is too big
+#                   expand = FALSE)
+#    
+# 
+# env_dogs
+
+# # Save the plot
+# ggsave(filename = here::here("plots",
+#                              "03_daily_activity",
+#                              "glmm",
+#                              "ENV05_prediction_dogs.png"),
+#        width = 1200,
+#        height = 1200,
+#        units = "px",
+#        dpi = 300)
+```
+
+
+```{r}
+# # Hour of the day and lockdown and season
+# env_season_lock <- 
+#   plot(ggemmeans(env05, terms = c("hour_day", "lockdown", "Season")), line.size = 2) + 
+#   # scale_y_continuous(
+#   #   limits = c(0, 1.00),
+#   #   breaks = seq(0, 1, by = 0.25),
+#   #   expand = c(.001, .001)) +
+#   scale_x_continuous(
+#     limits = c(5,17),
+#     breaks = seq(5, 17, by = 3),
+#     expand = c(.001, .001)) + 
+#    scale_colour_manual(values = col_lock) + 
+#   scale_fill_manual(values = darken(col_lock, 0.3)) +
+#   labs(x = "Hour of the day", 
+#        y = "Predicted activity density", 
+#        colour = "Lockdown",
+#        title = NULL) + 
+#    facet_wrap(~facet) +
+#   my_theme +
+#   theme(legend.position = c(0.93,0.88)) + 
+#   coord_cartesian(ylim = c(0, 1.0), # Here we need coord_cartesian because the range of the SD is too big
+#                   expand = FALSE) 
+# 
+# env_season_lock
+
+# # Save the plot
+# ggsave(filename = here::here("plots",
+#                              "03_daily_activity",
+#                              "glmm",
+#                              "ENV05_prediction_lockdown_season.png"),
+#        width = 1200*1.5,
+#        height = 1200,
+#        units = "px",
+#        dpi = 300)
 ```
 
 ```{r}
-summary(mod5)
-# plot(ggpredict(mod4))
-# plot(ggpredict(mod4, terms = c("hour_day", "lockdown")))
+# plot(ggemmeans(env05, terms = "hour_day [all]"), line.size = 2) + 
+#   scale_y_continuous(
+#     limits = c(0, 1.0),
+#     breaks = seq(0, 1, by = 0.25),
+#     expand = c(.001, .001)) +
+#   scale_x_continuous(
+#     limits = c(5,17),
+#     breaks = seq(5, 17, by = 3),
+#     expand = c(.001, .001)) + 
+#   labs(x = "Hour of the day", 
+#        y = "Predicted activity density", 
+#        title = NULL) + 
+#   my_theme 
 
-
-plot(ggpredict(mod5, terms = c("hour_day", "lockdown")))
-plot(ggpredict(mod5, terms = c("hour_day", "imperviousness_2018")))
-plot(ggpredict(mod5, terms = c("hour_day", "dogs_binary")))
-plot(ggpredict(mod5, terms = c("hour_day", "dogs_binary", "lockdown")))
-#plot(ggpredict(mod5, terms = c("hour_day", "cats_binary")))
-
+# # Save the plot
+# ggsave(filename = here::here("plots",
+#                              "03_daily_activity",
+#                              "glmm",
+#                              "ENV05_prediction_hour_all.png"),
+#        width = 1200,
+#        height = 1200,
+#        units = "px",
+#        dpi = 300)
 ```
 
+##### Build one figure for all plots
 ```{r}
-# takes around 5 minutes
-mod6 <- stan_glmer(formula = squirrel_sum_hour ~ (poly(hour_day,4))*lockdown + Season + scale(imperviousness_2018)*poly(hour_day,4) + 
-                     dogs_binary*poly(hour_day,4) 
-                   + (1|Station),   
-                   data = CT_squirrel_predators_hour, 
-                   family = poisson(link = "log"))
+# change position of figure labels or remove them
+ggdraw(xlim = c(0, 1), ylim = c(0, 1.0)) + 
+  # 1st row
+  draw_plot(plot_env_season, x = 0, y = 0.5, width = 0.5, height = 0.5) + 
+  draw_plot(plot_env_lock, x = 0.5, y = 0.5, width = 0.5, height = 0.5) + 
+  # 2nd
+  draw_plot(plot_env_imp, x = 0, y = 0.0, width = .5, height = 0.5) + 
+  draw_plot(plot_env_dogs, x = 0.5, y = 0.0, width = .5, height = 0.5) +
+  # labels
+  draw_label("Predicted activity density", x =  0, y = 0.52, vjust = 1.5, angle = 90, fontfamily = "Zilla Slab", color = "black") + 
+  draw_label("Predicted activity density", x =  0.5, y = 0.52, vjust = 1.5, angle = 90, fontfamily = "Zilla Slab", color = "black") + 
+  draw_plot_label(label = c("A", "B", "C", "D"), size = 13,
+                  x = c(0.10, 0.60, 0.10, 0.60), 
+                  y = c(0.98, 0.98, 0.48, 0.48), 
+                  family = "Roboto", colour = "black") 
+
+# Save the plot
+ggsave(filename = here::here("plots",
+                             "03_daily_activity",
+                             "glmm",
+                             "ENV_GLMM_prediction_arrange2.tiff"),
+       width = 180,
+       height = 180,
+       units = "mm",
+       dpi = 300)
+```
+New version
+```{r}
+# arrange the three plots in a single row
+prow <- plot_grid(
+  plot_env_season,
+  plot_env_lock,
+  plot_env_imp,
+  plot_env_dogs,
+  #align = 'vh',
+  labels = "AUTO", #c("A", "B", "C", "D"),
+  #hjust = -1,
+  ncol = 2,
+  nrow = 2, 
+  label_x = 0.17,
+  label_y = 0.97,
+  label_fontfamily = "Times", 
+  label_colour = "black"
+) + 
+  draw_label("Predicted activity density", x =  0, y = 0.53, vjust = 1.5, angle = 90, fontfamily = "Zilla Slab", color = "black") + 
+  draw_label("Predicted activity density", x =  0.5, y = 0.53, vjust = 1.5, angle = 90, fontfamily = "Zilla Slab", color = "black") 
+  
+prow
+
+
+  # extract a legend that is laid out horizontally
+legend_b <- get_legend(
+  plot_env_season + 
+    guides(color = guide_legend(nrow = 1), group = FALSE) +
+    theme(legend.position = "bottom")
+)
+
+# add the legend underneath the row we made earlier. Give it 10%
+# of the height of one plot (via rel_heights).
+plot_grid(prow, legend_b, ncol = 1, rel_heights = c(1, .1))
+
+# Save the plot
+ggsave(filename = here::here("plots",
+                             "03_daily_activity",
+                             "glmm",
+                             "ENV_GLMM_prediction_arrange2.tiff"),
+       width = 180,
+       height = 180,
+       units = "mm",
+       dpi = 300)
+```
+
+## Bayesian models
+```{r}
+env_b_00 <- stan_glmer(formula = squirrel_sum_hour ~ 1 + (1 | Station),   
+                       data = CT_squirrel_predators_hour, 
+                       family = poisson(link = "log"))
+
+env_b_01 <- stan_glmer(formula = squirrel_sum_hour ~ (poly(hour_day,4))*lockdown + Season + scale(imperviousness_2018) + 
+                         dogs_binary + (1 | Station),   
+                       data = CT_squirrel_predators_hour, 
+                       family = poisson(link = "log"))
+
+env_b_02 <- stan_glmer(formula = squirrel_sum_hour ~ (poly(hour_day,4))*lockdown + Season + 
+                         (poly(hour_day,4))*scale(imperviousness_2018) +
+                         (poly(hour_day,4))*dogs_binary + (1 | Station),   
+                       data = CT_squirrel_predators_hour, 
+                       family = poisson(link = "log"))
+
+env_b_03 <- stan_glmer(formula = squirrel_sum_hour ~ (poly(hour_day,4))*(lockdown + Season + scale(imperviousness_2018) + 
+                         dogs_binary) + (1|Station),    
+                       data = CT_squirrel_predators_hour, 
+                       family = poisson(link = "log"))
+############
+env_b_04 <- stan_glmer(formula = squirrel_sum_hour ~ (poly(hour_day,4))*lockdown + Season + 
+                         scale(imperviousness_2018) +
+                         (poly(hour_day,4))*dogs_binary + (1 | Station),   
+                       data = CT_squirrel_predators_hour, 
+                       family = poisson(link = "log"))
+
+env_b_05 <- stan_glmer(formula = squirrel_sum_hour ~ (poly(hour_day,4))*lockdown + Season + 
+                         (poly(hour_day,4))*scale(imperviousness_2018) +
+                         dogs_binary + (1 | Station),   
+                       data = CT_squirrel_predators_hour, 
+                       family = poisson(link = "log"))
+
 #?stan_glmer
 ```
 
+### Save models (long runtime)
 ```{r}
-describe_posterior(mod6, test = c("p_direction", "rope", "bayesfactor"), ci_method = "HDI")
-# plot(ggpredict(mod4))
-# plot(ggpredict(mod4, terms = c("hour_day", "lockdown")))
+# saveRDS(object = env_b_00,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "model_env_b_00_20240122.RDS"))
+# 
+# saveRDS(object = env_b_01,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "model_env_b_01_20240122.RDS"))
+# saveRDS(object = env_b_02,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "model_env_b_02_20240122.RDS"))
+# saveRDS(object = env_b_03,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "model_env_b_03_20240122.RDS"))
+```
+
+### Read models
+```{r}
+env_b_00 <- readRDS(here::here("output",
+                            "data-proc",
+                            "02_daily_activity",
+                            "model_env_b_00_20240122.RDS"))
+env_b_01 <- readRDS(here::here("output",
+                            "data-proc",
+                            "02_daily_activity",
+                            "model_env_b_01_20240122.RDS"))
+env_b_02 <- readRDS(here::here("output",
+                            "data-proc",
+                            "02_daily_activity",
+                            "model_env_b_02_20240122.RDS"))
+env_b_03 <- readRDS(here::here("output",
+                            "data-proc",
+                            "02_daily_activity",
+                            "model_env_b_03_20240122.RDS"))
+```
 
 
-plot(ggpredict(mod6, terms = c("hour_day", "lockdown")))
-plot(ggpredict(mod6, terms = c("hour_day", "imperviousness_2018")))
-plot(ggpredict(mod6, terms = c("hour_day", "dogs_binary", "lockdown")))
-#plot(ggpredict(mod5, terms = c("hour_day", "cats_binary")))
+
+### Model comparison
+Build a table for model comparison
+```{r}
+# compare all models
+compare_env_models <- as_tibble(
+  compare_performance(
+    env_b_00, env_b_01, env_b_02, env_b_03))
+```
+
+Calculate Nakagawas R2
+```{r}
+#?r2_nakagawa
+r2_env_b_00 <- r2_nakagawa(env_b_00)
+r2_env_b_01 <- r2_nakagawa(env_b_01)
+r2_env_b_02 <- r2_nakagawa(env_b_02)
+r2_env_b_03 <- r2_nakagawa(env_b_03)
+
+r2_marg_env_models <- c(r2_env_b_00$R2_marginal,
+                        r2_env_b_01$R2_marginal,
+                        r2_env_b_02$R2_marginal,
+                        r2_env_b_03$R2_marginal)
+
+r2_cond_env_models <- c(r2_env_b_00$R2_conditional,
+                        r2_env_b_01$R2_conditional,
+                        r2_env_b_02$R2_conditional,
+                        r2_env_b_03$R2_conditional)
+
 
 ```
 
+
+
+```{r}
+test <- performance::r2_nakagawa(env_b_01)
+x <- c(test$R2_conditional, test$R2_marginal)
+# Warnung: mu of 0.3 is too close to zero, estimate of random effect variances may be unreliable.# R2 for Mixed Models
+# 
+#   Conditional R2: 0.630
+#      Marginal R2: 0.321 (compare this value, but report the conditional)
+```
+```{r}
+r2_marg_env_models
+r2_cond_env_models
+```
+
+#### Full table
+```{r}
+compare_env_models <- compare_env_models %>%
+  mutate(r2_marginal =  r2_marg_env_models,
+         r2_conditional =  r2_cond_env_models) %>%
+  arrange(WAIC) %>%
+  mutate(delta_WAIC = WAIC - WAIC[1]) %>%
+  relocate(delta_WAIC, .after = WAIC_wt)
+ 
+compare_env_models # env03 has the lowest WAIC
+```
+
+Save the table
+```{r}
+# write_csv(x = compare_env_models,
+#           file = here::here("output",
+#                             "data-proc",
+#                             "02_daily_activity",
+#                             "compare_env_models_20240130.csv"),
+#           na = "NA")
+```
+
+### Closer look at the best model
+```{r}
+describe_posterior(env_b_03, test = c("p_direction", "rope", "bayesfactor"), ci_method = "HDI")
+```
+
+```{r}
+dat_b_hl <- ggpredict(env_b_03, terms = c("hour_day", "lockdown"))
+dat_b_hi <- ggpredict(env_b_03, terms = c("hour_day", "imperviousness_2018"))
+dat_b_hs <- ggpredict(env_b_03, terms = c("hour_day", "Season"))
+dat_b_hd <- ggpredict(env_b_03, terms = c("hour_day", "dogs_binary"))
+dat_b_hdl <- ggpredict(env_b_03, terms = c("hour_day", "dogs_binary", "lockdown"))
+dat_b_hls <- ggpredict(env_b_03, terms = c("hour_day", "lockdown", "Season"))
+dat_b_hdi <- ggpredict(env_b_03, terms = c("hour_day", "dogs_binary", "imperviousness_2018"))
+  
+plot(ggpredict(env_b_03, terms = c("hour_day", "lockdown")))
+plot(ggpredict(env_b_03, terms = c("hour_day", "imperviousness_2018")))
+plot(ggpredict(env_b_03, terms = c("hour_day", "Season")))
+plot(ggpredict(env_b_03, terms = c("hour_day", "dogs_binary")))
+plot(ggpredict(env_b_03, terms = c("hour_day", "dogs_binary", "lockdown")))
+#plot(ggpredict(env_b_03, terms = c("hour_day", "Season", "lockdown")))
+plot(ggpredict(env_b_03, terms = c("hour_day", "lockdown", "Season")))
+plot(ggpredict(env_b_03, terms = c("hour_day", "dogs_binary", "imperviousness_2018")))
+#plot(ggpredict(env_b_03, terms = c("hour_day", "imperviousness_2018", "dogs_binary")))
+```
+
+```{r}
+# Hour of the day and lockdown
+ggplot(data = dat_b_hl, mapping = aes(x = x, y = predicted, colour = group, fill = group)) +
+  geom_line(size = 2) +
+  geom_ribbon(aes(ymin = conf.low, 
+                  ymax = conf.high), 
+              alpha = 0.1, 
+              colour = NA) +
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 2),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = pal_2) + 
+  scale_fill_manual(values = darken(pal_2, 0.3)) +
+  labs(x = "Hour of the day", 
+       y = "Predicted activity density") 
+
+# Hour of the day and imperviousness
+ggplot(data = dat_b_hi, mapping = aes(x = x, y = predicted, colour = group, fill = group)) +
+  geom_line(size = 2) +
+  geom_ribbon(aes(ymin = conf.low, 
+                  ymax = conf.high), 
+              alpha = 0.1, 
+              colour = NA) +
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 2),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = pal_3) + 
+  scale_fill_manual(values = darken(pal_3, 0.3)) +
+  labs(x = "Hour of the day", 
+       y = "Predicted activity density") 
+
+# Hour of the day and dogs
+ggplot(data = dat_b_hd, mapping = aes(x = x, y = predicted, colour = group, fill = group)) +
+  geom_line(size = 2) +
+  geom_ribbon(aes(ymin = conf.low, 
+                  ymax = conf.high), 
+              alpha = 0.1, 
+              colour = NA) +
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 2),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = pal_2) + 
+  scale_fill_manual(values = darken(pal_2, 0.3)) +
+  labs(x = "Hour of the day", 
+       y = "Predicted activity density") 
+
+# Hour of the day and lockdown and dogs
+ggplot(data = dat_b_hls, mapping = aes(x = x, y = predicted, colour = group, fill = group)) +
+  geom_line(size = 2) +
+  geom_ribbon(aes(ymin = conf.low, 
+                  ymax = conf.high), 
+              alpha = 0.1, 
+              colour = NA) +
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 2),
+    expand = c(.001, .001)) +
+    scale_y_continuous(
+    limits = c(0,1.8),
+    breaks = seq(0, 1.8, by = 0.5),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = pal_2) + 
+  scale_fill_manual(values = darken(pal_2, 0.3)) +
+  labs(x = "Hour of the day", 
+       y = "Predicted activity density") +
+  facet_wrap(~facet) +
+  theme(panel.spacing = unit(1, "lines"), 
+        strip.text = element_text(size = 14))
+
+# ggsave(filename = here::here("plots",
+#                              "03_daily_activity",
+#                              "glmm",
+#                              "squirrel_env_hls.png"),
+#         # width = 1200*1.5,
+#         # height = 1200,
+#         # units = "px",
+#        dpi = 300)
+
+# Hour of the day and lockdown and dogs
+ggplot(data = dat_b_hdi, mapping = aes(x = x, y = predicted, colour = group, fill = group)) +
+  geom_line(size = 2) +
+  geom_ribbon(aes(ymin = conf.low, 
+                  ymax = conf.high), 
+              alpha = 0.1, 
+              colour = NA) +
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 2),
+    expand = c(.001, .001)) +
+    scale_y_continuous(
+    limits = c(0,1.8),
+    breaks = seq(0, 1.8, by = 0.5),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = pal_2) + 
+  scale_fill_manual(values = darken(pal_2, 0.3)) +
+  labs(x = "Hour of the day", 
+       y = "Predicted activity density") +
+  facet_wrap(~facet, labeller = labeller(facet = imp_labs)) +
+  theme(panel.spacing = unit(1, "lines"), 
+        strip.text = element_text(size = 14))
+
+# ggsave(filename = here::here("plots",
+#                              "03_daily_activity",
+#                              "glmm",
+#                              "squirrel_env_hdi.png"),
+#         # width = 1200*1.5,
+#         # height = 1200,
+#         # units = "px",
+#        dpi = 300)
+```
+
+#### Rope
 ```{r fig.height=10, fig.width=10}
-plot(rope(mod6))
+# plot(rope(env_b_01)) + 
+#   scale_x_continuous(
+#     limits = c(-75, 50),
+#     breaks = seq(-75, 50, by = 25),
+#     expand = c(.02, .001)) +
+#   scale_y_discrete(expand = c(0.05, 1),
+#                    labels = c("polynomial of degree 4 for hour of the day and lockdown = yes", 
+#                               "polynomial of degree 3 for hour of the day and lockdown = yes",
+#                               "polynomial of degree 2 for hour of the day and lockdown = yes",
+#                               "polynomial of degree 1 for hour of the day and lockdown = yes",
+#                               "Dogs as pets = yes", 
+#                               "Imperviousness",
+#                               "Season = spring", 
+#                               "Lockdown = yes", 
+#                               "polynomial of degree 4 for hour of the day",
+#                               "polynomial of degree 3 for hour of the day",
+#                               "polynomial of degree 2 for hour of the day",
+#                               "polynomial of degree 1 for hour of the day"))  +
+#   scale_fill_manual(values = pal_2) + 
+#   coord_cartesian(clip = "off")
+# 
+# plot(rope(env_b_02)) + 
+#   scale_x_continuous(
+#     limits = c(-75, 50),
+#     breaks = seq(-75, 50, by = 25),
+#     expand = c(.02, .001)) +
+#   scale_fill_manual(values = pal_2) + 
+#   coord_cartesian(clip = "off")
+
+plot(rope(env_b_03)) + 
+  scale_x_continuous(
+    limits = c(-75, 50),
+    breaks = seq(-75, 50, by = 25),
+    expand = c(.02, .001)) +
+  scale_fill_manual(values = pal_2) + 
+  coord_cartesian(clip = "off")
 ```
 
-# Predator analyses
-Nur stationen filtern bei denen mindestens einmal in der Laufzeit ein Foto von Katzen bzw. Mardern war
-Dann pro tag berechnen ob Katze/Marder da war oder nicht
-Dann Number of pictures per hour of the day for days with cats or without cats
-2 rows per hour per station (with cats vs without cats
+
+# Predator analyses: Cats 
+```{r}
+sum(CT_squirrel_cats_hour_station$squirrel_sum_hour_station)
+sapply(CT_squirrel_cats_hour_station, n_distinct)
+```
+
+```{r}
+CT_squirrel_cats_hour_station %>%
+  group_by(Station, project_phase) %>%
+  summarise(n = n()) %>%
+  group_by(project_phase) %>%
+  summarise(n = n())
+```
+
+```{r}
+table(CT_squirrel_cats_hour_station$squirrel_sum_hour_station)
+
+CT_squirrel_cats_hour_station %>%
+  ggplot(mapping = aes(x = squirrel_sum_hour_station)) + 
+  geom_histogram(stat = "bin", position = "identity", fill = "#303B4A", bins = 22) + # 
+  scale_y_continuous(
+    limits = c(0, 1400),
+    breaks = seq(0, 1400, by = 100),
+    expand = c(.008, .001)) +
+  scale_x_continuous(limits = c(-0.5, 20.5),
+                     expand = c(0,0)) +
+  labs(x = "Number of squirrel pictures per station") + 
+  my_theme
+
+# Zero inflated - we will use negative binomial distribution
+
+# # Save the plot
+# ggsave(filename = here::here("plots",
+#                              "03_daily_activity",
+#                              "CATS_squirrel_pics_per_station.png"),
+#        width = 1200*1.5,
+#        height = 1200,
+#        units = "px",
+#        dpi = 300)
+```
+
+```{r}
+table(CT_squirrel_cats_hour_station$lockdown)
+table(CT_squirrel_cats_hour_station$Season)
+table(CT_squirrel_cats_hour_station$cat_presence)
+table(CT_squirrel_cats_hour_station$cat_presence, CT_squirrel_cats_hour_station$Season)
+```
+
+## Linear models
+### Model formulation
+```{r}
+cats00 <- glmer.nb(formula = squirrel_sum_hour_station ~ 1 + (1 | Station),   
+                  data = CT_squirrel_cats_hour_station, 
+                  control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+
+cats01 <- glmer.nb(squirrel_sum_hour_station ~ (poly(hour_day,4))*lockdown + 
+                     Season + cat_presence + 
+                     (1 | Station), 
+                  data = CT_squirrel_cats_hour_station, 
+                  control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+
+#my_opt <- allFit(cats01)
+#summary(my_opt)$which.OK
+
+cats02 <- glmer.nb(squirrel_sum_hour_station ~ (poly(hour_day,4))*lockdown + 
+                     Season + (poly(hour_day,4))*cat_presence + 
+                     (1 | Station), 
+                  data = CT_squirrel_cats_hour_station, 
+                  control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+#my_opt2 <- allFit(cats02)
+#summary(my_opt2)$which.OK
+
+cats03 <- glmer.nb(squirrel_sum_hour_station ~ (poly(hour_day,4))*(lockdown + Season + cat_presence) + 
+                     (1 | Station), 
+                  data = CT_squirrel_cats_hour_station, 
+                  control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+#my_opt3 <- allFit(cats04)
+#summary(my_opt3)$which.OK
+```
+
+
+#### Save models
+```{r}
+# saveRDS(object = cats00,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "model_cats00_neg_20240213.RDS"))
+# 
+# saveRDS(object = cats01,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "model_cats01_neg_20240213.RDS"))
+# 
+# saveRDS(object = cats02,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "model_cats02_neg_20240213.RDS"))
+# 
+# saveRDS(object = cats03,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "model_cats03_neg_20240213.RDS"))
+```
+
+#### Read models
+```{r}
+cats00 <- readRDS(here::here("output",
+                             "data-proc",
+                             "02_daily_activity",
+                             "model_cats00_neg_20240213.RDS"))
+
+cats01 <- readRDS(here::here("output",
+                             "data-proc",
+                             "02_daily_activity",
+                             "model_cats01_neg_20240213.RDS"))
+
+cats02 <- readRDS(here::here("output",
+                             "data-proc",
+                             "02_daily_activity",
+                             "model_cats02_neg_20240213.RDS"))
+
+cats03 <- readRDS(here::here("output",
+                             "data-proc",
+                             "02_daily_activity",
+                             "model_cats03_neg_20240213.RDS"))
+```
+
+### Model comparison
+```{r}
+# Create a list with all models
+cat_model_list <- list(cats00 = cats00,
+                       cats01 = cats01,
+                       cats02 = cats02,
+                       cats03 = cats03)
+
+cat_mod_sel <- AICc(cats00,
+                    cats01,
+                    cats02,
+                    cats03)
+
+cat_AICc_w <- Weights(cat_mod_sel)
+
+cat_R2_list <- cat_model_list %>%
+  lapply(r2_nakagawa) #%>%
+cat_R2 <- do.call(rbind.data.frame, cat_R2_list)
+# unlist()
+
+cat_mod_sel <- cat_mod_sel %>%
+  mutate(AICc_weight = cat_AICc_w, R2_marginal = cat_R2$R2_marginal, R2_conditional = cat_R2$R2_conditional) %>%
+  arrange(AICc) %>%
+  mutate(delta_AICc = AICc - AICc[1]) %>%
+  mutate(across(where(is.numeric), round, digits = 3)) %>% 
+  select(df, AICc, delta_AICc, AICc_weight, R2_marginal, R2_conditional) %>% 
+  rename(n_param = df) %>%
+  rownames_to_column(var = "Name")
+
+# # save the table as csv
+# write_csv(x = cat_mod_sel,
+#           file = here::here("output",
+#                             "data-proc",
+#                             "02_daily_activity",
+#                             "cat_mod_sel_20240411.csv"),
+#           na = "NA")
+#
+# Load table
+cat_mod_sel <- read.csv(file = here::here("output",
+                                          "data-proc",
+                                          "02_daily_activity",
+                                          "cat_mod_sel_20240411.csv"))
+
+```
+
+```{r}
+## OLD Version
+# # Create a list with all models
+# cat_model_list <- list(cats00 = cats00,
+#                        cats01 = cats01,
+#                        cats02 = cats02,
+#                        cats03 = cats03)
+# 
+# # Create a table for comparing model performance
+# cat_mod_sel <- compare_performance(cat_model_list, metrics = c("AIC", "AICc", "R2"))
+# 
+# # Calculate the difference between the lowest AIC and the other AICs and put the model with the lowest AIC in the first row
+# cat_mod_sel <- cat_mod_sel %>%
+#   arrange(AIC) %>%
+#   mutate(delta_AIC = AIC - AIC[1]) %>%
+#   mutate(across(where(is.numeric), round, digits = 3)) %>% 
+#   select(Name, AIC, delta_AIC, AICc, R2_marginal, R2_conditional)
+# 
+# 
+# # # save the table as csv
+# # write_csv(x = cat_mod_sel,
+# #           file = here::here("output",
+# #                             "data-proc",
+# #                             "02_daily_activity",
+# #                             "cat_mod_sel_20240209.csv"),
+# #           na = "NA")
+# 
+# # # Load table
+# # cat_mod_sel <- read.csv(file = here::here("output",
+# #                                           "data-proc",
+# #                                           "02_daily_activity",
+# #                                           "cat_mod_sel_20240209.csv"))
+```
+
+#### Closer look at the best model
+```{r}
+# Model summary
+cat_sum <- tidy(cats03, conf.int = FALSE) %>%
+  dplyr::rename(Predictors = term,
+         Estimate = estimate,
+         SE = std.error,
+         T_statistic = statistic,
+         p = p.value) %>%
+  dplyr::mutate(across(.cols = c(4:7), 
+                       .fns =  as.numeric)) %>%
+  dplyr::mutate(across(where(is.numeric), round, digits = 3))
+
+# # save the table as csv
+# write_csv(x = cat_sum,
+#           file = here::here("output",
+#                             "data-proc",
+#                             "02_daily_activity",
+#                             "cats03_summary_20240606.csv"),
+#           na = "NA")
+
+# Load table
+cat_sum <- read.csv(file = here::here("output",
+                                      "data-proc",
+                                      "02_daily_activity",
+                                      "cats03_summary_20240606.csv"))
+```
+
+```{r}
+# table with model summary
+summary(cats03)
+cat_ano_sum <- cats03 %>%
+  car::Anova() %>%
+  rownames_to_column(var = "predictors") %>%
+  rename(Predictors = predictors,  
+         #Hello = Chisq#, bquote("Chi" * m^2)
+         p = "Pr(>Chisq)"
+         ) %>%
+  mutate(across(where(is.numeric), round, digits = 5)) 
+
+cat_ano_sum
+
+# # save the table as csv
+# write_csv(x = cat_ano_sum,
+#           file = here::here("output",
+#                             "data-proc",
+#                             "02_daily_activity",
+#                             "cat_anova_summary_20240214.csv"),
+#           na = "NA")
+# # 
+# # Load table
+# cat_ano_sum <- read.csv(file = here::here("output",
+#                                           "data-proc",
+#                                           "02_daily_activity",
+#                                           "cat_anova_summary_20240214.csv"))
+```
+
+```{r}
+check_model(cats03)
+
+plot(check_collinearity(cats03))
+check_collinearity(cats03)
+
+plot(cats03)
+```
+
+```{r}
+binned_residuals(cats03)
+plot(binned_residuals(cats03))
+```
+
+#### Prediction plots
+Create tables for estimated marginal means
+```{r}
+pred_cats_lock <- ggemmeans(cats03, terms = c("hour_day", "lockdown"))
+pred_cats_season  <- ggemmeans(cats03, terms = c("hour_day", "Season"))
+pred_cats_catp  <- ggemmeans(cats03, terms = c("hour_day", "cat_presence"))
+```
+
+```{r}
+plot_cats_lock <- 
+  ggplot(data = pred_cats_lock, 
+         mapping = aes(x = x, y = predicted, group = group, 
+                       colour = group, fill = group)) + 
+  geom_line(linewidth = 2) + 
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.15, colour = NA) + 
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 3),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = col_lock, labels = c("No", "Yes")) +
+  scale_fill_manual(values = darken(col_lock, 0.3)) +
+  labs(x = "Hour of the day",
+       y = "Predicted activity intensity", # 
+       colour = "Lockdown",
+       title = NULL) + 
+  theme(legend.position = c(0.82, 0.86),
+        plot.background = element_rect(fill = "transparent", colour = NA),
+        legend.background = element_blank(), 
+        legend.key = element_blank()) +
+  guides(group = "none", fill = "none") +
+  coord_cartesian(ylim = c(0, 1.1), # Here we need coord_cartesian because the range of the SD is too big
+                  expand = FALSE) 
+
+plot_cats_lock
+
+# Save the plot
+ggsave(filename = here::here("plots",
+                             "03_daily_activity",
+                             "glmm",
+                             "CATS03_prediction_lockdown2.png"),
+       width = 1200,
+       height = 1200,
+       units = "px",
+       dpi = 300)
+```
+
+```{r}
+plot_cats_season <- 
+  ggplot(data = pred_cats_season, 
+         mapping = aes(x = x, y = predicted, group = group, 
+                       colour = group, fill = group)) + 
+  geom_line(linewidth = 2) + 
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.15, colour = NA) + 
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 3),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = col_season, labels = c("Autumn", "Spring")) +
+  scale_fill_manual(values = darken(col_season, 0.3)) +
+  labs(x = "Hour of the day",
+       y = "Predicted activity intensity", # 
+       colour = "Season",
+       title = NULL) + 
+  theme(legend.position = c(0.82, 0.86),
+        plot.background = element_rect(fill = "transparent", colour = NA),
+        legend.background = element_blank(), 
+        legend.key = element_blank()) +
+  guides(group = "none", fill = "none") +
+  coord_cartesian(ylim = c(0, 1.1), # Here we need coord_cartesian because the range of the SD is too big
+                  expand = FALSE) 
+
+plot_cats_season
+
+# Save the plot
+ggsave(filename = here::here("plots",
+                             "03_daily_activity",
+                             "glmm",
+                             "CATS03_prediction_season2.png"),
+       width = 1200,
+       height = 1200,
+       units = "px",
+       dpi = 300)
+```
+
+```{r}
+plot_cats_catp <- 
+  ggplot(data = pred_cats_catp, 
+         mapping = aes(x = x, y = predicted, group = group, 
+                       colour = group, fill = group)) + 
+  geom_line(linewidth = 2) + 
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.15, colour = NA) + 
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 3),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = col_cats, labels = c("No", "Yes")) +
+  scale_fill_manual(values = darken(col_cats, 0.3)) +
+  labs(x = "Hour of the day",
+       y = "Predicted activity intensity", # 
+       colour = "Cats",
+       title = NULL) + 
+  theme(legend.position = c(0.87, 0.86), 
+        plot.background = element_rect(fill = "transparent", colour = NA),
+        legend.background = element_blank(), 
+        legend.key = element_blank()) +
+  guides(group = "none", fill = "none") +
+  coord_cartesian(ylim = c(0, 1.1), # Here we need coord_cartesian because the range of the SD is too big
+                  expand = FALSE) 
+
+plot_cats_catp
+
+# Save the plot
+ggsave(filename = here::here("plots",
+                             "03_daily_activity",
+                             "glmm",
+                             "CATS03_prediction_catpresence2.png"),
+       width = 1200,
+       height = 1200,
+       units = "px",
+       dpi = 300)
+```
+
+```{r}
+# German version
+plot_cats_catp <- 
+  ggplot(data = pred_cats_catp, 
+         mapping = aes(x = x, y = predicted, group = group, 
+                       colour = group, fill = group)) + 
+  geom_line(linewidth = 2) + 
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.15, colour = NA) + 
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 3),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = col_cats, labels = c("Nein", "Ja")) +
+  scale_fill_manual(values = darken(col_cats, 0.3)) +
+  labs(x = "Stunde des Tages",
+       y = "Aktivität", # Predicted activity density
+       colour = "Katzen",
+       title = NULL) + 
+  theme(legend.position = c(0.87, 0.86), 
+        legend.background = element_blank(), 
+        legend.key = element_blank()) +
+  guides(group = "none", fill = "none") +
+  coord_cartesian(ylim = c(0, 1.0), # Here we need coord_cartesian because the range of the SD is too big
+                  expand = FALSE) 
+
+plot_cats_catp
+
+# # Save the plot
+# ggsave(filename = here::here("plots",
+#                              "03_daily_activity",
+#                              "glmm",
+#                              "CATS03_prediction_catpresence_dt.png"),
+#        width = 1200,
+#        height = 1200,
+#        units = "px",
+#        dpi = 300)
+```
+
+```{r}
+# # Hour of the day and lockdown
+# cats_lock <- 
+#   plot(ggemmeans(cats03, terms = c("hour_day", "lockdown")), line.size = 2) + 
+#   # scale_y_continuous(
+#   #   limits = c(0, 1.5),
+#   #   breaks = seq(0, 1, by = 0.25),
+#   #   expand = c(.001, .001)) +
+#   scale_x_continuous(
+#     limits = c(5,17),
+#     breaks = seq(5, 17, by = 3),
+#     expand = c(.001, .001)) + 
+#   scale_colour_manual(values = col_lock, labels = c("No", "Yes")) + 
+#   scale_fill_manual(values = darken(col_lock, 0.3)) +
+#   labs(x = "Hour of the day", 
+#        y = "Predicted activity density", 
+#        colour = "Lockdown",
+#        title = NULL) + 
+#   #my_theme + 
+#   theme(legend.position = c(0.85,0.88)) +
+#   coord_cartesian(ylim = c(0, 1.0), 
+#                   expand = FALSE) 
+# 
+# cats_lock
+# 
+# # # Save the plot
+# # ggsave(filename = here::here("plots",
+# #                              "03_daily_activity",
+# #                              "glmm",
+# #                              "CATS03_prediction_lockdown.png"),
+# #        width = 1200,
+# #        height = 1200,
+# #        units = "px",
+# #        dpi = 300)
+```
+
+```{r}
+# # Hour of the day and Season
+# cats_season <- 
+#   plot(ggemmeans(cats03, terms = c("hour_day", "Season")), line.size = 2) + 
+#   scale_y_continuous(
+#     limits = c(0, 1.0),
+#     breaks = seq(0, 1, by = 0.25),
+#     expand = c(.001, .001)) +
+#   scale_x_continuous(
+#     limits = c(5,17),
+#     breaks = seq(5, 17, by = 3),
+#     expand = c(.001, .001)) + 
+#   scale_colour_manual(values = col_season, labels = c("Autumn", "Spring")) + 
+#   scale_fill_manual(values = darken(col_season, 0.3)) +
+#   labs(x = "Hour of the day", 
+#        y = "Predicted activity density", 
+#        title = NULL) + 
+#   my_theme + 
+#   theme(legend.position = c(0.87,0.88))
+# 
+# cats_season
+# 
+# # # Save the plot
+# # ggsave(filename = here::here("plots",
+# #                              "03_daily_activity",
+# #                              "glmm",
+# #                              "CATS03_prediction_season.png"),
+# #        width = 1200,
+# #        height = 1200,
+# #        units = "px",
+# #        dpi = 300)
+```
+
+```{r}
+# # Hour of the day and cat presence
+# cats_catp <-
+#   plot(ggemmeans(cats03, terms = c("hour_day", "cat_presence")), line.size = 2) + 
+#   scale_y_continuous(
+#     limits = c(0, 1.0),
+#     breaks = seq(0, 1, by = 0.25),
+#     expand = c(.001, .001)) +
+#   scale_x_continuous(
+#     limits = c(5,17),
+#     breaks = seq(5, 17, by = 3),
+#     expand = c(.001, .001)) + 
+#   scale_colour_manual(values = col_cats, labels = c("No", "Yes")) + 
+#   scale_fill_manual(values = darken(col_cats, 0.3)) +
+#   labs(x = "Hour of the day", 
+#        y = "Predicted activity density", 
+#        colour = "Cats",
+#        title = NULL) + 
+#   my_theme + 
+#   theme(legend.position = c(0.90,0.88))
+# 
+# cats_catp
+# 
+# # # Save the plot
+# # ggsave(filename = here::here("plots",
+# #                              "03_daily_activity",
+# #                              "glmm",
+# #                              "CATS03_prediction_catpresence.png"),
+# #        width = 1200,
+# #        height = 1200,
+# #        units = "px",
+# #        dpi = 300)
+```
+
+```{r}
+# plot(ggemmeans(cats03, terms = "hour_day [all]"), line.size = 2) + 
+#   scale_y_continuous(
+#     limits = c(0, 1.0),
+#     breaks = seq(0, 1, by = 0.25),
+#     expand = c(.001, .001)) +
+#   scale_x_continuous(
+#     limits = c(5,17),
+#     breaks = seq(5, 17, by = 3),
+#     expand = c(.001, .001)) + 
+#    scale_colour_manual(values = pal_2) + 
+#   scale_fill_manual(values = darken(pal_2, 0.3)) +
+#   labs(x = "Hour of the day", 
+#        y = "Predicted activity density", 
+#        title = NULL) + 
+#   my_theme
+# 
+# # # Save the plot
+# # ggsave(filename = here::here("plots",
+# #                              "03_daily_activity",
+# #                              "glmm",
+# #                              "CATS03_prediction_hour_all.png"),
+# #        width = 1200*1.5,
+# #        height = 1200,
+# #        units = "px",
+# #        dpi = 300)
+```
+
+Build one figure for all plots
+```{r}
+# # change position of figure labels or remove them
+# ggdraw(xlim = c(0, 1), ylim = c(0, 1.0)) + 
+#   # 1st row
+#   draw_plot(env_season, x = 0, y = 0.5, width = 0.5, height = 0.5) + 
+#   draw_plot(env_lock, x = 0.5, y = 0.5, width = 0.5, height = 0.5) + 
+#   # 2nd
+#   draw_plot(env_imp, x = 0, y = 0.0, width = .5, height = 0.5) + 
+#   draw_plot(env_dogs, x = 0.5, y = 0.0, width = .5, height = 0.5) +
+#   # labels
+#   draw_label("Number of pictures per station", x =  0, y = 0.52, vjust = 1.5, angle = 90, fontfamily = "Zilla Slab", color = "black") + 
+#   draw_label("Number of pictures per station", x =  0.5, y = 0.52, vjust = 1.5, angle = 90, fontfamily = "Zilla Slab", color = "black") + 
+#   draw_plot_label(label = c("A", "B", "C", "D"), size = 13,
+#                   x = c(0.10, 0.60, 0.10, 0.60), 
+#                   y = c(0.98, 0.98, 0.48, 0.48), 
+#                   family = "Roboto", colour = "black")
+# 
+# # Save the plot
+# ggsave(filename = here::here("plots",
+#                              "03_daily_activity",
+#                              "glmm",
+#                              "ENV_GLMM_prediction_arrange.png"),
+#        width = 1200*1.5,
+#        height = 1200,
+#        units = "px",
+#        dpi = 300)
+```
+
+## Bayesian models
+### Model formulation
+```{r}
+CT_squirrel_cats_hour_station %>% 
+  group_by(hour_day, lockdown, Season, cat_presence) %>%
+  summarise(n = n())
+
+CT_squirrel_cats_hour_station %>% 
+  group_by(Station, lockdown, Season) %>%
+  summarise(n = n()) %>% 
+  group_by(lockdown, Season) %>%
+  summarise(n = n())
+  
+```
+
+```{r}
+cat_b_00 <- stan_glmer.nb(formula = squirrel_sum_hour_station ~ 1 + (1 | Station), 
+                          data = CT_squirrel_cats_hour_station)
+cat_b_01 <- stan_glmer.nb(formula = squirrel_sum_hour_station ~ (poly(hour_day,4))*lockdown + Season + cat_presence + 
+                            (1 | Station), 
+                          data = CT_squirrel_cats_hour_station)
+cat_b_02 <- stan_glmer.nb(formula = squirrel_sum_hour_station ~ (poly(hour_day,4))*lockdown + Season + 
+                            (poly(hour_day,4))*cat_presence + 
+                            (1 | Station), 
+                          data = CT_squirrel_cats_hour_station)
+cat_b_03 <- stan_glmer.nb(formula = squirrel_sum_hour_station ~ (poly(hour_day,4))*(lockdown + Season + cat_presence) + 
+                            (1 | Station), 
+                          data = CT_squirrel_cats_hour_station)
+```
+
+
+
+#### Save models
+```{r}
+# saveRDS(object = cat_b_00,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "model_cat_b_00_neg_20240130.RDS"))
+# 
+# saveRDS(object = cat_b_01,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "model_cat_b_01_neg_20240130.RDS"))
+# 
+# saveRDS(object = cat_b_02,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "model_cat_b_02_neg_20240130.RDS"))
+# 
+# saveRDS(object = cat_b_03,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "model_cat_b_03_neg_20240130.RDS"))
+```
+
+#### Read models
+```{r}
+# cat_b_00 <- readRDS(here::here("output",
+#                              "data-proc",
+#                              "02_daily_activity",
+#                              "model_cat_b_00_neg_20240130.RDS"))
+# 
+# cat_b_01 <- readRDS(here::here("output",
+#                              "data-proc",
+#                              "02_daily_activity",
+#                              "model_cat_b_01_neg_20240130.RDS"))
+# 
+# cat_b_02 <- readRDS(here::here("output",
+#                              "data-proc",
+#                              "02_daily_activity",
+#                              "model_cat_b_02_neg_20240130.RDS"))
+# 
+# cat_b_03 <- readRDS(here::here("output",
+#                              "data-proc",
+#                              "02_daily_activity",
+#                              "model_cat_b_03_neg_20240130.RDS"))
+```
+
+### Model comparison
+Build a table for model comparison
+```{r}
+# compare all models
+compare_cat_models <- as_tibble(
+  compare_performance(
+    cat_b_00, cat_b_01, cat_b_02, cat_b_03))
+```
+
+Calculate Nakagawas R2
+```{r}
+r2_cat_b_00 <- r2_nakagawa(cat_b_00)
+r2_cat_b_01 <- r2_nakagawa(cat_b_01)
+r2_cat_b_02 <- r2_nakagawa(cat_b_02)
+r2_cat_b_03 <- r2_nakagawa(cat_b_03)
+
+summary(cat_b_03)
+r2_marg_cat_models <- c(r2_cat_b_00$R2_marginal,
+                        r2_cat_b_01$R2_marginal,
+                        r2_cat_b_02$R2_marginal,
+                        r2_cat_b_03$R2_marginal)
+
+r2_cond_cat_models <- c(r2_cat_b_00$R2_conditional,
+                        r2_cat_b_01$R2_conditional,
+                        r2_cat_b_02$R2_conditional,
+                        r2_cat_b_03$R2_conditional)
+
+?r2_nakagawa
+```
+
+```{r}
+r2_marg_cat_models
+r2_cond_cat_models
+```
+
+#### Full table
+```{r}
+compare_cat_models <- compare_cat_models %>%
+  mutate(r2_marginal =  r2_marg_cat_models,
+         r2_conditional =  r2_cond_cat_models) %>%
+  arrange(WAIC) %>%
+  mutate(delta_WAIC = WAIC - WAIC[1]) %>%
+  relocate(delta_WAIC, .after = WAIC_wt)
+ 
+compare_cat_models # cats03 has the lowest WAIC
+```
+
+Save the table
+```{r}
+write_csv(x = compare_cat_models,
+          file = here::here("output",
+                            "data-proc",
+                            "02_daily_activity",
+                            "compare_cat_models_20240130.csv"),
+          na = "NA")
+```
+
+
+#### Closer look at the best model
+```{r}
+describe_posterior(cat_b_03, test = c("p_direction", "rope", "bayesfactor"), ci_method = "HDI")
+
+#tidy(cats_b_03, conf.int = TRUE)
+```
+
+```{r}
+dat_cat_03_hl <- ggpredict(cat_b_03, terms = c("hour_day", "lockdown"))
+dat_cat_03_hs <- ggpredict(cat_b_03, terms = c("hour_day", "Season"))
+dat_cat_03_hc <- ggpredict(cat_b_03, terms = c("hour_day", "cat_presence"))
+dat_cat_03_hcl <- ggpredict(cat_b_03, terms = c("hour_day", "cat_presence", "lockdown"))
+dat_cat_03_hcs <- ggpredict(cat_b_03, terms = c("hour_day", "cat_presence", "Season"))
+dat_cat_03_hcls <- ggpredict(cat_b_03, terms = c("hour_day", "cat_presence", "lockdown", "Season"))
+plot(ggpredict(cat_b_03, terms = c("hour_day", "lockdown")))
+plot(ggpredict(cat_b_03, terms = c("hour_day", "Season")))
+plot(ggpredict(cat_b_03, terms = c("hour_day", "cat_presence")))
+# Nice version of this:
+plot(ggpredict(cat_b_03, terms = c("hour_day", "cat_presence", "lockdown", "Season")))
+plot(ggpredict(cat_b_03))
+
+```
+
+#### Prediction plots
+```{r}
+ggplot(data = dat_cat_03_hcls, mapping = aes(x = x, y = predicted, colour = group, fill = group)) +
+  geom_line(size = 2) +
+  geom_ribbon(aes(ymin = conf.low, 
+                  ymax = conf.high), 
+              alpha = 0.1, 
+              colour = NA) +
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 2),
+    expand = c(.001, .001)) +
+  scale_y_continuous(
+    limits = c(0,1.8),
+    breaks = seq(0, 1.8, by = 0.5),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = pal_2) + 
+  scale_fill_manual(values = darken(pal_2, 0.3)) +
+  labs(x = "Hour of the day", 
+       y = "Predicted activity density") +
+  facet_grid(panel ~ facet, labeller = labeller(facet = lock_labs))  +
+  theme(panel.spacing = unit(1, "lines"), 
+        strip.text = element_text(size = 14))
+
+# ggsave(filename = here::here("plots",
+#                              "03_daily_activity",
+#                              "glmm",
+#                              "squirrel_cats_hcls.png"),
+#         # width = 1200*1.5,
+#         # height = 1200,
+#         # units = "px",
+#        dpi = 300)
+```
+
+```{r}
+# Hour of the day and lockdown
+ggplot(data = dat_cat_03_hl, mapping = aes(x = x, y = predicted, colour = group, fill = group)) +
+  geom_line(size = 2) +
+  geom_ribbon(aes(ymin = conf.low, 
+                  ymax = conf.high), 
+              alpha = 0.1, 
+              colour = NA) +
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 2),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = pal_2) + 
+  scale_fill_manual(values = darken(pal_2, 0.3)) +
+  labs(x = "Hour of the day", 
+       y = "Predicted activity density") 
+
+# Hour of the day and season
+ggplot(data = dat_cat_03_hs, mapping = aes(x = x, y = predicted, colour = group, fill = group)) +
+  geom_line(size = 2) +
+  geom_ribbon(aes(ymin = conf.low, 
+                  ymax = conf.high), 
+              alpha = 0.1, 
+              colour = NA) +
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 2),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = pal_3) + 
+  scale_fill_manual(values = darken(pal_3, 0.3)) +
+  labs(x = "Hour of the day", 
+       y = "Predicted activity density") 
+
+# Hour of the day and cats
+ggplot(data = dat_cat_03_hc, mapping = aes(x = x, y = predicted, colour = group, fill = group)) +
+  geom_line(size = 2) +
+  geom_ribbon(aes(ymin = conf.low, 
+                  ymax = conf.high), 
+              alpha = 0.1, 
+              colour = NA) +
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 2),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = pal_2) + 
+  scale_fill_manual(values = darken(pal_2, 0.3)) +
+  labs(x = "Hour of the day", 
+       y = "Predicted activity density") 
+
+# Hour of the day and lockdown and cats
+ggplot(data = dat_cat_03_hcl, mapping = aes(x = x, y = predicted, colour = group, fill = group)) +
+  geom_line(size = 2) +
+  geom_ribbon(aes(ymin = conf.low, 
+                  ymax = conf.high), 
+              alpha = 0.1, 
+              colour = NA) +
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 2),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = pal_2) + 
+  scale_fill_manual(values = darken(pal_2, 0.3)) +
+  labs(x = "Hour of the day", 
+       y = "Predicted activity density") +
+  facet_wrap(~facet, labeller = labeller(facet = lock_labs))
+
+# Hour of the day and season and cats
+ggplot(data = dat_cat_03_hcs, mapping = aes(x = x, y = predicted, colour = group, fill = group)) +
+  geom_line(size = 2) +
+  geom_ribbon(aes(ymin = conf.low, 
+                  ymax = conf.high), 
+              alpha = 0.1, 
+              colour = NA) +
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 2),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = pal_2) + 
+  scale_fill_manual(values = darken(pal_2, 0.3)) +
+  labs(x = "Hour of the day", 
+       y = "Predicted activity density") +
+  facet_wrap(~facet)
+```
+
+```{r}
+plot(rope(cat_b_03)) + 
+  scale_x_continuous(
+    limits = c(-125, 75),
+    breaks = seq(-125, 75, by = 25),
+    expand = c(.02, .001)) +
+  scale_fill_manual(values = pal_2) + 
+  coord_cartesian(clip = "off")
+```
+
+# Predator analyses: Martens 
+```{r}
+sum(CT_squirrel_martens_hour_station$squirrel_sum_hour_station)
+sapply(CT_squirrel_martens_hour_station, n_distinct)
+```
+
+```{r}
+CT_squirrel_martens_hour_station %>%
+  group_by(Station, project_phase) %>%
+  summarise(n = n()) %>%
+  group_by(project_phase) %>%
+  summarise(n = n())
+```
+
+
+```{r}
+table(CT_squirrel_martens_hour_station$squirrel_sum_hour_station)
+
+CT_squirrel_martens_hour_station %>%
+  ggplot(mapping = aes(x = squirrel_sum_hour_station)) + 
+  geom_histogram(stat = "bin", position = "identity", fill = "#303B4A", bins = 22) + # 
+  scale_y_continuous(
+    limits = c(0, 300),
+    breaks = seq(0, 300, by = 100),
+    expand = c(.008, .001)) +
+  scale_x_continuous(limits = c(-0.5, 20.5),
+                     expand = c(0,0)) +
+  labs(x = "Number of squirrel pictures per station") + 
+  my_theme
+
+
+# Zero inflated - we will use negative binomial distribution
+
+# # Save the plot
+# ggsave(filename = here::here("plots",
+#                              "03_daily_activity",
+#                              "MARTEN_squirrel_pics_per_station.png"),
+#        width = 1200*1.5,
+#        height = 1200,
+#        units = "px",
+#        dpi = 300)
+```
+
+
+
+## Linear models
+### Model formulation
+```{r}
+martens00 <- glmer.nb(formula = squirrel_sum_hour_station ~ 1 + (1 | Station),   
+                  data = CT_squirrel_martens_hour_station, 
+                  control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+
+
+martens01 <- glmer.nb(squirrel_sum_hour_station ~ (poly(hour_day,4))*lockdown + 
+                     Season + marten_presence + 
+                     (1 | Station), 
+                  data = CT_squirrel_martens_hour_station, 
+                  control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+
+
+martens02 <- glmer.nb(squirrel_sum_hour_station ~ (poly(hour_day,4))*lockdown + 
+                     Season + (poly(hour_day,4))*marten_presence + 
+                     (1 | Station), 
+                  data = CT_squirrel_martens_hour_station, 
+                  control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+
+
+martens03 <- glmer.nb(squirrel_sum_hour_station ~ (poly(hour_day,4))*(lockdown + Season + marten_presence) + 
+                     (1 | Station), 
+                  data = CT_squirrel_martens_hour_station, 
+                  control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 100000)))
+```
+
+
+#### Save models
+```{r}
+# saveRDS(object = martens00,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "model_martens00_neg_20240221.RDS"))
+# 
+# saveRDS(object = martens01,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "model_martens01_neg_20240221.RDS"))
+# 
+# saveRDS(object = martens02,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "model_martens02_neg_20240221.RDS"))
+# 
+# saveRDS(object = martens03,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "model_martens03_neg_20240221.RDS"))
+```
+
+#### Read models
+```{r}
+martens00 <- readRDS(here::here("output",
+                             "data-proc",
+                             "02_daily_activity",
+                             "model_martens00_neg_20240221.RDS"))
+
+martens01 <- readRDS(here::here("output",
+                             "data-proc",
+                             "02_daily_activity",
+                             "model_martens01_neg_20240221.RDS"))
+
+martens02 <- readRDS(here::here("output",
+                             "data-proc",
+                             "02_daily_activity",
+                             "model_martens02_neg_20240221.RDS"))
+
+martens03 <- readRDS(here::here("output",
+                             "data-proc",
+                             "02_daily_activity",
+                             "model_martens03_neg_20240221.RDS"))
+```
+
+### Model comparison
+```{r}
+# Create a list with all models
+marten_model_list <- list(martens00 = martens00,
+                          martens01 = martens01,
+                          martens02 = martens02,
+                          martens03 = martens03)
+
+marten_mod_sel <- AICc(martens00,
+                       martens01,
+                       martens02,
+                       martens03)
+
+marten_AICc_w <- Weights(marten_mod_sel)
+
+marten_R2_list <- marten_model_list %>%
+  lapply(r2_nakagawa) #%>%
+marten_R2 <- do.call(rbind.data.frame, marten_R2_list)
+# unlist()
+
+marten_mod_sel <- marten_mod_sel %>%
+  mutate(AICc_weight = marten_AICc_w, R2_marginal = marten_R2$R2_marginal, R2_conditional = marten_R2$R2_conditional) %>%
+  arrange(AICc) %>%
+  mutate(delta_AICc = AICc - AICc[1]) %>%
+  mutate(across(where(is.numeric), round, digits = 3)) %>% 
+  select(df, AICc, delta_AICc, AICc_weight, R2_marginal, R2_conditional) %>% 
+  rename(n_param = df) %>%
+  rownames_to_column(var = "Name")
+
+# # save the table as csv
+# write_csv(x = marten_mod_sel,
+#           file = here::here("output",
+#                             "data-proc",
+#                             "02_daily_activity",
+#                             "marten_mod_sel_20240411.csv"),
+#           na = "NA")
+
+# Load table
+marten_mod_sel <- read.csv(file = here::here("output",
+                                             "data-proc",
+                                             "02_daily_activity",
+                                             "marten_mod_sel_20240411.csv"))
+
+```
+
+```{r}
+## OLD Version
+# # Create a list with all models
+# marten_model_list <- list(martens00 = martens00,
+#                           martens01 = martens01,
+#                           martens02 = martens02,
+#                           martens03 = martens03)
+# 
+# # Create a table for comparing model performance
+# marten_mod_sel <- compare_performance(marten_model_list, metrics = c("AIC", "AICc", "R2"))
+# 
+# # Calculate the difference between the lowest AIC and the other AICs and put the model with the lowest AIC in the first row
+# marten_mod_sel <- marten_mod_sel %>%
+#   arrange(AIC) %>%
+#   mutate(delta_AIC = AIC - AIC[1]) %>%
+#   mutate(across(where(is.numeric), round, digits = 3)) %>% 
+#   select(Name, AIC, delta_AIC, AICc, R2_marginal, R2_conditional)
+# 
+# 
+# # # save the table as csv
+# # write_csv(x = marten_mod_sel,
+# #           file = here::here("output",
+# #                             "data-proc",
+# #                             "02_daily_activity",
+# #                             "marten_mod_sel_20240221.csv"),
+# #           na = "NA")
+# 
+# # Load table
+# marten_mod_sel <- read.csv(file = here::here("output",
+#                                              "data-proc",
+#                                              "02_daily_activity",
+#                                              "marten_mod_sel_20240221.csv"))
+```
+
+#### Closer look at the best model
+```{r}
+# Model summary
+marten_sum <- tidy(martens03, conf.int = FALSE) %>%
+  dplyr::rename(Predictors = term,
+         Estimate = estimate,
+         SE = std.error,
+         T_statistic = statistic,
+         p = p.value) %>%
+  dplyr::mutate(across(.cols = c(4:7), 
+                       .fns =  as.numeric)) %>%
+  dplyr::mutate(across(where(is.numeric), round, digits = 3))
+
+# save the table as csv
+write_csv(x = marten_sum,
+          file = here::here("output",
+                            "data-proc",
+                            "02_daily_activity",
+                            "martens03_summary_20240606.csv"),
+          na = "NA")
+
+# Load table
+marten_sum <- read.csv(file = here::here("output",
+                                      "data-proc",
+                                      "02_daily_activity",
+                                      "martens03_summary_20240606.csv"))
+```
+
+```{r}
+# table with model summary
+marten_ano_sum <- martens03 %>%
+  car::Anova() %>%
+  rownames_to_column(var = "predictors") %>%
+  rename(Predictors = predictors,  
+         #Hello = Chisq#, bquote("Chi" * m^2)
+         p = "Pr(>Chisq)"
+  ) %>%
+  mutate(across(where(is.numeric), round, digits = 5)) 
+
+marten_ano_sum
+
+# # save the table as csv
+# write_csv(x = marten_ano_sum,
+#           file = here::here("output",
+#                             "data-proc",
+#                             "02_daily_activity",
+#                             "marten_anova_summary_20240221.csv"),
+#           na = "NA")
+
+# Load table
+marten_ano_sum <- read.csv(file = here::here("output",
+                                             "data-proc",
+                                             "02_daily_activity",
+                                             "marten_anova_summary_20240221.csv"))
+```
+
+```{r}
+# test overdispersion of the model
+simulationOutput <- simulateResiduals(fittedModel = martens03)
+testDispersion(simulationOutput) 
+## NO overdispersion detected
+
+check_model(martens03)
+
+plot(check_collinearity(martens03))
+check_collinearity(martens03)
+
+plot(martens03)
+```
+
+```{r}
+binned_residuals(martens03)
+plot(binned_residuals(martens03))
+```
+
+#### Prediction plots
+```{r}
+pred_martens_lock <- ggemmeans(martens03, terms = c("hour_day", "lockdown"))
+pred_martens_season  <- ggemmeans(martens03, terms = c("hour_day", "Season"))
+pred_martens_martenp  <- ggemmeans(martens03, terms = c("hour_day", "marten_presence"))
+```
+
+```{r}
+plot_martens_lock <- 
+  ggplot(data = pred_martens_lock, 
+         mapping = aes(x = x, y = predicted, group = group, 
+                       colour = group, fill = group)) + 
+  geom_line(linewidth = 2) + 
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.15, colour = NA) + 
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 3),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = col_lock, labels = c("No", "Yes")) +
+  scale_fill_manual(values = darken(col_lock, 0.3)) +
+  labs(x = "Hour of the day",
+       y = "Predicted activity intensity", # 
+       colour = "Lockdown",
+       title = NULL) + 
+  theme(legend.position = c(0.82, 0.86),
+        plot.background = element_rect(fill = "transparent", colour = NA),
+        legend.background = element_blank(), 
+        legend.key = element_blank()) +
+  guides(group = "none", fill = "none", color = guide_legend(override.aes = list(fill = NA))) +
+  coord_cartesian(ylim = c(0, 1.1), # Here we need coord_cartesian because the range of the SD is too big
+                  expand = FALSE) 
+
+plot_martens_lock
+
+# Save the plot
+ggsave(filename = here::here("plots",
+                             "03_daily_activity",
+                             "glmm",
+                             "MARTENS03_prediction_lockdown2.png"),
+       width = 1200,
+       height = 1200,
+       units = "px",
+       dpi = 300)
+```
+
+```{r}
+plot_martens_season <- 
+  ggplot(data = pred_martens_season, 
+         mapping = aes(x = x, y = predicted, group = group, 
+                       colour = group, fill = group)) + 
+  geom_line(linewidth = 2) + 
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.15, colour = NA) + 
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 3),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = col_season, labels = c("Autumn", "Spring")) +
+  scale_fill_manual(values = darken(col_season, 0.3)) +
+  labs(x = "Hour of the day",
+       y = "Predicted activity intensity", # 
+       colour = "Season",
+       title = NULL) + 
+  theme(legend.position = c(0.82, 0.86),
+        plot.background = element_rect(fill = "transparent", colour = NA),
+        legend.background = element_blank(), 
+        legend.key = element_blank()) +
+  guides(group = "none", fill = "none") +
+  coord_cartesian(ylim = c(0, 1.1), # Here we need coord_cartesian because the range of the SD is too big
+                  expand = FALSE) 
+
+plot_martens_season
+
+# Save the plot
+ggsave(filename = here::here("plots",
+                             "03_daily_activity",
+                             "glmm",
+                             "MARTENS03_prediction_season2.png"),
+       width = 1200,
+       height = 1200,
+       units = "px",
+       dpi = 300)
+```
+
+```{r}
+plot_martens_martenp <- 
+  ggplot(data = pred_martens_martenp, 
+         mapping = aes(x = x, y = predicted, group = group, 
+                       colour = group, fill = group)) + 
+  geom_line(linewidth = 2) + 
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.15, colour = NA) + 
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 3),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = col_martens, labels = c("No", "Yes")) +
+  scale_fill_manual(values = darken(col_martens, 0.3)) +
+  labs(x = "Hour of the day",
+       y = "Predicted activity intensity", # 
+       colour = "Martens",
+       title = NULL) + 
+  theme(legend.position = c(0.87, 0.86),
+        plot.background = element_rect(fill = "transparent", colour = NA),
+        legend.background = element_blank(), 
+        legend.key = element_blank()) +
+  guides(group = "none", fill = "none") +
+  coord_cartesian(ylim = c(0, 1.1), # Here we need coord_cartesian because the range of the SD is too big
+                  expand = FALSE) 
+
+plot_martens_martenp
+
+# Save the plot
+ggsave(filename = here::here("plots",
+                             "03_daily_activity",
+                             "glmm",
+                             "MARTENS03_prediction_martenpresence2.png"),
+       width = 1200,
+       height = 1200,
+       units = "px",
+       dpi = 300)
+```
+
+```{r}
+# German version
+plot_martens_martenp <- 
+  ggplot(data = pred_martens_martenp, 
+         mapping = aes(x = x, y = predicted, group = group, 
+                       colour = group, fill = group)) + 
+  geom_line(linewidth = 2) + 
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.15, colour = NA) + 
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 3),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = col_martens, labels = c("Nein", "Ja")) +
+  scale_fill_manual(values = darken(col_martens, 0.3)) +
+  labs(x = "Stunde des Tages",
+       y = "Aktivität", # Predicted activity density
+       colour = "Marder",
+       title = NULL) + 
+  theme(legend.position = c(0.87, 0.86), 
+        legend.background = element_blank(), 
+        legend.key = element_blank()) +
+  guides(group = "none", fill = "none") +
+  coord_cartesian(ylim = c(0, 1.0), # Here we need coord_cartesian because the range of the SD is too big
+                  expand = FALSE) 
+
+plot_martens_martenp
+
+# Save the plot
+ggsave(filename = here::here("plots",
+                             "03_daily_activity",
+                             "glmm",
+                             "MARTENS03_prediction_martenpresence_dt.png"),
+       width = 1200,
+       height = 1200,
+       units = "px",
+       dpi = 300)
+```
+
+
+```{r}
+# # Hour of the day and lockdown
+# martens_lock <- 
+# plot(ggemmeans(martens03, terms = c("hour_day", "lockdown")), line.size = 2) + 
+#   # scale_y_continuous(
+#   #   limits = c(0, 2.5),
+#   #   breaks = seq(0, 1, by = 0.25),
+#   #   expand = c(.001, .001)) +
+#   scale_x_continuous(
+#     limits = c(5,17),
+#     breaks = seq(5, 17, by = 3),
+#     expand = c(.001, .001)) + 
+#    scale_colour_manual(values = col_lock, labels = c("No", "Yes")) + 
+#   scale_fill_manual(values = darken(col_lock, 0.3)) +
+#   labs(x = "Hour of the day", 
+#        y = "Predicted activity density", 
+#        colour = "Lockdown",
+#        title = NULL) + 
+#   my_theme +
+#   theme(legend.position = c(0.85,0.88)) + 
+#   coord_cartesian(ylim = c(0, 1.0),
+#                   expand = FALSE) 
+# 
+# martens_lock
+# 
+# # # Save the plot
+# # ggsave(filename = here::here("plots",
+# #                              "03_daily_activity",
+# #                              "glmm",
+# #                              "MARTENS03_prediction_lockdown.png"),
+# #        width = 1200,
+# #        height = 1200,
+# #        units = "px",
+# #        dpi = 300)
+```
+
+```{r}
+# # Hour of the day and Season
+# martens_season <- 
+#   plot(ggemmeans(martens03, terms = c("hour_day", "Season")), line.size = 2) + 
+#   scale_x_continuous(
+#     limits = c(5,17),
+#     breaks = seq(5, 17, by = 3),
+#     expand = c(.001, .001)) + 
+#   scale_colour_manual(values = col_season, labels = c("Autumn", "Spring")) + 
+#   scale_fill_manual(values = darken(col_season, 0.3)) +
+#   labs(x = "Hour of the day", 
+#        y = "Predicted activity density", 
+#        title = NULL) + 
+#   my_theme +
+#   theme(legend.position = c(0.87,0.88)) + 
+#   coord_cartesian(ylim = c(0, 1.1),
+#                   expand = FALSE)
+# 
+# martens_season
+# 
+# # # Save the plot
+# # ggsave(filename = here::here("plots",
+# #                              "03_daily_activity",
+# #                              "glmm",
+# #                              "MARTENS03_prediction_season.png"),
+# #        width = 1200,
+# #        height = 1200,
+# #        units = "px",
+# #        dpi = 300)
+```
+
+```{r}
+# # Hour of the day and Cat presence
+# plot(ggemmeans(martens03, terms = c("hour_day", "marten_presence")), line.size = 2) + 
+#   scale_x_continuous(
+#     limits = c(5,17),
+#     breaks = seq(5, 17, by = 3),
+#     expand = c(.001, .001)) + 
+#    scale_colour_manual(values = col_martens, labels = c("No", "Yes")) + 
+#   scale_fill_manual(values = darken(col_martens, 0.3)) +
+#   labs(x = "Hour of the day", 
+#        y = "Predicted activity density", 
+#        colour = "Martens",
+#        title = NULL) + 
+#   my_theme +
+#   theme(legend.position = c(0.87,0.88)) + 
+#   coord_cartesian(ylim = c(0, 1.0),
+#                   expand = FALSE)
+# 
+# # # Save the plot
+# # ggsave(filename = here::here("plots",
+# #                              "03_daily_activity",
+# #                              "glmm",
+# #                              "MARTENS03_prediction_martenpresence.png"),
+# #        width = 1200,
+# #        height = 1200,
+# #        units = "px",
+# #        dpi = 300)
+```
+
+```{r}
+# plot(ggemmeans(martens03, terms = "hour_day [all]"), line.size = 2) + 
+#   # scale_y_continuous(
+#   #   limits = c(0, 1.0),
+#   #   breaks = seq(0, 1, by = 0.25),
+#   #   expand = c(.001, .001)) +
+#   scale_x_continuous(
+#     limits = c(5,17),
+#     breaks = seq(5, 17, by = 3),
+#     expand = c(.001, .001)) + 
+#   labs(x = "Hour of the day", 
+#        y = "Predicted activity density", 
+#        title = NULL) + 
+#   my_theme +
+#   coord_cartesian(ylim = c(0, 1.0),
+#                   expand = FALSE)
+# 
+# # # Save the plot
+# # ggsave(filename = here::here("plots",
+# #                              "03_daily_activity",
+# #                              "glmm",
+# #                              "MARTENS03_prediction_hour_all.png"),
+# #        width = 1200,
+# #        height = 1200,
+# #        units = "px",
+# #        dpi = 300)
+```
+
+Build one figure for all plots
+```{r}
+# # change position of figure labels or remove them
+# ggdraw(xlim = c(0, 1), ylim = c(0, 1.0)) + 
+#   # 1st row
+#   draw_plot(env_season, x = 0, y = 0.5, width = 0.5, height = 0.5) + 
+#   draw_plot(env_lock, x = 0.5, y = 0.5, width = 0.5, height = 0.5) + 
+#   # 2nd
+#   draw_plot(env_imp, x = 0, y = 0.0, width = .5, height = 0.5) + 
+#   draw_plot(env_dogs, x = 0.5, y = 0.0, width = .5, height = 0.5) +
+#   # labels
+#   draw_label("Number of pictures per station", x =  0, y = 0.52, vjust = 1.5, angle = 90, fontfamily = "Zilla Slab", color = "black") + 
+#   draw_label("Number of pictures per station", x =  0.5, y = 0.52, vjust = 1.5, angle = 90, fontfamily = "Zilla Slab", color = "black") + 
+#   draw_plot_label(label = c("A", "B", "C", "D"), size = 13,
+#                   x = c(0.10, 0.60, 0.10, 0.60), 
+#                   y = c(0.98, 0.98, 0.48, 0.48), 
+#                   family = "Roboto", colour = "black")
+# 
+# # Save the plot
+# ggsave(filename = here::here("plots",
+#                              "03_daily_activity",
+#                              "glmm",
+#                              "ENV_GLMM_prediction_arrange.png"),
+#        width = 1200*1.5,
+#        height = 1200,
+#        units = "px",
+#        dpi = 300)
+```
+
+## Bayesian models
+```{r}
+CT_squirrel_cats_hour_station %>% 
+  group_by(hour_day, lockdown, Season, cat_presence) %>%
+  summarise(n = n())
+
+CT_squirrel_cats_hour_station %>% 
+  group_by(Station, lockdown, Season) %>%
+  summarise(n = n()) %>% 
+  group_by(lockdown, Season) %>%
+  summarise(n = n())
+  
+```
+
+### Model formulation
+```{r}
+cat_b_00 <- stan_glmer.nb(formula = squirrel_sum_hour_station ~ 1 + (1 | Station), 
+                          data = CT_squirrel_cats_hour_station)
+cat_b_01 <- stan_glmer.nb(formula = squirrel_sum_hour_station ~ (poly(hour_day,4))*lockdown + Season + cat_presence + 
+                            (1 | Station), 
+                          data = CT_squirrel_cats_hour_station)
+cat_b_02 <- stan_glmer.nb(formula = squirrel_sum_hour_station ~ (poly(hour_day,4))*lockdown + Season + 
+                            (poly(hour_day,4))*cat_presence + 
+                            (1 | Station), 
+                          data = CT_squirrel_cats_hour_station)
+cat_b_03 <- stan_glmer.nb(formula = squirrel_sum_hour_station ~ (poly(hour_day,4))*(lockdown + Season + cat_presence) + 
+                            (1 | Station), 
+                          data = CT_squirrel_cats_hour_station)
+```
+
+
+
+#### Save models
+```{r}
+# saveRDS(object = cat_b_00,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "model_cat_b_00_neg_20240130.RDS"))
+# 
+# saveRDS(object = cat_b_01,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "model_cat_b_01_neg_20240130.RDS"))
+# 
+# saveRDS(object = cat_b_02,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "model_cat_b_02_neg_20240130.RDS"))
+# 
+# saveRDS(object = cat_b_03,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "model_cat_b_03_neg_20240130.RDS"))
+```
+
+#### Read models
+```{r}
+# cat_b_00 <- readRDS(here::here("output",
+#                              "data-proc",
+#                              "02_daily_activity",
+#                              "model_cat_b_00_neg_20240130.RDS"))
+# 
+# cat_b_01 <- readRDS(here::here("output",
+#                              "data-proc",
+#                              "02_daily_activity",
+#                              "model_cat_b_01_neg_20240130.RDS"))
+# 
+# cat_b_02 <- readRDS(here::here("output",
+#                              "data-proc",
+#                              "02_daily_activity",
+#                              "model_cat_b_02_neg_20240130.RDS"))
+# 
+# cat_b_03 <- readRDS(here::here("output",
+#                              "data-proc",
+#                              "02_daily_activity",
+#                              "model_cat_b_03_neg_20240130.RDS"))
+```
+
+#### Model comparison
+Build a table for model comparison
+```{r}
+# compare all models
+compare_cat_models <- as_tibble(
+  compare_performance(
+    cat_b_00, cat_b_01, cat_b_02, cat_b_03))
+```
+
+Calculate Nakagawas R2
+```{r}
+r2_cat_b_00 <- r2_nakagawa(cat_b_00)
+r2_cat_b_01 <- r2_nakagawa(cat_b_01)
+r2_cat_b_02 <- r2_nakagawa(cat_b_02)
+r2_cat_b_03 <- r2_nakagawa(cat_b_03)
+
+summary(cat_b_03)
+r2_marg_cat_models <- c(r2_cat_b_00$R2_marginal,
+                        r2_cat_b_01$R2_marginal,
+                        r2_cat_b_02$R2_marginal,
+                        r2_cat_b_03$R2_marginal)
+
+r2_cond_cat_models <- c(r2_cat_b_00$R2_conditional,
+                        r2_cat_b_01$R2_conditional,
+                        r2_cat_b_02$R2_conditional,
+                        r2_cat_b_03$R2_conditional)
+
+?r2_nakagawa
+```
+
+```{r}
+r2_marg_cat_models
+r2_cond_cat_models
+```
+
+##### Full table
+```{r}
+compare_cat_models <- compare_cat_models %>%
+  mutate(r2_marginal =  r2_marg_cat_models,
+         r2_conditional =  r2_cond_cat_models) %>%
+  arrange(WAIC) %>%
+  mutate(delta_WAIC = WAIC - WAIC[1]) %>%
+  relocate(delta_WAIC, .after = WAIC_wt)
+ 
+compare_cat_models # cats03 has the lowest WAIC
+```
+
+Save the table
+```{r}
+write_csv(x = compare_cat_models,
+          file = here::here("output",
+                            "data-proc",
+                            "02_daily_activity",
+                            "compare_cat_models_20240130.csv"),
+          na = "NA")
+```
+
+
+#### Closer look at the best model
+```{r}
+describe_posterior(cat_b_03, test = c("p_direction", "rope", "bayesfactor"), ci_method = "HDI")
+
+#tidy(cats_b_03, conf.int = TRUE)
+```
+
+```{r}
+dat_cat_03_hl <- ggpredict(cat_b_03, terms = c("hour_day", "lockdown"))
+dat_cat_03_hs <- ggpredict(cat_b_03, terms = c("hour_day", "Season"))
+dat_cat_03_hc <- ggpredict(cat_b_03, terms = c("hour_day", "cat_presence"))
+dat_cat_03_hcl <- ggpredict(cat_b_03, terms = c("hour_day", "cat_presence", "lockdown"))
+dat_cat_03_hcs <- ggpredict(cat_b_03, terms = c("hour_day", "cat_presence", "Season"))
+dat_cat_03_hcls <- ggpredict(cat_b_03, terms = c("hour_day", "cat_presence", "lockdown", "Season"))
+plot(ggpredict(cat_b_03, terms = c("hour_day", "lockdown")))
+plot(ggpredict(cat_b_03, terms = c("hour_day", "Season")))
+plot(ggpredict(cat_b_03, terms = c("hour_day", "cat_presence")))
+# Nice version of this:
+plot(ggpredict(cat_b_03, terms = c("hour_day", "cat_presence", "lockdown", "Season")))
+plot(ggpredict(cat_b_03))
+
+```
+
+
+```{r}
+ggplot(data = dat_cat_03_hcls, mapping = aes(x = x, y = predicted, colour = group, fill = group)) +
+  geom_line(size = 2) +
+  geom_ribbon(aes(ymin = conf.low, 
+                  ymax = conf.high), 
+              alpha = 0.1, 
+              colour = NA) +
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 2),
+    expand = c(.001, .001)) +
+  scale_y_continuous(
+    limits = c(0,1.8),
+    breaks = seq(0, 1.8, by = 0.5),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = pal_2) + 
+  scale_fill_manual(values = darken(pal_2, 0.3)) +
+  labs(x = "Hour of the day", 
+       y = "Predicted activity density") +
+  facet_grid(panel ~ facet, labeller = labeller(facet = lock_labs))  +
+  theme(panel.spacing = unit(1, "lines"), 
+        strip.text = element_text(size = 14))
+
+# ggsave(filename = here::here("plots",
+#                              "03_daily_activity",
+#                              "glmm",
+#                              "squirrel_cats_hcls.png"),
+#         # width = 1200*1.5,
+#         # height = 1200,
+#         # units = "px",
+#        dpi = 300)
+```
+
+```{r}
+# Hour of the day and lockdown
+ggplot(data = dat_cat_03_hl, mapping = aes(x = x, y = predicted, colour = group, fill = group)) +
+  geom_line(size = 2) +
+  geom_ribbon(aes(ymin = conf.low, 
+                  ymax = conf.high), 
+              alpha = 0.1, 
+              colour = NA) +
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 2),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = pal_2) + 
+  scale_fill_manual(values = darken(pal_2, 0.3)) +
+  labs(x = "Hour of the day", 
+       y = "Predicted activity density") 
+
+# Hour of the day and season
+ggplot(data = dat_cat_03_hs, mapping = aes(x = x, y = predicted, colour = group, fill = group)) +
+  geom_line(size = 2) +
+  geom_ribbon(aes(ymin = conf.low, 
+                  ymax = conf.high), 
+              alpha = 0.1, 
+              colour = NA) +
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 2),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = pal_3) + 
+  scale_fill_manual(values = darken(pal_3, 0.3)) +
+  labs(x = "Hour of the day", 
+       y = "Predicted activity density") 
+
+# Hour of the day and cats
+ggplot(data = dat_cat_03_hc, mapping = aes(x = x, y = predicted, colour = group, fill = group)) +
+  geom_line(size = 2) +
+  geom_ribbon(aes(ymin = conf.low, 
+                  ymax = conf.high), 
+              alpha = 0.1, 
+              colour = NA) +
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 2),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = pal_2) + 
+  scale_fill_manual(values = darken(pal_2, 0.3)) +
+  labs(x = "Hour of the day", 
+       y = "Predicted activity density") 
+
+# Hour of the day and lockdown and cats
+ggplot(data = dat_cat_03_hcl, mapping = aes(x = x, y = predicted, colour = group, fill = group)) +
+  geom_line(size = 2) +
+  geom_ribbon(aes(ymin = conf.low, 
+                  ymax = conf.high), 
+              alpha = 0.1, 
+              colour = NA) +
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 2),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = pal_2) + 
+  scale_fill_manual(values = darken(pal_2, 0.3)) +
+  labs(x = "Hour of the day", 
+       y = "Predicted activity density") +
+  facet_wrap(~facet, labeller = labeller(facet = lock_labs))
+
+# Hour of the day and season and cats
+ggplot(data = dat_cat_03_hcs, mapping = aes(x = x, y = predicted, colour = group, fill = group)) +
+  geom_line(size = 2) +
+  geom_ribbon(aes(ymin = conf.low, 
+                  ymax = conf.high), 
+              alpha = 0.1, 
+              colour = NA) +
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 2),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = pal_2) + 
+  scale_fill_manual(values = darken(pal_2, 0.3)) +
+  labs(x = "Hour of the day", 
+       y = "Predicted activity density") +
+  facet_wrap(~facet)
+```
+
+```{r}
+plot(rope(cat_b_03)) + 
+  scale_x_continuous(
+    limits = c(-125, 75),
+    breaks = seq(-125, 75, by = 25),
+    expand = c(.02, .001)) +
+  scale_fill_manual(values = pal_2) + 
+  coord_cartesian(clip = "off")
+```
+
+
+
+### Bayesian models
+```{r}
+marten_b_00 <- stan_glmer.nb(formula = squirrel_sum_hour_station ~ 1 + (1 | Station), 
+                              data = CT_squirrel_martens_hour_station)
+marten_b_01 <- stan_glmer.nb(formula = squirrel_sum_hour_station ~ (poly(hour_day,4))*lockdown + Season + marten_presence + 
+                                (1 | Station), 
+                              data = CT_squirrel_martens_hour_station)
+marten_b_02 <- stan_glmer.nb(formula = squirrel_sum_hour_station ~ (poly(hour_day,4))*lockdown + Season + 
+                                (poly(hour_day,4))*marten_presence + 
+                                (1 | Station), 
+                              data = CT_squirrel_martens_hour_station)
+marten_b_03 <- stan_glmer.nb(formula = squirrel_sum_hour_station ~ (poly(hour_day,4))*(lockdown + Season + marten_presence) + 
+                                (1 | Station), 
+                              data = CT_squirrel_martens_hour_station)
+```
+
+```{r}
+#my_opt <- allFit(martens_b_03)
+```
+
+#### Save models
+```{r}
+# saveRDS(object = marten_b_00,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "model_marten_b_00_neg_20240130.RDS"))
+# 
+# saveRDS(object = marten_b_01,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "model_marten_b_01_neg_20240130.RDS"))
+# 
+# saveRDS(object = marten_b_02,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "model_marten_b_02_neg_20240130.RDS"))
+# 
+# saveRDS(object = marten_b_03,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "model_marten_b_03_neg_20240130.RDS"))
+```
+
+#### Read models
+```{r}
+# marten_b_00 <- readRDS(here::here("output",
+#                              "data-proc",
+#                              "02_daily_activity",
+#                              "model_marten_b_00_neg_20240130.RDS"))
+# 
+# marten_b_01 <- readRDS(here::here("output",
+#                              "data-proc",
+#                              "02_daily_activity",
+#                              "model_marten_b_01_neg_20240130.RDS"))
+# 
+# marten_b_02 <- readRDS(here::here("output",
+#                              "data-proc",
+#                              "02_daily_activity",
+#                              "model_marten_b_02_neg_20240130.RDS"))
+# 
+# marten_b_03 <- readRDS(here::here("output",
+#                              "data-proc",
+#                              "02_daily_activity",
+#                              "model_marten_b_03_neg_20240130.RDS"))
+```
+
+#### Model comparison
+```{r}
+r2_nakagawa(martens01)
+test <- r2_nagelkerke(martens01)
+testb <- r2_nagelkerke(marten_b_01)
+```
+
+Build a table for model comparison
+```{r}
+# compare all models
+compare_marten_models <- as_tibble(
+  compare_performance(
+    marten_b_00, marten_b_01, marten_b_02, marten_b_03))
+```
+
+Calculate Nakagawas R2
+```{r}
+r2_marten_b_00 <- r2_nakagawa(marten_b_00)
+r2_marten_b_01 <- r2_nakagawa(marten_b_01)
+r2_marten_b_02 <- r2_nakagawa(marten_b_02)
+r2_marten_b_03 <- r2_nakagawa(marten_b_03)
+
+r2_marg_marten_models <- c(r2_marten_b_00$R2_marginal,
+                        r2_marten_b_01$R2_marginal,
+                        r2_marten_b_02$R2_marginal,
+                        r2_marten_b_03$R2_marginal)
+
+r2_cond_marten_models <- c(r2_marten_b_00$R2_conditional,
+                        r2_marten_b_01$R2_conditional,
+                        r2_marten_b_02$R2_conditional,
+                        r2_marten_b_03$R2_conditional)
+
+
+```
+
+```{r}
+r2_marg_marten_models
+r2_cond_marten_models
+```
+
+##### Full table
+```{r}
+compare_marten_models <- compare_marten_models %>%
+  mutate(r2_marginal =  r2_marg_marten_models,
+         r2_conditional =  r2_cond_marten_models) %>%
+  arrange(WAIC) %>%
+  mutate(delta_WAIC = WAIC - WAIC[1]) %>%
+  relocate(delta_WAIC, .after = WAIC_wt)
+ 
+compare_marten_models # martens03 has the lowest WAIC
+```
+
+Save the table
+```{r}
+# write_csv(x = compare_marten_models,
+#           file = here::here("output",
+#                             "data-proc",
+#                             "02_daily_activity",
+#                             "compare_marten_models_20240130.csv"),
+#           na = "NA")
+```
+
+#### Closer look at the best model
+```{r}
+describe_posterior(marten_b_03, test = c("p_direction", "rope", "bayesfactor"), ci_method = "HDI")
+```
+
+```{r}
+dat_marten_03_hl <- ggpredict(marten_b_03, terms = c("hour_day", "lockdown"))
+dat_marten_03_hs <- ggpredict(marten_b_03, terms = c("hour_day", "Season"))
+dat_marten_03_hm <- ggpredict(marten_b_03, terms = c("hour_day", "marten_presence"))
+dat_marten_03_hml <- ggpredict(marten_b_03, terms = c("hour_day", "marten_presence", "lockdown"))
+dat_marten_03_hms <- ggpredict(marten_b_03, terms = c("hour_day", "marten_presence", "Season"))
+dat_marten_03_hcls <- ggpredict(marten_b_03, terms = c("hour_day", "marten_presence", "lockdown", "Season"))
+plot(ggpredict(marten_b_03, terms = c("hour_day", "lockdown")))
+plot(ggpredict(marten_b_03, terms = c("hour_day", "Season")))
+plot(ggpredict(marten_b_03, terms = c("hour_day", "marten_presence")))
+plot(ggpredict(marten_b_03, terms = c("hour_day", "marten_presence", "lockdown")))
+plot(ggpredict(marten_b_03, terms = c("hour_day", "marten_presence", "Season")))
+plot(ggpredict(marten_b_03, terms = c("hour_day", "lockdown", "marten_presence", "Season")))
+# Nice version of this: y-axis: Activity index
+plot(ggpredict(marten_b_03, terms = c("hour_day", "marten_presence", "lockdown", "Season")))
+plot(ggpredict(marten_b_03))
+# dat <- ggpredict(martens_b_03, terms = c("hour_day", "lockdown", "marten_presence", "Season"))
+# ggplot(dat, aes(x = x, y = predicted, colour = group, group = group, fill =  group)) +
+#   geom_line(linewidth = 1.5) + 
+#   geom_ribbon(aes(ymin = conf.low, ymax = conf.high), colour = NA, alpha = 0.3) +
+#    labs(
+#     colour = get_legend_title(dat),
+#     fill = get_legend_title(dat),
+#     x = get_x_title(dat),
+#     y = get_y_title(dat),
+#     title = get_title(dat)) +
+#       scale_colour_manual(values = c("purple4", "orange3")) +
+#       scale_fill_manual(values = c("purple4", "orange3")) +
+#   facet_grid(group~facet) +
+#   theme(legend.position = "right")
+```
+
+```{r}
+ggplot(data = dat_marten_03_hcls, mapping = aes(x = x, y = predicted, colour = group, fill = group)) +
+  geom_line(size = 2) +
+  geom_ribbon(aes(ymin = conf.low, 
+                  ymax = conf.high), 
+              alpha = 0.1, 
+              colour = NA) +
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 2),
+    expand = c(.001, .001)) +
+  # scale_y_continuous(
+  #   limits = c(0,1.8),
+  #   breaks = seq(0, 1.8, by = 0.5),
+  #   expand = c(.001, .001)) +
+  scale_colour_manual(values = pal_2) + 
+  scale_fill_manual(values = darken(pal_2, 0.3)) +
+  labs(x = "Hour of the day", 
+       y = "Predicted activity density") +
+  facet_grid(panel ~ facet, labeller = labeller(facet = lock_labs))  +
+  theme(panel.spacing = unit(1, "lines"), 
+        strip.text = element_text(size = 14))
+
+# ggsave(filename = here::here("plots",
+#                              "03_daily_activity",
+#                              "glmm",
+#                              "squirrel_martens_hcls.png"),
+#         # width = 1200*1.5,
+#         # height = 1200,
+#         # units = "px",
+#        dpi = 300)
+```
+
+
+```{r}
+# Hour of the day and lockdown
+ggplot(data = dat_marten_03_hl, mapping = aes(x = x, y = predicted, colour = group, fill = group)) +
+  geom_line(size = 2) +
+  geom_ribbon(aes(ymin = conf.low, 
+                  ymax = conf.high), 
+              alpha = 0.1, 
+              colour = NA) +
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 2),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = pal_2) + 
+  scale_fill_manual(values = darken(pal_2, 0.3)) +
+  labs(x = "Hour of the day", 
+       y = "Predicted activity density") 
+
+# Hour of the day and season
+ggplot(data = dat_marten_03_hs, mapping = aes(x = x, y = predicted, colour = group, fill = group)) +
+  geom_line(size = 2) +
+  geom_ribbon(aes(ymin = conf.low, 
+                  ymax = conf.high), 
+              alpha = 0.1, 
+              colour = NA) +
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 2),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = pal_3) + 
+  scale_fill_manual(values = darken(pal_3, 0.3)) +
+  labs(x = "Hour of the day", 
+       y = "Predicted activity density") 
+
+# Hour of the day and martens
+ggplot(data = dat_marten_03_hm, mapping = aes(x = x, y = predicted, colour = group, fill = group)) +
+  geom_line(size = 2) +
+  geom_ribbon(aes(ymin = conf.low, 
+                  ymax = conf.high), 
+              alpha = 0.1, 
+              colour = NA) +
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 2),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = pal_2) + 
+  scale_fill_manual(values = darken(pal_2, 0.3)) +
+  labs(x = "Hour of the day", 
+       y = "Predicted activity density") 
+
+# Hour of the day and lockdown and martens
+ggplot(data = dat_marten_03_hml, mapping = aes(x = x, y = predicted, colour = group, fill = group)) +
+  geom_line(size = 2) +
+  geom_ribbon(aes(ymin = conf.low, 
+                  ymax = conf.high), 
+              alpha = 0.1, 
+              colour = NA) +
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 2),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = pal_2) + 
+  scale_fill_manual(values = darken(pal_2, 0.3)) +
+  labs(x = "Hour of the day", 
+       y = "Predicted activity density") +
+  facet_wrap(~facet, labeller = labeller(facet = lock_labs))
+
+# Hour of the day and season and martens
+ggplot(data = dat_marten_03_hms, mapping = aes(x = x, y = predicted, colour = group, fill = group)) +
+  geom_line(size = 2) +
+  geom_ribbon(aes(ymin = conf.low, 
+                  ymax = conf.high), 
+              alpha = 0.1, 
+              colour = NA) +
+  scale_x_continuous(
+    limits = c(5,17),
+    breaks = seq(5, 17, by = 2),
+    expand = c(.001, .001)) +
+  scale_colour_manual(values = pal_2) + 
+  scale_fill_manual(values = darken(pal_2, 0.3)) +
+  labs(x = "Hour of the day", 
+       y = "Predicted activity density") +
+  facet_wrap(~facet)
+```
+
+```{r}
+plot(rope(marten_b_03)) + 
+  scale_x_continuous(
+    limits = c(-125, 75),
+    breaks = seq(-125, 75, by = 25),
+    expand = c(.02, .001)) +
+  scale_fill_manual(values = pal_2) + 
+  coord_cartesian(clip = "off")
+```
+
+
+# TEST PLOT
+```{r}
+plot(ggpredict(marten_b_01, terms = "Season", type = "fixed"))
+CT_squirrel_martens_hour_station
+
+
+plot(ggpredict(marten_b_01))
+
+ggeffect(marten_b_01) %>% 
+  ggplot(aes(x = x, y = predicted)) +
+  geom_point()
+
+terms(marten_b_01)
+
+mydf <- ggpredict(marten_b_01, terms = "hour_day")
+ggplot(mydf, aes(x = x, y = predicted)) +
+  stat_smooth(method = "lm", se = FALSE) +
+  labs(
+    y = get_y_title(mydf),
+    x = get_x_title(mydf),
+    colour = get_legend_title(mydf)
+  )
+
+
+str(cats_b_03)
+terms(cats_b_03)
+mydf <- ggpredict(cats_b_03, terms = c("lockdown", "cat_presence", "Season"))
+
+
+
+str(test2)
+
+test <- stan_glmer(formula = squirrel_sum_hour ~ (poly(hour_day, 4)) * Season + (1 | Station),   
+                       data = CT_squirrel_predators_hour, 
+                       family = poisson(link = "log"))
+saveRDS(object = test,
+        file = here::here("output",
+                          "data-proc",
+                          "02_daily_activity",
+                          "test00.RDS"))
+
+test2 <- readRDS(here::here("output",
+                            "data-proc",
+                            "02_daily_activity",
+                            "test00.RDS"))
+
+
+plot(ggpredict(test))
+plot(ggpredict(test2))
+
+plot(ggpredict(test2, terms = c("hour_day", "Season")))
+
+
+dat <- ggpredict(test2, terms = c("hour_day", "Season"))
+ggplot(dat, aes(x = x, y = predicted, colour = group, group = group, fill =  group)) +
+  geom_line(linewidth = 1.5) + 
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), colour = NA, alpha = 0.3) +
+   labs(
+    colour = get_legend_title(dat),
+    fill = get_legend_title(dat),
+    x = get_x_title(dat),
+    y = get_y_title(dat),
+    title = get_title(dat)) +
+      scale_colour_manual(values = c("purple4", "orange3")) +
+      scale_fill_manual(values = c("purple4", "orange3")) +
+  theme(legend.position = "right")
 
   
-# Days with/without predator  
-## cats
-```{r}
-XX <- glmer(squirrel_sum_hour ~ (poly(hour_day,4))*lockdown + Season + presence_cat  
-                + (1|Station),   
-              data = CT_squirrel_predators_hour, 
-              family = poisson(link = "log"))
-XX <- glmer(squirrel_sum_hour ~ (poly(hour_day,4))*lockdown + Season + (poly(hour_day,4))*presence_cat  
-                + (1|Station),   
-              data = CT_squirrel_predators_hour, 
-              family = poisson(link = "log"))
 
-XX <- glmer(squirrel_sum_hour ~ (poly(hour_day,4))*lockdown + Season + presence_marten  
-                + (1|Station),   
-              data = CT_squirrel_predators_hour, 
-              family = poisson(link = "log"))
-XX <- glmer(squirrel_sum_hour ~ (poly(hour_day,4))*lockdown + Season + (poly(hour_day,4))*presence_marten  
-                + (1|Station),   
-              data = CT_squirrel_predators_hour, 
-              family = poisson(link = "log"))
 ```
 
-```{r}
-station_cats <- CT_species_interest %>%
-  filter(Species == "Cat") %>%
-  dplyr::count(Species, project_phase, Station, Date)  %>% 
-  #group_by(Species, Station, Date) %>%
-  dplyr::mutate(pics_day_binary = case_when(n > 0 ~ 1)) %>%
-  ungroup()
-```
-
-
-```{r}
-station_cats_2 <- station_cats %>%
-  filter(project_phase == "2") %>%
-  complete(Station, Date = as.Date(c(as.Date("2019-04-01"):as.Date("2019-04-28")), 
-                                   origin = "1970-01-01"), 
-           fill = list(pics_day_binary = 0, n = 0, Species = "Cat", project_phase = "2"))
-
-station_cats_3 <- station_cats %>%
-  filter(project_phase == "3") %>%
-  complete(Station, Date = as.Date(c(as.Date("2019-09-30"):as.Date("2019-10-27")), 
-                                   origin = "1970-01-01"), 
-           fill = list(pics_day_binary = 0, n = 0, Species = "Cat", project_phase = "3"))
-
-station_cats_4 <- station_cats %>%
-  filter(project_phase == "4") %>%
-  complete(Station, Date = as.Date(c(as.Date("2020-03-30"):as.Date("2020-04-26")), 
-                                   origin = "1970-01-01"), 
-           fill = list(pics_day_binary = 0, n = 0, Species = "Cat", project_phase = "4"))
-
-station_cats_5 <- station_cats %>%
-  filter(project_phase == "5") %>%
-  complete(Station, Date = as.Date(c(as.Date("2020-09-28"):as.Date("2020-10-26")), 
-                                   origin = "1970-01-01"), 
-           fill = list(pics_day_binary = 0, n = 0, Species = "Cat", project_phase = "5"))
-
-station_cats <- rbind(station_cats_2, station_cats_3, station_cats_4, station_cats_5)
-```
-
-```{r}
-table(station_cats$pics_day_binary)
-length(unique(station_cats$Station))
-```
-what is when I do not have 
-## martens
-```{r}
-station_martens <- CT_species_interest %>%
-  filter(Species == "Marten") %>%
-  dplyr::count(Species, project_phase, Station, Date)  %>% 
-  #group_by(Species, Station, Date) %>%
-  dplyr::mutate(pics_day_binary = case_when(n > 0 ~ 1)) %>%
-  ungroup()
-```
-
-
-```{r}
-station_martens_2 <- station_martens %>%
-  filter(project_phase == "2") %>%
-  complete(Station, Date = as.Date(c(as.Date("2019-04-01"):as.Date("2019-04-28")), 
-                                   origin = "1970-01-01"), 
-           fill = list(pics_day_binary = 0, n = 0, Species = "Marten", project_phase = "2"))
-
-station_martens_3 <- station_martens %>%
-  filter(project_phase == "3") %>%
-  complete(Station, Date = as.Date(c(as.Date("2019-09-30"):as.Date("2019-10-27")), 
-                                   origin = "1970-01-01"), 
-           fill = list(pics_day_binary = 0, n = 0, Species = "Marten", project_phase = "3"))
-
-station_martens_4 <- station_martens %>%
-  filter(project_phase == "4") %>%
-  complete(Station, Date = as.Date(c(as.Date("2020-03-30"):as.Date("2020-04-26")), 
-                                   origin = "1970-01-01"), 
-           fill = list(pics_day_binary = 0, n = 0, Species = "Marten", project_phase = "4"))
-
-station_martens_5 <- station_martens %>%
-  filter(project_phase == "5") %>%
-  complete(Station, Date = as.Date(c(as.Date("2020-09-28"):as.Date("2020-10-26")), 
-                                   origin = "1970-01-01"), 
-           fill = list(pics_day_binary = 0, n = 0, Species = "Marten", project_phase = "5"))
-
-station_martens <- rbind(station_martens_2, station_martens_3, station_martens_4, station_martens_5)
-```
-
-```{r}
-table(station_martens$pics_day_binary)
-length(unique(station_martens$Station))
-```
-
-
-```{r}
-# test <- CT_species_interest %>%
-#   filter(Species == "Cat") %>%
-#   dplyr::count(Species, project_phase, Station, Date)  %>% 
-#   #group_by(Species, Station, Date) %>%
-#   dplyr::mutate(pics_day_binary = case_when(n > 0 ~ 1)) %>%
-#   case_when(project_phase == "2" ~ complete(Station, Date = as.Date(c(as.Date("2019-04-01"):as.Date("2019-04-28")), 
-#                                                                     origin = "1970-01-01"), 
-#                                             fill = list(pics_day_binary = 0, n = 0)), 
-#             project_phase == "3" ~ complete(Station, Date = as.Date(c(as.Date("2019-09-30"):as.Date("2019-10-27")), 
-#                                                                     origin = "1970-01-01"), 
-#                                             fill = list(pics_day_binary = 0, n = 0)),
-#             project_phase == "4" ~ complete(Station, Date = as.Date(c(as.Date("2020-03-30"):as.Date("2020-04-26")), 
-#                                                                     origin = "1970-01-01"), 
-#                                             fill = list(pics_day_binary = 0, n = 0)),
-#             project_phase == "5" ~ complete(Station, Date = as.Date(c(as.Date("2020-09-28"):as.Date("2020-10-26")), 
-#                                                                     origin = "1970-01-01"), 
-#                                             fill = list(pics_day_binary = 0, n = 0)),) %>%
-#               ungroup()
-```
-
-list_date_monthly[[2]] <- c(as.Date("2019-04-01"),
-                           as.Date("2019-04-28")) #P2
-list_date_monthly[[3]] <- c(as.Date("2019-09-30"), 
-                           as.Date("2019-10-27")) #P3
-list_date_monthly[[4]] <- c(as.Date("2020-03-30"),
-                           as.Date("2020-04-26")) #P4
-list_date_monthly[[5]] <- c(as.Date("2020-09-28"), 
-                           as.Date("2020-10-26")) #P5
-
-
-
-```{r}
-station_cats2 <- CT_species_interest %>%
-  filter(Species == "Cat") %>%
-  #dplyr::count(Species, Station, Date)  %>% 
-  group_by(Species, Station, Date) %>%
-  dplyr::summarise(sum_pic_day = n()) %>%
-  ungroup()
-```
-
-
-```{r}
-CT_squirrels_station <- CT_per_station %>%
-  filter(Species == "Cat") %>% 
-  mutate(
-    cats_cam_binary = case_when(
-      Species == "Cat" & sum_pic > 0 ~ 1, 
-      Species == "Cat" & sum_pic == 0 ~ 0)) %>%
-  select(Station, cats_cam_binary) %>%
-  right_join(y = CT_squirrels_station, by = "Station")
-```
-
-
-day_marten and day_cat as factor also binary 0 or 1
-n pictures ~ hour*day_marten + hour*imperviousness + hour*lockdown + dog + (1|Station), poisson
-n pictures ~ hour*day_cat  + hour*imperviousness  + hour*lockdown + dog + (1|Station), poisson,
-
-Season??? Depends on how many observations we have
-
-
-# Dhat
-calculate dhat marten and cat per camera use a for-loop
-
-dhat_marten ~ imp + lockdown + season + dogs, glm (weil  nur eine Beobachtung pro Kamera), gaussian distribution
-dhat_cat ~ ...
-
-OR
-one table: dhat | predator species | station ... + column if both species are at this station or not
-= one model for the dhat, cats and martens combined
-for this: look how many stations have martens and cats
 
 
 ***

@@ -1,0 +1,225 @@
+---
+title: "StudyAreaMap"
+author: "Aimara Planillo"
+date: "2024-01-24"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Create map of study area
+
+
+### prepare workspace
+```{r}
+library(dplyr)
+library(sf)
+library(terra)
+library(ggplot2)
+library(ggspatial)
+library(viridis)
+library(png)
+library(grid)
+
+```
+
+
+# Load data
+```{r}
+## impervious surface
+imperv <- rast("data-raw/geo-raw/imperviousness_berlin_copernicus_raster_10m_2018_3035/imperviousness_berlin_copernicus_raster_10m_2018_3035.tif")
+
+## water bodies
+water <- st_read("data-raw/geo-raw/waterbodies_Berlin_25833.gpkg") %>% 
+  st_transform(crs = 3035) %>% 
+  st_union()
+
+## berlin border
+berlin <- st_read("data-raw/geo-raw/berlin_city_border_25833.gpkg") %>% 
+  st_transform(crs = 3035) %>% 
+  st_union()
+
+
+##loading the environmental variables with camera coordinates
+env_var <- readRDS("output/data-proc/01_overall_activity/env_var_binary_species_20230305.RDS")
+head(as.data.frame(env_var))
+
+# make it spatial
+ct_spatial <- st_as_sf(x = env_var,
+           coords = c("Long","Lat"), # name the columns with the coordinates
+           remove = F, # dont remove long lat columns
+           crs = 32633) %>% # crs of the points
+  st_transform(crs = 3035) %>% 
+  mutate(xcoord = Long, ycoord = Lat)  ## correct the names. Long and Lat should be used only for degrees
+
+
+plot(imperv)
+plot(st_geometry(ct_spatial), add = TRUE, col = "blue", pch = 16)
+
+```
+
+## aggregate raster for faster plotting
+```{r}
+imperv_250 <- aggregate(imperv, fact = 25, fun = mean, na.rm = TRUE)
+
+# get in data frame format
+imperv_df <- as.data.frame(imperv_250, xy = TRUE)
+colnames(imperv_df)[3] <- "imperv"
+```
+
+
+## create base map
+```{r}
+RColorBrewer::brewer.pal(n = 8, name = "Dark2")
+
+# pal_4 <- c("#303B4A", "#E4CAA5", "#4D6476", "#837461") # , "#C83649"
+# Tol_bright <- c('#EE6677', '#228833', '#4477AA', '#CCBB44', '#66CCEE', '#AA3377', '#BBBBBB')
+# Okabe_Ito <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000")
+# 
+# pal_phase <- c('#E4CAA5', '#EE6677', '#228833', '#CCBB44')
+pal_phase2 <- c( "#0072B2", "#D55E00", "#CC79A7", "#000000")
+
+
+pal_alpha <- c("1" = 1, "0" = 0.7)
+
+(map1 <- ggplot() +
+    geom_raster(data = imperv_df, aes(x = x, y = y, fill = imperv)) +
+    scale_fill_viridis(option = "E", na.value = NA, direction = -1, 
+                       begin = 0.2, end = 0.6, alpha = 0.4, 
+                       name = "Imperviousness") +
+    geom_sf(data = berlin, colour = "grey70", lwd = 1.2, fill = NA) +
+    geom_sf(data = water, fill = "lightblue3", colour = "transparent") +
+    geom_sf(data = ct_spatial, aes(colour = project_phase, pch = project_phase, alpha = squirrels_cam_binary), 
+            size = 2) +
+    geom_sf(data = ct_spatial %>% 
+              filter(squirrels_cam_binary == 1), aes(pch = project_phase), 
+             size = .5, col = "white") +
+    scale_colour_manual(values = rev(pal_phase2), name = "Phase", 
+                        labels = c("Spring 19", "Autumn 19", "Spring 20", "Autumn 20")) +
+    scale_shape_manual(name = "Phase",
+                     values = c(16,17,18,15),
+                     labels = c("Spring 19", "Autumn 19", "Spring 20", "Autumn 20")) +
+    scale_alpha_manual(values = pal_alpha) +
+    annotation_north_arrow(which_north = "true", location = "bl",
+                            pad_x = unit(0.3, "cm"), pad_y = unit(1, "cm"),
+    height = unit(1, "cm"),
+    width = unit(0.6, "cm")) +
+    annotation_scale(text_cex = 1.5) +
+    guides(shape = guide_legend(order = 1), 
+           colour = guide_legend(order = 1, 
+                                 override.aes = list(colour = rev(c("#0072B2", "#D55E00", "#CC79A7", "#000000")), 
+                                                  size = c(3,3,4,3))),
+           fill = guide_legend(order = 2), 
+           alpha = "none") +
+   theme_minimal() +
+  theme(
+    # panel.grid = element_blank(),
+    plot.background = element_rect(fill = "white", color = NA),
+    panel.background = element_rect(fill = NULL, color = "grey80"), 
+    axis.title = element_blank(),
+    legend.position = c(0.85,0.85),
+    legend.title = element_text(face = "bold", size = 10),
+    legend.text = element_text(size = 10),
+    legend.key.size = unit(0.8,"lines"), 
+    legend.box = "horizontal")
+)
+```
+
+
+## Prettify the map
+```{r}
+## load images
+img_squirrel <- readPNG("data-raw/squirrel_silhouette.png")
+g_squirrel <- rasterGrob(img_squirrel, interpolate=TRUE)
+
+## tree
+img_tree <- readPNG("data-raw/tree.png")
+g_tree <- rasterGrob(img_tree, interpolate=TRUE)
+
+## camera
+img_cam <- readPNG("data-raw/camera_img.png")
+g_cam <- rasterGrob(img_cam, interpolate=TRUE)
+
+
+
+## add images
+# add images
+st_bbox(berlin)
+
+(map2 <- map1 +
+    annotation_custom(g_tree, xmin = 4571452 , xmax = 4579152 , ymin = 3269495 , ymax = 3278395) +
+    # annotation_custom(g_cam, xmin = 4573452 , xmax = 4577152 , ymin = 3266495 , ymax = 3280695) +
+    annotation_custom(g_squirrel, xmin = 4569452 , xmax = 4573552 , ymin = 3252495 , ymax = 3290695) 
+)
+  
+ggsave(plot = map2, 
+       "plots/Fig1_map_studyArea_opt1.png", 
+       dpi = 600, height = 7, width = 7)
+```
+
+
+```{r}
+## just the squirrel
+
+squirrel_plot <- ggplot() +
+  geom_point(aes(x =seq(1:10), y = seq(1:10)), 
+             col = NA, fill = NA) +
+  annotation_custom(g_squirrel, xmin = 2 , xmax = 6 , ymin = 1 , ymax = 4) +
+  annotation_custom(g_tree, xmin = 5 , xmax = 10 , ymin = 1 , ymax = 10) +
+  annotation_custom(g_cam, xmin = 6.7 , xmax = 7.7 , ymin = 3 , ymax = 4) +
+  theme_void()
+
+```
+
+## map Europe
+
+```{r}
+library(rnaturalearth)
+
+world <- ne_countries(scale = "medium", returnclass = "sf")
+europe <- world %>% 
+  filter(continent  == "Europe")
+
+europe_crop <- europe %>% 
+   st_make_valid() %>% 
+    st_crop(xmin = -25, ymin = 25, xmax = 50, ymax = 70)
+
+centroid_berlin <- berlin %>% 
+  st_transform(crs = 4326) %>% 
+  st_centroid()
+
+(eu_map <- ggplot() +
+    geom_sf(data = europe_crop, col = "black", fill = "grey90") +
+    annotation_north_arrow(location = "bl", width = unit(0.8, "cm")) +
+    geom_sf(data = centroid_berlin, size = 6, pch = 22, linewidth = 3, fill = "red", col = "red") +
+    geom_sf(data = centroid_berlin, col = "red", size = 4, pch = 22, fill = "grey90") +
+    coord_sf(xlim = c(-25,51.5), ylim = c(35,71), expand = FALSE) +
+    theme(
+      panel.background = element_rect(fill = NA, color = "black", linewidth = 2)
+  )
+)
+```
+
+
+## Combine both maps
+
+```{r}
+library(cowplot)
+
+left_plot <- plot_grid(NULL, eu_map, squirrel_plot, NULL,
+                       ncol = 1, rel_heights = c(0.4, 1.5,1, 0.8))
+combined_plot <- plot_grid(left_plot, map1, 
+          align = "h", axis = "t",
+          rel_widths = c(1,2)) +
+  theme(plot.background = element_rect(fill = "white", colour = NA))
+
+
+ggsave(plot = combined_plot, 
+       "plots/Fig1_map_studyArea_opt2.png", 
+       dpi = 600, height = 7, width = 10)
+```
+

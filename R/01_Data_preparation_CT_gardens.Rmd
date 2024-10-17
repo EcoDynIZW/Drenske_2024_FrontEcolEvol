@@ -1,41 +1,32 @@
 ---
-title: "Squirrel activity: Data Preparation" ## name of your project and analysis step
+title: "Squirrel activity: Data Preparation"
 description: |
-    The aim of this study is...
+    The aim of the study is to investigate the influence of altered environmental urban parameters and direct human disturbance expressed by the lockdown together with animal predator risk parameters on the general activity of squirrels
 author:
-    ## author information; single arguemnts can be deleted if not needed
     - name: "Sinah Drenske"
-      url: https://izw-berlin.de/en/john-smith-en.html  
       affiliation: Leibniz Institute for Zoo and Wildlife Research, Technical University Berlin
       affiliation_url: https://izw-berlin.de/en/
-      orcid_id: 0000-0000-0000-0000
-    - name: "Aimara Planillo"
-      url: https://izw-berlin.de/en/john-smith-en.html  
-      affiliation: Leibniz Institute for Zoo and Wildlife Research
-      affiliation_url: https://izw-berlin.de/en/
-      orcid_id: 0000-0000-0000-0000
-    - name: "Marius Grabow"
-      url: https://izw-berlin.de/en/john-smith-en.html  
-      affiliation: Leibniz Institute for Zoo and Wildlife Research, Technical University Berlin
-      affiliation_url: https://izw-berlin.de/en/
-      orcid_id: 0000-0000-0000-0000
+      orcid_id: 0000-0002-2247-6507
     - name: "Julie Louvrier"
-      url: https://janedoe.com
       affiliation: Leibniz Institute for Zoo and Wildlife Research
       affiliation_url: https://izw-berlin.de/en/
-      orcid_id: 0000-0000-0000-0000
-    - name: "Conny Landgraf"
-      url: https://janedoe.com
-      affiliation: Leibniz Institute for Zoo and Wildlife Research
-      affiliation_url: https://izw-berlin.de/en/
-      orcid_id: 0000-0000-0000-0000
-    - name: "Stephanie Kramer-Schadt"
-      url: https://janedoe.com
+      orcid_id: 0000-0003-1252-1746
+    - name: "Marius Grabow"
       affiliation: Leibniz Institute for Zoo and Wildlife Research, Technical University Berlin
       affiliation_url: https://izw-berlin.de/en/
-      orcid_id: 0000-0000-0000-0000
-    ## add more authors with the same intendation and styling if needed 
-    ## a new author always starts with a hyphen!
+      orcid_id: 0000-0003-0702-9642
+    - name: "Conny Landgraf"
+      affiliation: Leibniz Institute for Zoo and Wildlife Research
+      affiliation_url: https://izw-berlin.de/en/
+      #orcid_id: 0000-0000-0000-0000
+    - name: "Stephanie Kramer-Schadt"
+      affiliation: Leibniz Institute for Zoo and Wildlife Research, Technical University Berlin
+      affiliation_url: https://izw-berlin.de/en/
+      orcid_id: 0000-0002-9269-4446
+    - name: "Aimara Planillo"
+      affiliation: Leibniz Institute for Zoo and Wildlife Research
+      affiliation_url: https://izw-berlin.de/en/
+      orcid_id: 0000-0001-6763-9923
 date: "`r Sys.Date()`"
 output: 
     distill::distill_article:
@@ -45,45 +36,36 @@ output:
         toc_depth: 2         ## level to be displayed in the table of content
 ---
 
--   **Research question:**
--   **Study area:**
--   **Data:** Already filtered data used by Julie .... in "...."
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, 
+                      dev = "ragg_png", fig.width = 9, fig.height = 6, dpi = 600, retina = 1)
+Sys.setlocale("LC_TIME", "C")
+```
+
+* **Research question:** Which risk effects increase or decrease the overall activity of red squirrels in urban gardens?  
+* **Study area:** Berlin 2019-2020 
+* **Data:** Detection histories of squirrels, martens and cats from 4 seasons (spring 2019, autumn 2019, spring 2020, autumn 2020), already filtered as in Louvrier et al. 2021 + environmental information on camera stations.
 
 # Setup
 
 ```{r packages, message=FALSE, warning=FALSE}
-# Please install the package librarian, it loads and installs (if necessary) the specified packages from CRAN, GitHub or Bioconductor
+# install the package of our department
+#remotes::install_github("EcoDynIZW/d6")
 
-#devtools::install_github("DesiQuintans/librarian")
-librarian::shelf(update_all = FALSE,
-                 #camtrapR,
-                 #dplyr,
-                 #evaluate, 
-                 gdata, 
-                 #ggplot2, 
-                 ggpubr, 
-                 here, 
-                 #janitor, 
-                 lubridate, 
-                 #maptools, 
-                 ropenscilabs / ochRe,
-                 # "optimbase", maybe needed but has to be installed from the CRAN archive https://cran.r-project.org/web/packages/optimbase/index.html
-                 plyr,
-                 raster,
-                 readxl, 
-                 #rgdal, 
-                 #rgeos, 
-                 #rjags, 
-                 #rlecuyer, 
-                 #sf, 
-                 #showtext, 
-                 skimr, 
-                 #snowfall, 
-                 #sp, 
-                 stringr, 
-                 tidyverse, 
-                 vroom
-                 )
+#this function loads and installs (if necessary) the specified packages from CRAN or GitHub. No previously installed packages are reinstalled or updated by default
+d6::simple_load(c(#"camtrapR",
+                  #"gdata", 
+                  #"ggpubr", 
+                  "here", 
+                  "lubridate", 
+                  #"plyr",
+                  #"raster",
+                  #"readxl", 
+                  "skimr", 
+                  "stringr", 
+                  "tidyverse", 
+                  "vroom"
+))
 ```
 
 # Data
@@ -179,7 +161,7 @@ stacked_raster_values_and_garden_CT_all_seasons_no_nas <- stacked_raster_values_
 stacked_raster_values_and_garden_CT_all_seasons_no_nas <- 
   stacked_raster_values_and_garden_CT_all_seasons_no_nas %>%
   dplyr::mutate(across(.cols = c(garden_type, compost, dogs_binary, cats_binary, trees_of_interest),
-                       .fns =  as.factor))%>%
+                       .fns =  as.factor)) %>%
   droplevels()
 ```
 
@@ -294,7 +276,7 @@ CT_act_date_formated <- CT_act_date_formated %>%
                                      label = FALSE, 
                                      abbr = FALSE)) %>% 
 #binary variable for weekdays or weekends: 0 for weekends, 1 for weekdays
- dplyr::mutate(weekdays_binary = factor(ifelse(date_wday == "6"| date_wday == "7", "0", "1")))
+ dplyr::mutate(weekdays_binary = factor(ifelse(date_wday == "6" | date_wday == "7", "0", "1")))
 ```
 
 ### Remove rows with conflicted data
@@ -397,9 +379,7 @@ We do not consider all species in our analysis. The species that are not conside
 CT_species_interest <- CT_act_date_formated %>%
   filter(Species == "Squirrel" | 
            Species == "Cat" | 
-           Species == "Marten" | 
-           Species == "Raccoon" | 
-           Species == "Red Fox") %>%
+           Species == "Marten") %>%
   droplevels()
 ```
 
@@ -475,6 +455,10 @@ There are 5 project phases, so in order to have the same number of phases per se
 # Remove pictures from phase 1
 CT_species_interest_full <- CT_species_interest_time
 
+CT_species_phase1 <- CT_species_interest_full %>%
+  filter(project_phase == 1) %>%
+  droplevels()
+
 CT_species_interest_time <- CT_species_interest_time %>%
   filter(project_phase != 1) %>%
   droplevels()
@@ -487,6 +471,29 @@ stacked_raster_values_and_garden_CT_all_seasons_no_nas <- stacked_raster_values_
   droplevels()
 ```
 
+### Description of phase 1 (test phase)
+```{r}
+CT_phase1 <- CT_species_phase1 %>% 
+  dplyr::count(Species, project_phase, Date) %>% # 
+  group_by(Species, project_phase) %>% 
+  dplyr::summarize(n_overall = sum(n),
+                   n_days = n(),
+                   mean_day = mean(n), 
+                   median_day = median(n), 
+                   min_day = min(n), 
+                   max_day = max(n))
+
+CT_phase1
+
+CT_per_species1 <- CT_species_phase1 %>% 
+  #filter(project_phase == 1) %>%
+  dplyr::count(Species, project_phase, Station) %>%
+  group_by(Species, project_phase) %>% 
+  dplyr::summarize(n_overall = sum(n), 
+                   n_stations = n())
+
+CT_per_species1
+```
 
 
 # Data overview
@@ -539,53 +546,36 @@ table(stacked_raster_values_and_garden_CT_all_seasons_no_nas$trees_of_interest)
 # saveRDS(object = CT_act_date_formated,
 #         file = here::here("output",
 #                           "data-proc",
-#                           "all_seasons",
-#                           "CT_act_date_proc_20230124.RDS"))
+#                           "01_overall_activity",
+#                           "CT_act_date_proc_20230305.RDS"))
 # 
 # # CT Species interest
 # saveRDS(object = CT_species_interest_time,
 #         file = here::here("output",
 #                           "data-proc",
-#                           "all_seasons",
-#                           "CT_species_interest_time_20230223.RDS"))
+#                           "01_overall_activity",
+#                           "CT_species_interest_time_20230305.RDS"))
 # 
 # # CT Species interest full
 # saveRDS(object = CT_species_interest_full,
 #         file = here::here("output",
 #                           "data-proc",
-#                           "all_seasons",
-#                           "CT_species_interest_time_full_20230223.RDS"))
+#                           "01_overall_activity",
+#                           "CT_species_interest_time_full_20230305.RDS"))
 # 
 # # stacked_raster_values_and_garden_CT_all_seasons_no_nas
 # saveRDS(object = stacked_raster_values_and_garden_CT_all_seasons_no_nas,
 #         file = here::here("output",
 #                           "data-proc",
-#                           "all_seasons",
-#                           "stacked_raster_values_and_garden_CT_all_seasons_no_nas_proc_20230223.RDS"))
+#                           "01_overall_activity",
+#                           "stacked_raster_values_and_garden_CT_all_seasons_no_nas_proc_20230305.RDS"))
 # 
 # # stacked_raster_values_and_garden_CT_all_seasons_no_nas full
 # saveRDS(object = stacked_raster_values_and_garden_CT_all_seasons_no_nas_full,
 #         file = here::here("output",
 #                           "data-proc",
-#                           "all_seasons",
-#                           "stacked_raster_values_and_garden_CT_all_seasons_no_nas_proc_full_20230223.RDS"))
-# 
-# # ########### NOT USED AT THE MOMENT ##
-# 
-# # Activity_squirrel_pred_Berlin_all_seasons
-# saveRDS(object = Activity_squirrel_pred_Berlin_all_seasons,
-#         file = here::here("output", "data-proc", "all_seasons",
-#                           "Activity_squirrel_pred_Berlin_all_seasons_20221117.RDS"))
-# 
-# # squirrels_CT
-# saveRDS(object = squirrels_CT,
-#         file = here::here("output", "data-proc", "all_seasons",
-#                           "squirrels_CT_20221117.RDS"))
-#
-# # Diurnality
-# # saveRDS(object = diurnality_predprey_Berlin_all_seasons,
-# #         file = here::here("output", "data-proc", "all_seasons",
-# #                           "diurnality_predprey_Berlin_all_seasons_20220802.RDS"))
+#                           "01_overall_activity",
+#                           "stacked_raster_values_and_garden_CT_all_seasons_no_nas_proc_full_20230305.RDS"))
 ```
 
 ------------------------------------------------------------------------

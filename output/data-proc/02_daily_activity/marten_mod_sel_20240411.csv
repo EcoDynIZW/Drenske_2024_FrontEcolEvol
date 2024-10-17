@@ -1,0 +1,5 @@
+Name,n_param,AICc,delta_AICc,AICc_weight,R2_marginal,R2_conditional
+martens03,22,718.076,0,1,0.733,0.821
+martens01,14,733.983,15.907,0,0.714,0.803
+martens02,18,736.056,17.98,0,0.714,0.804
+martens00,3,797.291,79.216,0,0,0.381

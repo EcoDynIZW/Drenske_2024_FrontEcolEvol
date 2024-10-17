@@ -1,20 +1,32 @@
 ---
 title: "Squirrel activity: Daily patterns data preparation" ## name of your project and analysis step
 description: |
-    The aim of this study is...
+    The aim of the study is to investigate the influence of altered environmental urban parameters and direct human disturbance expressed by the lockdown together with animal predator risk parameters on the general activity of squirrels
 author:
-    ## author information; single arguemnts can be deleted if not needed
-    - name: "John Smith"
-      url: https://izw-berlin.de/en/john-smith-en.html  
+    - name: "Sinah Drenske"
+      affiliation: Leibniz Institute for Zoo and Wildlife Research, Technical University Berlin
+      affiliation_url: https://izw-berlin.de/en/
+      orcid_id: 0000-0002-2247-6507
+    - name: "Julie Louvrier"
       affiliation: Leibniz Institute for Zoo and Wildlife Research
       affiliation_url: https://izw-berlin.de/en/
-      orcid_id: 0000-0000-0000-0000
-    - name: "Jane Doe"
-      url: https://janedoe.com
+      orcid_id: 0000-0003-1252-1746
+    - name: "Marius Grabow"
+      affiliation: Leibniz Institute for Zoo and Wildlife Research, Technical University Berlin
+      affiliation_url: https://izw-berlin.de/en/
+      orcid_id: 0000-0003-0702-9642
+    - name: "Conny Landgraf"
       affiliation: Leibniz Institute for Zoo and Wildlife Research
       affiliation_url: https://izw-berlin.de/en/
-    ## add more authors with the same intendation and styling if needed 
-    ## a new author always starts with a hyphen!
+      #orcid_id: 0000-0000-0000-0000
+    - name: "Stephanie Kramer-Schadt"
+      affiliation: Leibniz Institute for Zoo and Wildlife Research, Technical University Berlin
+      affiliation_url: https://izw-berlin.de/en/
+      orcid_id: 0000-0002-9269-4446
+    - name: "Aimara Planillo"
+      affiliation: Leibniz Institute for Zoo and Wildlife Research
+      affiliation_url: https://izw-berlin.de/en/
+      orcid_id: 0000-0001-6763-9923
 date: "`r Sys.Date()`"
 output: 
     distill::distill_article:
@@ -30,53 +42,20 @@ knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE,
 Sys.setlocale("LC_TIME", "C")
 ```
 
-* **Research question:**
-* **Study area:**
-* **Data:** 
+* **Research question:** How do urban conditions affect the daily activity patterns of squirrels?
+* **Study area:** Berlin 2019-2020 
+* **Data:** Detection histories of squirrels, martens and cats from 4 seasons (spring 2019, autumn 2019, spring 2020, autumn 2020), already filtered as in Louvrier et al. 2021 + environmental information on camera stations. 
 
 # Setup
 
 ```{r packages}
-# install the package librarian, it loads and installs (if necessary) the specified packages from CRAN, GitHub or Bioconductor
-
-#devtools::install_github("DesiQuintans/librarian")
-librarian::shelf(update_all = FALSE,
-                 #activity,
-                 #camtrapR,
-                 #colorspace, 
-                 #corrplot,
-                 #dplyr,
-                 EcoDynIZW / d6berlin,
-                 #extrafont, 
-                 #evaluate, 
-                 #gdata, 
-                 #ggplot2, 
-                 #ggdist, 
-                 #ggpubr, 
-                 here, 
-                 #janitor, 
-                 lubridate, 
-                 #maptools, 
-                 #ropenscilabs / ochRe,
-                 #overlap,
-                 # "optimbase", maybe needed but has to be installed from the CRAN archive https://cran.r-project.org/web/packages/optimbase/index.html
-                 #plyr,
-                 #raster,
-                 #readxl, 
-                 #rgdal, 
-                 #rgeos, 
-                 #rjags, 
-                 #rlecuyer, 
-                # scico,
-                 #sf, 
-                 #showtext, 
-                 skimr, 
-                 #snowfall, 
-                 #sp, 
-                 #stringr, 
-                 tidyverse, 
-                 #vroom
-                 )
+#remotes::install_github("EcoDynIZW/d6")
+d6::simple_load(c(#"EcoDynIZW / d6berlin",
+                  "here", 
+                  "lubridate", 
+                  "skimr", 
+                  "tidyverse" 
+))
 ```
 
 
@@ -85,17 +64,14 @@ librarian::shelf(update_all = FALSE,
 #loading the environmental variables and using only the user IDs that are within the cov table
 env_var <- readRDS(here::here("output",
                               "data-proc",
-                              "all_seasons",
-                              "env_var_binary_species_20230223.RDS"))
-                              #"stacked_raster_values_and_garden_CT_all_seasons_no_nas_proc_20230124.RDS"))
+                              "01_overall_activity",
+                              "env_var_binary_species_20230305.RDS"))
 
 #already formatted and filtered data 
-# CT_act_date_proc <- readRDS(here::here("output", "data-proc", "all_seasons",
-#                                        "CT_act_date_proc_20230124.RDS"))
 CT_species_interest <- readRDS(here::here("output", 
                                           "data-proc", 
-                                          "all_seasons",
-                                          "CT_species_interest_with_env_20230223.RDS"))
+                                          "01_overall_activity",
+                                          "CT_species_interest_with_env_20230305.RDS"))
 ```
 
 
@@ -104,14 +80,15 @@ original data combined with environmental data
 
 calculate the time in radians
 ```{r}
-# Calculate the time in fractions and the radiated time for the overlap estimates
-CT_species_interest$time_frac <- (hour(CT_species_interest$DateTimeOriginal)*60 + minute(CT_species_interest$DateTimeOriginal))/(24*60)
-CT_species_interest$radtime <- CT_species_interest$time_frac * 2 * pi
+# # Calculate the time in fractions and the radiated time for the overlap estimates
+# CT_species_interest$time_frac <- (hour(CT_species_interest$DateTimeOriginal)*60 + minute(CT_species_interest$DateTimeOriginal))/(24*60)
+# CT_species_interest$radtime <- CT_species_interest$time_frac * 2 * pi
 ```
 
 
 # Data for GLMMs
-As response for the GLMMs we use the sum of squirrel pictures per hour of the day.
+## GLMM1: Hours of the day per station
+In a first generalized linear mixed model, we want to test the influence of urban and garden variables that are contingent over time on squirrel activity per hour. For this we calculate the number of squirrel photos per hour and also the number of photos of martens and cats (we don't need the cats and martens anymore, do we???).
 
 Add a column for the hour of the day and calculate the sum of pictures per hour per station
 ```{r}
@@ -127,9 +104,7 @@ Split the data per species
 CT_species <- split(x = CT_species_interest_hour_station, f = CT_species_interest_hour_station$Species)
 CT_cat <- CT_species[[1]] %>% rename(cat_sum_hour = sum_hour)
 CT_marten <- CT_species[[2]] %>% rename(marten_sum_hour = sum_hour)
-CT_raccoon <- CT_species[[3]] %>% rename(raccoon_sum_hour = sum_hour)
-CT_fox <- CT_species[[4]] %>% rename(fox_sum_hour = sum_hour)
-CT_squirrel <- CT_species[[5]] %>% rename(squirrel_sum_hour = sum_hour)
+CT_squirrel <- CT_species[[3]] %>% rename(squirrel_sum_hour = sum_hour)
 ```
 
 Add zeros for hours during the day when squirrels where not seen on a camera
@@ -142,7 +117,7 @@ from when to when are squirrels active
 ```{r}
 range(CT_squirrel$hour_day)
 ```
-170 stations, Can be active at 13 hours per day
+170 stations, Can be active at 13 (5-17) hours per day
 170*13 = 2210 rows with zeros
 
 ```{r}
@@ -151,16 +126,12 @@ CT_squirrel_day <- CT_squirrel[, c(1:5)] %>%
   left_join(y = env_var[, c(1, 3:23)], by = "Station")
 ```
 
-
-
 Add the number of pictures per species per hour
 ```{r}
 CT_squirrel_predators_hour <- CT_squirrel_day %>%
   left_join(y = CT_cat[,c(3,4,5)], by = c("Station", "hour_day")) %>%
   left_join(y = CT_marten[,c(3,4,5)], by = c("Station", "hour_day")) %>%
-  left_join(y = CT_raccoon[,c(3,4,5)], by = c("Station", "hour_day")) %>%
-  left_join(y = CT_fox[,c(3,4,5)], by = c("Station", "hour_day")) %>%
-  replace_na(list( squirrel_sum_hour = 99, cat_sum_hour = 0, marten_sum_hour = 0, raccoon_sum_hour = 0, fox_sum_hour = 0))
+  replace_na(list( squirrel_sum_hour = 99, cat_sum_hour = 0, marten_sum_hour = 0))
 ```
 
 Small overview of the data
@@ -168,153 +139,445 @@ Small overview of the data
 summary(CT_squirrel_predators_hour$squirrel_sum_hour) # many zeros
 ```
 
+## GLMM2: Hours of the day per station per predator presence
+In another GLMM, we would like to examine squirrel activity based on the presence of predators. However, here we examine the presence of predators in the hours from midnight to the last appearance of squirrels per day. 
+
+For this purpose, we create separate data sets for cats and martens. We only use the stations where cats or martens occur.
+
+### Martens
+```{r}
+# Create a dataset containing only squirrel photos from stations where squirrels and martens occurred at least once. 
+Squirrel_marten <- CT_species_interest %>%
+  filter(Species == "Squirrel") %>%
+  filter(squirrels_cam_binary == 1 & marten_cam_binary == 1) %>%
+  droplevels()
+
+# Create a dataset that examines per day whether squirrels were present or not.
+Squirrel_day1 <- Squirrel_marten %>%
+  group_by(Station, Date) %>%
+  summarise(squirrel_day = 1)
+
+# Create a dataset containing only marten photos from stations where squirrels and martens occurred and only on days where squirrels occurred.
+Marten_squirrel <- CT_species_interest %>%
+  filter(Species == "Marten") %>%
+  filter(squirrels_cam_binary == 1 & marten_cam_binary == 1) %>%
+  droplevels() %>%
+  left_join(y = Squirrel_day1, by = c("Station", "Date")) %>%
+  filter(squirrel_day == 1)
+
+#test4 <- rbind(test[, c(1:8)], test3[, c(1:8)])
+
+# Here we create a table that shows the first and the last squirrel picture per day.
+Squirrel_range <- Squirrel_marten[, c(1:8)] %>%
+  group_by(Species, project_phase, Date, Station) %>%
+  summarise(first_squirrel_day = dplyr::first(Time),
+            last_squirrel_day = dplyr::last(Time)) %>%
+  ungroup()
+
+# Here we create a table that shows the first and the last marten picture per day.
+Marten_range <- Marten_squirrel[, c(1:8)] %>%
+  group_by(Species, project_phase, Date, Station) %>%
+  summarise(first_marten_day = dplyr::first(Time),
+            last_marten_day = dplyr::last(Time)) %>%
+  ungroup()
+
+# NOT WORKING WHY???? 01.08.2023: Working (seems so)
+# Creates a table that compares the marten and squirrel image data per day and determines whether or not the predator was seen before the last squirrel image.
+Squirrel_marten_combi_pre <- Squirrel_range %>%
+  left_join(y = Marten_range, by = c("Station", "Date", "project_phase")) %>%
+  rename(Species_squirrel = Species.x, Species_marten = Species.y) %>%
+  mutate(marten_presence = case_when(first_marten_day < last_squirrel_day ~ 1,
+                                     .default = 0))
+
+Squirrel_marten_combi_pre %>% 
+  filter(Station %in% c(396))
+
+table(Squirrel_marten_combi_pre$marten_presence)
+
+# OLD????
+# Squirrel_marten_combi_pre <- Squirrel_range %>%
+#   left_join(y = Marten_range[, c(1,3:6)], by = c("Station", "Date")) %>%
+#   rename(Species_squirrel = Species.x, Species_marten = Species.y)
+# 
+# Squirrel_marten_combi_pre$marten_presence <- 
+#   ifelse(test = Squirrel_marten_combi_pre$first_marten_day < Squirrel_marten_combi_pre$last_squirrel_day, 
+#          yes = 1, 
+#          no = ifelse(test = Squirrel_marten_combi_pre$first_marten_day > Squirrel_marten_combi_pre$last_squirrel_day, 
+#                      yes = 99, 
+#                      no = 0))
+# Squirrel_marten_combi_pre$marten_presence <- replace_na(data = Squirrel_marten_combi_pre$cat_presence, replace = 0)
+# 
+# table(Squirrel_marten_combi_pre$marten_presence)
+
+```
+
+```{r}
+# Create a list of stations that occur in this dataset and where the predator was sighted before the squirrel. 
+stations_list <- Squirrel_marten_combi_pre %>%
+  filter(marten_presence != 0) 
+
+stations_list <- unique(stations_list$Station)
+
+# Not Working anymore... WHY????? 01.08.2023: Working
+# Remove all stations where a marten has never been found or was found after the squirrel
+Squirrel_marten_combi <- Squirrel_marten_combi_pre %>%
+  filter(Station %in% stations_list) #%>%
+  # mutate(marten_presence = case_when(marten_presence == 99 ~ 0,
+  #                                    .default = marten_presence)) %>%
+  # group_by(Station)
+
+# OLD
+# Squirrel_marten_combi2 <- Squirrel_marten_combi_pre %>%
+#   filter(Station %in% stations_list) %>%
+#   mutate(marten_presence = case_when(marten_presence == 99 ~ 0,
+#                                      .default = marten_presence)) %>%
+#   group_by(Station) %>%
+#   mutate(presence_sum = sum(marten_presence)) %>%
+#   filter(presence_sum > 0)
+
+# # If the predator was sighted after the squirrel, this should not be considered further.
+# Squirrel_marten_combi <- Squirrel_marten_combi_pre %>%
+#   filter(Station %in% stations_list) %>%
+#   mutate(marten_presence = ifelse(test = marten_presence == 99, 
+#                                   yes = 0, 
+#                                   no = marten_presence)) %>%
+#   group_by(Station) %>%
+#   mutate(presence_sum = sum(marten_presence)) %>%
+#   filter(presence_sum > 0)
+```
+
+
+```{r}
+# Create a list of stations where a marten has been seen at least once
+stations_list <- unique(Squirrel_marten_combi$Station)
+
+# Create a table that filters out the squirrel photos that are from stations in the list above. Count the photos per hour
+CT_squirrel_day_hour_station <- CT_species_interest %>%
+  filter(Species == "Squirrel") %>% 
+  filter(Station %in% stations_list) %>%
+  droplevels() %>%
+  mutate(hour_day = hour(Time)) %>%
+  group_by(Species, project_phase, Station, Date, hour_day) %>%
+  summarize(squirrel_sum_hour_day = n()) %>% # number of pics per station per hour of the day
+  #left_join(y = env_var[, c(1, 3:23)], by = "Station") %>%
+  ungroup()
+
+length(unique(CT_squirrel_day_hour_station$Station))
+```
+
+from when to when are squirrels active
+```{r}
+range(CT_squirrel_day_hour_station$hour_day)
+```
+```{r}
+# Mean number of pictures per day
+martens_day_station <-
+  Marten_squirrel %>%
+  filter(Station %in% stations_list) %>%
+  group_by(Station, Date) %>%
+  #group_by(Station) %>% 
+  count() %>%
+  group_by(Station) %>%
+  count()
+martens_day_station
+
+sd(martens_day_station$n)
+summary(martens_day_station$n)
+
+# per_day <- Marten_squirrel %>%
+#   filter(Station %in% stations_list) %>%
+#   group_by(Station, Date) %>%
+#   #group_by(Station) %>% 
+#   count() 
+```
+
+```{r}
+# complete for all hours per day but only for days when there was a squirrel
+CT_squirrel_day_hour_station_complete <- CT_squirrel_day_hour_station[, c(1,3:6)] %>%
+  group_by(Station, Date) %>%
+  complete(hour_day = c(5:17), fill = list(squirrel_sum_hour_day = 0, Species = "Squirrel")) %>%
+  left_join(y = env_var[, c(1:23)], by = "Station") %>%
+  ungroup()
+# 1586 rows
+```
+
+```{r}
+# Create a dataset with the photos per hour of the day per station for days without vs with marten
+# 15 stations, 13 hours per day (5-17), days with vs without marten = 15*13*2 = 390 rows
+
+## OLD
+# CT_squirrel_martens_hour_station <- CT_squirrel_day_hour_station_complete %>%
+#   left_join(y = Squirrel_marten_combi[, c(3,4,10)], by = c("Station", "Date")) %>%
+#   dplyr::mutate(across(.cols = c(marten_presence),
+#                        .fns =  as.factor)) %>%
+#   droplevels() %>%
+#   group_by(Species, project_phase, Station, hour_day, marten_presence) %>%
+#   summarise(squirrel_sum_hour_station = sum(squirrel_sum_hour_day)) %>%
+#   left_join(y = env_var[, c(1,3:23)], by = "Station") %>%
+#   ungroup()
+
+
+CT_squirrel_martens_hour_station <- CT_squirrel_day_hour_station_complete %>%
+  left_join(y = Squirrel_marten_combi[, c(3,4,10)], by = c("Station", "Date")) %>%
+  dplyr::mutate(across(.cols = c(marten_presence),
+                       .fns =  as.factor)) %>%
+  droplevels() %>%
+  group_by(Species, project_phase, Station, hour_day, marten_presence) %>%
+  summarise(squirrel_sum_hour_station = sum(squirrel_sum_hour_day)) %>%
+  ungroup() %>%
+  # until here 364 rows. Less rows than calculated because there are 2 stations (1682,1990) where on days when squirrels were seen also martens were there before, never only squirrels. That is why we need the function complete
+  complete(Species,
+           Station,
+           hour_day,
+           marten_presence, 
+           fill = list(squirrel_sum_hour_station = 0)) %>%
+  mutate(project_phase = NULL) %>%
+  left_join(y = env_var[, c(1:23)], by = "Station") %>%
+  ungroup()
+```
+
+### Cats
+```{r}
+Squirrel_cat <- CT_species_interest %>%
+  filter(Species == "Squirrel") %>%
+  filter(squirrels_cam_binary == 1 & cats_cam_binary == 1) %>%
+  droplevels()
+
+Squirrel_day1 <- Squirrel_cat %>%
+  group_by(Station, Date) %>%
+  summarise(squirrel_day = 1)
+
+Cat_squirrel <- CT_species_interest %>%
+  filter(Species == "Cat") %>%
+  filter(squirrels_cam_binary == 1 & cats_cam_binary == 1) %>%
+  droplevels() %>%
+  left_join(y = Squirrel_day1, by = c("Station", "Date")) %>%
+  filter(squirrel_day == 1)
+
+#test4 <- rbind(test[, c(1:8)], test3[, c(1:8)])
+
+Squirrel_range <- Squirrel_cat[, c(1:8)] %>%
+  group_by(Species, project_phase, Date, Station) %>%
+  summarise(first_squirrel_day = dplyr::first(Time),
+            last_squirrel_day = dplyr::last(Time)) %>%
+  ungroup()
+
+Cat_range <- Cat_squirrel[, c(1:8)] %>%
+  group_by(Species, project_phase, Date, Station) %>%
+  summarise(first_cat_day = dplyr::first(Time),
+            last_cat_day = dplyr::last(Time)) %>%
+  ungroup()
+
+# Creates a table that compares the cat and squirrel image data per day and determines whether or not the predator was seen before the last squirrel image.
+Squirrel_cat_combi_pre <- Squirrel_range %>%
+  left_join(y = Cat_range[, c(1,3:6)], by = c("Station", "Date")) %>%
+  rename(Species_squirrel = Species.x, Species_cat = Species.y) %>%
+  mutate(cat_presence = case_when(first_cat_day < last_squirrel_day ~ 1,
+                                     .default = 0))
+
+table(Squirrel_cat_combi_pre$cat_presence)
+
+## OLD:Not Working anymore... WHY?????
+# Squirrel_cat_combi_pre <- Squirrel_range %>%
+#   left_join(y = Cat_range[, c(1,3:6)], by = c("Station", "Date")) %>%
+#   rename(Species_squirrel = Species.x, Species_cat = Species.y) %>%
+#   mutate(cat_presence = case_when(first_cat_day < last_squirrel_day ~ 1,
+#                                   first_cat_day > last_squirrel_day ~ 99,
+#                                   .default = 0))
+# 
+# Squirrel_cat_combi_pre <- Squirrel_range %>%
+#   left_join(y = Cat_range[, c(1,3:6)], by = c("Station", "Date")) %>%
+#   rename(Species_squirrel = Species.x, Species_cat = Species.y)
+# 
+# Squirrel_cat_combi_pre$cat_presence <- 
+#   ifelse(test = Squirrel_cat_combi_pre$first_cat_day < Squirrel_cat_combi_pre$last_squirrel_day, 
+#          yes = 1, 
+#          no = ifelse(test = Squirrel_cat_combi_pre$first_cat_day > Squirrel_cat_combi_pre$last_squirrel_day, 
+#                      yes = 99, 
+#                      no = 0))
+# Squirrel_cat_combi_pre$cat_presence <- replace_na(data = Squirrel_cat_combi_pre$cat_presence, replace = 0)
+# 
+```
+
+
+```{r}
+# Create a list of stations that occur in this dataset and where the predator was sighted before the squirrel. 
+stations_list <- Squirrel_cat_combi_pre %>%
+  filter(cat_presence != 0) 
+
+stations_list <- unique(stations_list$Station)
+
+# # Not Working anymore... WHY?????
+Squirrel_cat_combi <- Squirrel_cat_combi_pre %>%
+  filter(Station %in% stations_list) %>%
+  # following can also be removed???, but leave group_by station
+  mutate(cat_presence = case_when(cat_presence == 99 ~ 0,
+                                  .default = cat_presence)) %>%
+   group_by(Station) #%>%
+  # mutate(presence_sum = sum(cat_presence)) %>%
+  # filter(presence_sum > 0)
+
+# # If the predator was sighted after the squirrel, this should not be considered further.
+# Squirrel_cat_combi <- Squirrel_cat_combi_pre %>%
+#   filter(Station %in% stations_list) %>%
+#   mutate(cat_presence = ifelse(test = cat_presence == 99, yes = 0, no = cat_presence)) %>%
+#   group_by(Station) %>%
+#   mutate(presence_sum = sum(cat_presence)) %>%
+#   filter(presence_sum > 0)
+```
+
+
+```{r}
+# Create a list of stations that were in the dataset with all stations that are still in the dataset.
+stations_list <- unique(Squirrel_cat_combi$Station)
+
+# Create a table that filters out the squirrel photos that are from stations in the list above. Count the photos per hour
+CT_squirrel_day_hour_station <- CT_species_interest %>%
+  filter(Species == "Squirrel" & Station %in% stations_list) %>%
+  droplevels() %>%
+  mutate(hour_day = hour(Time)) %>%
+  group_by(Species, project_phase, Station, Date, hour_day) %>%
+  summarize(squirrel_sum_hour_day = n()) %>% # number of pics per station per hour of the day
+  left_join(y = env_var[, c(1, 3:23)], by = "Station") %>%
+  ungroup()
+
+length(unique(CT_squirrel_day_hour_station$Station))
+```
+
+from when to when are squirrels active
+```{r}
+range(CT_squirrel_day_hour_station$hour_day)
+```
+
+```{r}
+# Mean number of cat pictures per day
+cats_day_station <-
+  Cat_squirrel %>%
+  filter(Station %in% stations_list) %>%
+  group_by(Station, Date) %>%
+  #group_by(Station) %>% 
+  count() %>%
+  group_by(Station) %>%
+  count()
+cats_day_station
+
+sd(cats_day_station$n)
+summary(cats_day_station$n)
+```
+
+```{r}
+# complete for all hours per day but only for days when there was a squirrel
+CT_squirrel_day_hour_station_complete <- CT_squirrel_day_hour_station[, c(1,3:6)] %>%
+  group_by(Station, Date) %>%
+  complete(hour_day = c(5:17), fill = list(squirrel_sum_hour_day = 0, Species = "Squirrel")) %>%
+  left_join(y = env_var[, c(1:23)], by = "Station") %>%
+  ungroup()
+# 4446 rows
+```
+
+```{r}
+# Create a dataset with the photos per hour of the day per station for days without vs with cat
+# 63 stations, 13 hours per day (5-17), days with vs without cat = 63*13*2 = 1638 rows
+
+## OLD
+# CT_squirrel_cats_hour_station <- CT_squirrel_day_hour_station_complete %>%
+#   left_join(y = Squirrel_cat_combi[, c(3,4,10)], by = c("Station", "Date")) %>%
+#   dplyr::mutate(across(.cols = c(cat_presence),
+#                        .fns =  as.factor)) %>%
+#   droplevels() %>%
+#   group_by(Species, project_phase, Station, hour_day, cat_presence) %>%
+#   summarise(squirrel_sum_hour_station = sum(squirrel_sum_hour_day)) %>%
+#   left_join(y = env_var[, c(1,3:23)], by = "Station") %>%
+#   ungroup()
+# 1391 rows
+# 247 Less rows than calculated because there are 19 stations 
+# (444,454,478,524,604,1059,1064,1129,1130,1142,1144,1221,1271,1276,1382,1561,1594,1892,1897) 
+# where on days when squirrels were seen also cats were there before, never only squirrels. 
+
+
+CT_squirrel_cats_hour_station <- CT_squirrel_day_hour_station_complete %>%
+  left_join(y = Squirrel_cat_combi[, c(3,4,10)], by = c("Station", "Date")) %>%
+  dplyr::mutate(across(.cols = c(cat_presence),
+                       .fns =  as.factor)) %>%
+  droplevels() %>%
+  group_by(Species, project_phase, Station, hour_day, cat_presence) %>%
+  summarise(squirrel_sum_hour_station = sum(squirrel_sum_hour_day)) %>%
+  ungroup() %>%
+# until here 1391 rows
+# 247 Less rows than calculated because there are 19 stations 
+# (444,454,478,524,604,1059,1064,1129,1130,1142,1144,1221,1271,1276,1382,1561,1594,1892,1897) 
+# where on days when squirrels were seen also cats were there before, never only squirrels. 
+  complete(Species,
+           Station,
+           hour_day,
+           cat_presence, 
+           fill = list(squirrel_sum_hour_station = 0)) %>%
+  mutate(project_phase = NULL) %>%
+  left_join(y = env_var[, c(1:23)], by = "Station") %>%
+  ungroup()
+
+```
+
 
 # Save data
 ```{r}
-# # CT_species_interest
-# saveRDS(object = CT_species_interest,
-#         file = here::here("output",
-#                           "data-proc",
-#                           "all_seasons",
-#                           "CT_species_interest_radians_20230223.RDS"))
 # # CT_species_interest_hour_station
 # saveRDS(object = CT_species_interest_hour_station,
 #         file = here::here("output",
 #                           "data-proc",
-#                           "all_seasons",
-#                           "CT_species_interest_hour_station_20230223.RDS"))
+#                           "02_daily_activity",
+#                           "CT_species_interest_hour_station_20230316.RDS"))
+# 
 # # CT_squirrel_predators_hour
 # saveRDS(object = CT_squirrel_predators_hour,
 #         file = here::here("output",
 #                           "data-proc",
-#                           "all_seasons",
-#                           "CT_squirrel_left_join_20230228.RDS"))
+#                           "02_daily_activity",
+#                           "CT_squirrel_predators_hour_20230316.RDS"))
+# 
+# # CT_squirrel_martens_hour_station
+# saveRDS(object = CT_squirrel_martens_hour_station,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "CT_squirrel_martens_hour_station_20230823.RDS"))
+# # Squirrel_marten_combi
+# saveRDS(object = Squirrel_marten_combi, 
+#         file = here::here("output", 
+#                           "data-proc", 
+#                           "02_daily_activity", 
+#                           "Squirrel_marten_combi_20230827.RDS"))
+# 
+# # CT_squirrel_cats_hour_station
+# saveRDS(object = CT_squirrel_cats_hour_station,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "CT_squirrel_cats_hour_station_20230823.RDS"))
+#
+# # Squirrel_cat_combi
+# saveRDS(object = Squirrel_cat_combi, 
+#         file = here::here("output", 
+#                           "data-proc", 
+#                           "02_daily_activity", 
+#                           "Squirrel_cat_combi_20230827.RDS"))
+# 
+# # NOT USED
+# # CT_squirrel_predators_day
+# saveRDS(object = CT_squirrel_predators_day,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "CT_squirrel_predators_day_20230307.RDS"))
+#
+# # CT_species_interest
+# saveRDS(object = CT_species_interest,
+#         file = here::here("output",
+#                           "data-proc",
+#                           "02_daily_activity",
+#                           "CT_species_interest_radians_20230223.RDS"))
 ```
 
-# OLD
-Split the dataset in separate lists per project phase
-```{r}
-# CT_project_phase <- split(x = CT_species_interest_hour_station, f = CT_species_interest_hour_station$project_phase)
-```
-
-Fill the dataset with zeros for days and hours were no picture was taken per species
-```{r}
-# # Phase 1
-# CT_phase1_species_station_date_hour <- CT_project_phase[[1]] %>%
-#   as.data.frame() %>%
-#   droplevels() %>%
-#   complete(Species, project_phase, Station, 
-#            Date = as.Date(as.Date("2018-10-07"):as.Date("2018-11-04"), origin="1970-01-01"), 
-#            hour_day = c(0:23), 
-#            fill = list(pic_hour = 0))
-# 
-# # # 29 days
-# # length(unique(CT_phase1$Date))
-# # # a 24 hours 
-# # length(unique(CT_phase1$hour_day))
-# # # a 5 species
-# # length(unique(CT_phase1$Species))
-# # # a 150 stations
-# # length(unique(CT_phase1$Station))
-# # # 29*24*5*150 = 522000 rows
-# 
-# # Phase 2
-# CT_phase2_species_station_date_hour <- CT_project_phase[[2]] %>%
-#   as.data.frame() %>%
-#   droplevels() %>%
-#   complete(Species, project_phase, Station, 
-#            Date = as.Date(as.Date("2019-04-01"):as.Date("2019-04-28"), origin="1970-01-01"), 
-#            hour_day = c(0:23), 
-#            fill = list(pic_hour = 0))
-# 
-# # Phase 3
-# CT_phase3_species_station_date_hour <- CT_project_phase[[3]] %>%
-#   as.data.frame() %>%
-#   droplevels() %>%
-#   complete(Species, project_phase, Station, 
-#            Date = as.Date(as.Date("2019-09-30"):as.Date("2019-10-27"), origin="1970-01-01"), 
-#            hour_day = c(0:23), 
-#            fill = list(pic_hour = 0))
-# # # 28 days
-# # length(unique(CT_phase3$Date))
-# # # a 24 hours 
-# # length(unique(CT_phase3$hour_day))
-# # # a 5 species
-# # length(unique(CT_phase3$Species))
-# # # a 133 stations
-# # length(unique(CT_phase3$Station))
-# # # 28*24*5*133 = 446880 rows
-# 
-# 
-# # Phase 4
-# CT_phase4_species_station_date_hour <- CT_project_phase[[4]] %>%
-#   as.data.frame() %>%
-#   droplevels() %>%
-#   complete(Species, project_phase, Station, 
-#            Date = as.Date(as.Date("2020-03-30"):as.Date("2020-04-26"), origin="1970-01-01"), 
-#            hour_day = c(0:23), 
-#            fill = list(pic_hour = 0))
-# 
-# # Phase 5
-# CT_phase5_species_station_date_hour <- CT_project_phase[[5]] %>%
-#   as.data.frame() %>%
-#   droplevels() %>%
-#   complete(Species, project_phase, Station, 
-#            Date = as.Date(as.Date("2020-09-28"):as.Date("2020-10-26"), origin="1970-01-01"), 
-#            hour_day = c(0:23), 
-#            fill = list(pic_hour = 0))
-```
-
-Combine all data sets
-```{r}
-# CT_species_station_date_hour <- rbind(CT_phase1_species_station_date_hour, 
-#                                       CT_phase2_species_station_date_hour, 
-#                                       CT_phase3_species_station_date_hour, 
-#                                       CT_phase4_species_station_date_hour, 
-#                                       CT_phase5_species_station_date_hour)
-```
-
-
-```{r}
-# CT_species_station_mean_hour <- CT_species_station_date_hour %>%
-#   group_by(Species, project_phase, Station, hour_day) %>%
-#   summarize(mean_hour = mean(pic_hour), sd_hour = sd(pic_hour)) %>%
-#   left_join(y = env_var[, c(1, 3:25)], by = "Station")
-# 
-# # 5 species, 666 cameras, 24 hours = 79920
-```
-
-
-```{r}
-# CT_phase1_species_station_mean_hour <- CT_phase1_species_station_date_hour %>%
-#   group_by(Species, project_phase, Station, hour_day) %>%
-#   summarize(mean_hour = mean(pic_hour), sd_hour = sd(pic_hour))
-# # 5 species, 150 cameras, 24 hours = 18 000 rows
-# 
-# CT_phase1_species_mean_hour <- CT_phase1_species_station_date_hour %>%
-#   group_by(Species, project_phase, hour_day) %>%
-#   summarize(mean_hour = mean(pic_hour), sd_hour = sd(pic_hour))
-# # 5 species, 24 hours = 120
-```
-
-## Prepare data for activity plots and overlap calculation
-rad time + overlap with date
-
-```{r}
-# # Build a date column for the overlap calculation or plots (maybe not necessary)
-# CT_species_station_mean_hour$hour_day_overlap <- as.POSIXct(x = paste(CT_species_station_mean_hour$hour_day, 00, sep=":"), 
-#                                             format = "%H:%M", 
-#                                             tz = "GMT")
-# # Calculate the time in radians (for overlap calculation)
-# CT_species_station_mean_hour$time_rad <- (CT_species_station_mean_hour$hour_day/24)*2*pi
-```
-
-
-### Build a dataset only for squirrels
-```{r}
-# CT_squirrels_station_mean_hour <- CT_species_station_mean_hour %>%
-#   filter(Species == "Squirrel")
-```
 
 ***
 

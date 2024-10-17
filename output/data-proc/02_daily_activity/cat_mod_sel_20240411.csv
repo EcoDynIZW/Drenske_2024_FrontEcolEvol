@@ -1,0 +1,5 @@
+Name,n_param,AICc,delta_AICc,AICc_weight,R2_marginal,R2_conditional
+cats03,22,2173.317,0,1,0.451,0.632
+cats02,18,2190.186,16.869,0,0.449,0.631
+cats01,14,2190.526,17.209,0,0.423,0.614
+cats00,3,2314.821,141.503,0,0,0.368

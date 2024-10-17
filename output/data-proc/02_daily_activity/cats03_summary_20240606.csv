@@ -1,0 +1,22 @@
+effect,group,Predictors,Estimate,SE,T_statistic,p
+fixed,NA,(Intercept),-2.247,0.285,-7.888,0
+fixed,NA,"poly(hour_day, 4)1",0.391,9.192,0.043,0.966
+fixed,NA,"poly(hour_day, 4)2",-60.066,11.617,-5.17,0
+fixed,NA,"poly(hour_day, 4)3",9.064,7.654,1.184,0.236
+fixed,NA,"poly(hour_day, 4)4",-31.958,7.934,-4.028,0
+fixed,NA,lockdown1,1.178,0.332,3.544,0
+fixed,NA,Seasonspring,-0.51,0.323,-1.581,0.114
+fixed,NA,cat_presence1,-0.552,0.151,-3.663,0
+fixed,NA,"poly(hour_day, 4)1:lockdown1",-14.926,9.623,-1.551,0.121
+fixed,NA,"poly(hour_day, 4)2:lockdown1",25.018,11.958,2.092,0.036
+fixed,NA,"poly(hour_day, 4)3:lockdown1",-13.27,8.173,-1.624,0.104
+fixed,NA,"poly(hour_day, 4)4:lockdown1",14.347,8.215,1.746,0.081
+fixed,NA,"poly(hour_day, 4)1:Seasonspring",-9.718,7.459,-1.303,0.193
+fixed,NA,"poly(hour_day, 4)2:Seasonspring",32.929,8.083,4.074,0
+fixed,NA,"poly(hour_day, 4)3:Seasonspring",7.743,6.927,1.118,0.264
+fixed,NA,"poly(hour_day, 4)4:Seasonspring",14.37,6.485,2.216,0.027
+fixed,NA,"poly(hour_day, 4)1:cat_presence1",10.795,7.398,1.459,0.144
+fixed,NA,"poly(hour_day, 4)2:cat_presence1",-14.097,8.049,-1.751,0.08
+fixed,NA,"poly(hour_day, 4)3:cat_presence1",1.396,6.567,0.213,0.832
+fixed,NA,"poly(hour_day, 4)4:cat_presence1",-4.527,6.125,-0.739,0.46
+ran_pars,Station,sd__(Intercept),0.976,NA,NA,NA
