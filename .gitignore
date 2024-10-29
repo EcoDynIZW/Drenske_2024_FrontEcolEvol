@@ -14,7 +14,7 @@
 *.xls*
 *.tif*
 *.gpkg*
-*.png
+*.png*
 
 # Temporary files
 *.utf8.md
@@ -29,16 +29,15 @@
 # Folder
 data-raw/geo-raw/
 data-raw/r-raw/Old/
-docs/admin
-docs/literature
-docs/manuscript
-docs/presentations
-docs/reports/Old
-model/Old
-plots/01_environmental_variables/Old
-plots/02_overall_activity/Old
-plots/03_daily_activity/Old
-share_common
+docs/admin/
+docs/literature/
+docs/manuscript/
+docs/presentations/
+docs/reports/Old/
+model/Old/
+plots/01_environmental_variables/Old/
+plots/02_overall_activity/Old/
+plots/03_daily_activity/Old/
+share_common/
 sciurus_vulgaris_b_cttemp_drenske_s/
-
-R/Old
+R/Old/
