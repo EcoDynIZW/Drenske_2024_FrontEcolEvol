@@ -4,14 +4,7 @@ d6::render_all_reports()
 ## Or render each step by step
 ## Add additonal lines for each .Rmd file placed in ./R that you want to render
 d6::render_report("01_Data_preparation_CT_gardens.Rmd")
-d6::render_report("02_Env_data_rasters.Rmd")
-d6::render_report("04_Env_data_exploration.Rmd")
-d6::render_report("05a_Seasonal_squirrel_activity_Exploration.Rmd")
 
-
-
-d6::render_report("03a_Squirrel_activity_General_description_Exploration.Rmd")
-d6::render_report("03c_Squirrel_activity_General_description_GLM.Rmd")
 
 
 

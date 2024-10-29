@@ -14,7 +14,7 @@
 *.xls*
 *.tif*
 *.gpkg*
-*.
+*.png
 
 # Temporary files
 *.utf8.md
@@ -38,6 +38,7 @@ model/Old
 plots/01_environmental_variables/Old
 plots/02_overall_activity/Old
 plots/03_daily_activity/Old
+share_common
 sciurus_vulgaris_b_cttemp_drenske_s/
 
 R/Old
