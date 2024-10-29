@@ -27,8 +27,8 @@
 
 
 # Folder
-data-raw/geo-raw
-data-raw/r-raw/Old
+data-raw/geo-raw/
+data-raw/r-raw/Old/
 docs/admin
 docs/literature
 docs/manuscript
