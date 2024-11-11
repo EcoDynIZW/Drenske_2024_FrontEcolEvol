@@ -10,6 +10,7 @@
 
 # Specific file formats
 *.doc*
+*.docx*
 *.pptx
 *.xls*
 *.tif*
