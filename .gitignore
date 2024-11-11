@@ -26,17 +26,15 @@
 *.xlk
 ~$*.ppt*
 
-
 # Folder
 data-raw/geo-raw/
 data-raw/r-raw/Old/
-
+docs/
 docs/admin/
 docs/literature/
 docs/manuscript/
 docs/presentations/
 docs/reports/Old/
-
 share_common/
 
 
